@@ -210,3 +210,21 @@ func TestAnInvalidBuildFileGetsNoKeys(t *testing.T) {
 	assert.ErrorIs(t, err, plan.ErrUnknownStage)
 	assert.Nil(t, found)
 }
+
+func TestAStepKeepsItsKeyWhenALaterStepChanges(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
+	nano := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install nano\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	require.Len(t, vimKeys, 1)
+	require.Len(t, nanoKeys, 1)
+	require.Len(t, vimKeys[0], 2)
+	require.Len(t, nanoKeys[0], 2)
+	assert.Equal(t, vimKeys[0][0], nanoKeys[0][0])
+	assert.NotEqual(t, vimKeys[0][1], nanoKeys[0][1])
+}
