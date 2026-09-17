@@ -27,8 +27,8 @@ type parser struct {
 }
 
 func (p *parser) read(line sourceLine) error {
-	if line.unfinished {
-		return errors.New("continuation runs off the end of the file")
+	if line.problem != nil {
+		return line.problem
 	}
 
 	text := strings.TrimLeft(line.text, " \t")
