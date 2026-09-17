@@ -1,19 +1,34 @@
 package plan_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/imagefile"
+	"github.com/The127/miso/internal/plan"
 )
 
 // images are base images in memory, by what a FROM calls them.
 type images map[string]string
 
-func (i images) Digest(base string) string {
-	return i[base]
+var errNoSuchImage = errors.New("no such image")
+
+func (i images) Digest(base string) (string, error) {
+	digest, found := i[base]
+	if !found {
+		return "", errNoSuchImage
+	}
+
+	return digest, nil
 }
 
-var noImages = images{}
+var (
+	noImages     = images{}
+	debianImages = images{"debian:sid": "sha256:sid", "debian:trixie": "sha256:trixie"}
+)
 
 func TestARefreshedBaseImageChangesTheKeys(t *testing.T) {
 	// arrange
@@ -50,4 +65,19 @@ func TestAStageBasedOnAChangedStageGetsDifferentKeys(t *testing.T) {
 
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
+
+func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nFROM nope\n")
+
+	// act
+	_, err := plan.Keys(stages, anyAgent, noFiles, noImages)
+
+	// assert
+	var planErr *imagefile.Error
+	require.ErrorAs(t, err, &planErr)
+	assert.Equal(t, 2, planErr.Line)
+	assert.ErrorIs(t, err, errNoSuchImage)
+	assert.ErrorContains(t, err, "nope")
 }

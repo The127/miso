@@ -76,8 +76,8 @@ func TestADifferentBaseChangesTheKeys(t *testing.T) {
 	trixie := parse(t, "FROM debian:trixie\nRUN true\n")
 
 	// act
-	sidKeys := keys(t, sid, anyAgent, noFiles, noImages)
-	trixieKeys := keys(t, trixie, anyAgent, noFiles, noImages)
+	sidKeys := keys(t, sid, anyAgent, noFiles, debianImages)
+	trixieKeys := keys(t, trixie, anyAgent, noFiles, debianImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, sidKeys), lastKey(t, trixieKeys))
@@ -167,8 +167,8 @@ func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
 	nano := parse(t, "FROM debian:sid AS build\nRUN make nano\nFROM scratch\nCOPY --from=build /out /\n")
 
 	// act
-	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
-	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+	vimKeys := keys(t, vim, anyAgent, noFiles, debianImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, debianImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
@@ -180,8 +180,8 @@ func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
 	nano := parse(t, "FROM debian:sid\nRUN make nano\nFROM scratch\nCOPY motd /etc/\n")
 
 	// act
-	vimKeys := keys(t, vim, anyAgent, files{"motd": "hello"}, noImages)
-	nanoKeys := keys(t, nano, anyAgent, files{"motd": "hello"}, noImages)
+	vimKeys := keys(t, vim, anyAgent, files{"motd": "hello"}, debianImages)
+	nanoKeys := keys(t, nano, anyAgent, files{"motd": "hello"}, debianImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
