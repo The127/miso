@@ -6,6 +6,9 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
+// scratch is the base with nothing in it.
+const scratch = "scratch"
+
 // Bases knows the images a FROM can start a stage on.
 type Bases interface {
 	Digest(base string) (string, error)
@@ -15,7 +18,7 @@ type Bases interface {
 // changed agent may build the same step differently.
 func root(agent string, stage imagefile.Stage, bases Bases) (string, error) {
 	fields := []string{agent, stage.Base}
-	if stage.Base != "scratch" {
+	if stage.Base != scratch {
 		digest, err := bases.Digest(stage.Base)
 		if err != nil {
 			return "", at(stage.Line, fmt.Errorf("FROM %s: %w", stage.Base, err))

@@ -19,3 +19,14 @@ func TestTwoStagesWithTheSameNameAreRejected(t *testing.T) {
 	assert.ErrorIs(t, err, plan.ErrDuplicateStage)
 	assert.ErrorContains(t, err, "build")
 }
+
+func TestAStageNamedScratchIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS scratch\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrReservedStage)
+}
