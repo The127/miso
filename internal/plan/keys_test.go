@@ -15,17 +15,27 @@ const anyAgent = "agent"
 func keys(t *testing.T, stages []imagefile.Stage, agent string, context plan.Context, bases plan.Bases) [][]string {
 	t.Helper()
 
-	found, err := plan.Keys(stages, agent, context, bases)
+	planned, err := plan.New(stages, agent, context, bases)
 	require.NoError(t, err)
+
+	var found [][]string
+	for _, stage := range planned.Stages {
+		var stageKeys []string
+		for _, step := range stage.Steps {
+			stageKeys = append(stageKeys, step.Key)
+		}
+
+		found = append(found, stageKeys)
+	}
 
 	return found
 }
 
-func lastKey(t *testing.T, keys [][]string) string {
+func lastKey(t *testing.T, found [][]string) string {
 	t.Helper()
 
-	require.NotEmpty(t, keys)
-	stage := keys[len(keys)-1]
+	require.NotEmpty(t, found)
+	stage := found[len(found)-1]
 	require.NotEmpty(t, stage)
 
 	return stage[len(stage)-1]
@@ -199,16 +209,16 @@ func TestADifferentAgentChangesTheKeys(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
 }
 
-func TestAnInvalidBuildFileGetsNoKeys(t *testing.T) {
+func TestAnInvalidBuildFileGetsNoPlan(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch\nCOPY --from=nope a /b\n")
 
 	// act
-	found, err := plan.Keys(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
 
 	// assert
 	assert.ErrorIs(t, err, plan.ErrUnknownStage)
-	assert.Nil(t, found)
+	assert.Empty(t, planned.Stages)
 }
 
 func TestAStepKeepsItsKeyWhenALaterStepChanges(t *testing.T) {

@@ -55,7 +55,7 @@ func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY nope /etc/\n")
 
 	// act
-	_, err := plan.Keys(stages, anyAgent, noFiles, noImages)
+	_, err := plan.New(stages, anyAgent, noFiles, noImages)
 
 	// assert
 	var planErr *imagefile.Error

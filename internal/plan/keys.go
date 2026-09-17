@@ -11,27 +11,6 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
-// Keys are the cache keys of a build, one for each instruction of each
-// stage.
-func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) ([][]string, error) {
-	planned, err := New(stages, agent, context, bases)
-	if err != nil {
-		return nil, err
-	}
-
-	var keys [][]string
-	for _, stage := range planned.Stages {
-		var stageKeys []string
-		for _, step := range stage.Steps {
-			stageKeys = append(stageKeys, step.Key)
-		}
-
-		keys = append(keys, stageKeys)
-	}
-
-	return keys, nil
-}
-
 // planner is one planning run. Nothing else talks to the outside.
 type planner struct {
 	agent   string
