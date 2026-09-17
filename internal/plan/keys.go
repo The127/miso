@@ -12,12 +12,12 @@ import (
 
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
-func Keys(stages []imagefile.Stage) [][]string {
+func Keys(stages []imagefile.Stage, agent string) [][]string {
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
-		parent := stage.Base
+		parent := hashed([]string{agent, stage.Base})
 		for _, instruction := range stage.Instructions {
 			parent = stepKey(parent, instruction, last)
 			stageKeys = append(stageKeys, parent)
@@ -54,7 +54,12 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 		fields = append(fields, "CHECK", step.Command)
 	}
 
-	// the length in front keeps "a b" apart from "a" and "b"
+	return hashed(fields)
+}
+
+// hashed puts the length in front of every field, which keeps "a b" apart
+// from "a" and "b".
+func hashed(fields []string) string {
 	hash := sha256.New()
 	for _, field := range fields {
 		hash.Write([]byte(strconv.Itoa(len(field)) + ":" + field))

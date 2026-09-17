@@ -9,6 +9,8 @@ import (
 	"github.com/The127/miso/internal/plan"
 )
 
+const anyAgent = "agent"
+
 func lastKey(t *testing.T, keys [][]string) string {
 	t.Helper()
 
@@ -25,8 +27,8 @@ func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	nano := parse(t, "FROM scratch\nRUN apt-get install nano\n")
 
 	// act
-	vimKeys := plan.Keys(vim)
-	nanoKeys := plan.Keys(nano)
+	vimKeys := plan.Keys(vim, anyAgent)
+	nanoKeys := plan.Keys(nano, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
@@ -38,8 +40,8 @@ func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
 	upgraded := parse(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
 
 	// act
-	updatedKeys := plan.Keys(updated)
-	upgradedKeys := plan.Keys(upgraded)
+	updatedKeys := plan.Keys(updated, anyAgent)
+	upgradedKeys := plan.Keys(upgraded, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, updatedKeys), lastKey(t, upgradedKeys))
@@ -51,8 +53,8 @@ func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	check := parse(t, "FROM scratch\nCHECK true\n")
 
 	// act
-	runKeys := plan.Keys(run)
-	checkKeys := plan.Keys(check)
+	runKeys := plan.Keys(run, anyAgent)
+	checkKeys := plan.Keys(check, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, runKeys), lastKey(t, checkKeys))
@@ -64,8 +66,8 @@ func TestADifferentBaseChangesTheKeys(t *testing.T) {
 	trixie := parse(t, "FROM debian:trixie\nRUN true\n")
 
 	// act
-	sidKeys := plan.Keys(sid)
-	trixieKeys := plan.Keys(trixie)
+	sidKeys := plan.Keys(sid, anyAgent)
+	trixieKeys := plan.Keys(trixie, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, sidKeys), lastKey(t, trixieKeys))
@@ -77,8 +79,8 @@ func TestAChangedEnvChangesTheKeysAfterIt(t *testing.T) {
 	nano := parse(t, "FROM scratch\nENV EDITOR=nano\nRUN true\n")
 
 	// act
-	vimKeys := plan.Keys(vim)
-	nanoKeys := plan.Keys(nano)
+	vimKeys := plan.Keys(vim, anyAgent)
+	nanoKeys := plan.Keys(nano, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
@@ -90,8 +92,8 @@ func TestAChangedCopyDestinationChangesItsKey(t *testing.T) {
 	srv := parse(t, "FROM scratch\nCOPY motd /srv/\n")
 
 	// act
-	etcKeys := plan.Keys(etc)
-	srvKeys := plan.Keys(srv)
+	etcKeys := plan.Keys(etc, anyAgent)
+	srvKeys := plan.Keys(srv, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, etcKeys), lastKey(t, srvKeys))
@@ -103,8 +105,8 @@ func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
 	two := parse(t, "FROM scratch\nCOPY a b /c\n")
 
 	// act
-	oneKeys := plan.Keys(one)
-	twoKeys := plan.Keys(two)
+	oneKeys := plan.Keys(one, anyAgent)
+	twoKeys := plan.Keys(two, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, oneKeys), lastKey(t, twoKeys))
@@ -116,8 +118,8 @@ func TestAChangedOutputKindChangesItsKey(t *testing.T) {
 	iso := parse(t, "FROM scratch\nOUTPUT iso os.img\n")
 
 	// act
-	diskKeys := plan.Keys(disk)
-	isoKeys := plan.Keys(iso)
+	diskKeys := plan.Keys(disk, anyAgent)
+	isoKeys := plan.Keys(iso, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, diskKeys), lastKey(t, isoKeys))
@@ -129,8 +131,8 @@ func TestAChangedOutputOptionChangesItsKey(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\n")
 
 	// act
-	smallKeys := plan.Keys(small)
-	largeKeys := plan.Keys(large)
+	smallKeys := plan.Keys(small, anyAgent)
+	largeKeys := plan.Keys(large, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -142,8 +144,8 @@ func TestOutputOptionsInADifferentOrderKeepTheKey(t *testing.T) {
 	sizeLast := parse(t, "FROM scratch\nOUTPUT disk os.img --label=root --verity --size=4G\n")
 
 	// act
-	sizeFirstKeys := plan.Keys(sizeFirst)
-	sizeLastKeys := plan.Keys(sizeLast)
+	sizeFirstKeys := plan.Keys(sizeFirst, anyAgent)
+	sizeLastKeys := plan.Keys(sizeLast, anyAgent)
 
 	// assert
 	assert.Equal(t, lastKey(t, sizeFirstKeys), lastKey(t, sizeLastKeys))
@@ -155,8 +157,8 @@ func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
 	nano := parse(t, "FROM debian:sid AS build\nRUN make nano\nFROM scratch\nCOPY --from=build /out /\n")
 
 	// act
-	vimKeys := plan.Keys(vim)
-	nanoKeys := plan.Keys(nano)
+	vimKeys := plan.Keys(vim, anyAgent)
+	nanoKeys := plan.Keys(nano, anyAgent)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
@@ -168,9 +170,21 @@ func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
 	nano := parse(t, "FROM debian:sid\nRUN make nano\nFROM scratch\nCOPY motd /etc/\n")
 
 	// act
-	vimKeys := plan.Keys(vim)
-	nanoKeys := plan.Keys(nano)
+	vimKeys := plan.Keys(vim, anyAgent)
+	nanoKeys := plan.Keys(nano, anyAgent)
 
 	// assert
 	assert.Equal(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
+
+func TestADifferentAgentChangesTheKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nRUN true\n")
+
+	// act
+	oldKeys := plan.Keys(stages, "agent-a")
+	newKeys := plan.Keys(stages, "agent-b")
+
+	// assert
+	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
 }
