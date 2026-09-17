@@ -33,3 +33,17 @@ func TestCopyWithoutADestinationIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: COPY needs a source and a destination")
 }
+
+func TestCopyFromNamesTheStageItCopiesFrom(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid AS build\nFROM scratch\nCOPY --from=build /out/app /usr/bin/\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Copy{From: "build", Sources: []string{"/out/app"}, Destination: "/usr/bin/"},
+	}, stages[1].Instructions)
+}
