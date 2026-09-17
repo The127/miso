@@ -17,6 +17,13 @@ standard systemd formats and leaves the rest to whoever runs the machine.
 - Every commit is DCO signed off: always `git commit -s`. Enforced by the
   commit-msg hook.
 - Work incrementally in small reviewed steps, no big-bang generation.
+- TDD as if you meant it, for all production code. One failing test, call
+  the expected failure before running it, make it pass with code written in
+  the test. Functions and types appear only by extracting that code, and
+  they reach a package only by being moved there. Slower is fine, it is
+  better.
+- A behaviour is one commit: its test together with the code it drove out.
+  Tests never get a commit of their own, and nothing is committed at red.
 - This is the tool itself, not a first cut of it. Never frame plans as
   "v1", versions or phases, and never propose cutting scope to ship sooner.
   Talk about the order of work instead.
