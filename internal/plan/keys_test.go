@@ -59,8 +59,8 @@ func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
 
 func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	// arrange
-	run := parse(t, "FROM scratch\nRUN true\n")
-	check := parse(t, "FROM scratch\nCHECK true\n")
+	run := parse(t, "FROM scratch\nOUTPUT disk os.img\nRUN true\n")
+	check := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK true\n")
 
 	// act
 	runKeys := keys(t, run, anyAgent, noFiles, noImages)
@@ -197,4 +197,16 @@ func TestADifferentAgentChangesTheKeys(t *testing.T) {
 
 	// assert
 	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
+}
+
+func TestAnInvalidBuildFileGetsNoKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nCOPY --from=nope a /b\n")
+
+	// act
+	found, err := plan.Keys(stages, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrUnknownStage)
+	assert.Nil(t, found)
 }
