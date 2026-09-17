@@ -2,6 +2,7 @@ package imagefile
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -19,12 +20,15 @@ func (p *parser) copy(arguments string) error {
 	var from string
 	var paths []string
 	for _, word := range strings.Fields(arguments) {
-		if stage, isFrom := strings.CutPrefix(word, "--from="); isFrom {
-			from = stage
-			continue
+		flag, value, _ := strings.Cut(word, "=")
+		switch {
+		case !strings.HasPrefix(flag, "--"):
+			paths = append(paths, word)
+		case flag == "--from":
+			from = value
+		default:
+			return fmt.Errorf("COPY does not know %s", flag)
 		}
-
-		paths = append(paths, word)
 	}
 
 	if len(paths) < 2 {
