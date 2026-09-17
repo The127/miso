@@ -53,24 +53,32 @@ func (d *Dir) Digest(path string) (string, error) {
 }
 
 func (d *Dir) entry(name string, below string, isDir bool) (string, error) {
-	if isDir {
-		return hashed([]string{below}), nil
+	info, statErr := d.root.Lstat(name)
+
+	var content string
+	var readErr error
+	if !isDir {
+		content, readErr = d.content(name)
 	}
 
-	return d.file(name, below)
-}
-
-func (d *Dir) file(name string, below string) (string, error) {
-	info, statErr := d.root.Lstat(name)
-	content, readErr := d.root.ReadFile(name)
 	if err := errors.Join(statErr, readErr); err != nil {
 		return "", err
 	}
 
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
+
+	return hashed([]string{below, perm, content}), nil
+}
+
+func (d *Dir) content(name string) (string, error) {
+	content, err := d.root.ReadFile(name)
+	if err != nil {
+		return "", err
+	}
+
 	sum := sha256.Sum256(content)
 
-	return hashed([]string{below, perm, hex.EncodeToString(sum[:])}), nil
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // below is a path as seen from the source of the copy. The source's own
