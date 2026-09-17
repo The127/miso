@@ -244,3 +244,16 @@ func TestAStageKeepsItsKeysWhenALaterStageChanges(t *testing.T) {
 	assert.Equal(t, vimKeys[0], nanoKeys[0])
 	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
 }
+
+func TestAChangedCopySourceChangesItsKey(t *testing.T) {
+	// arrange
+	app := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nCOPY --from=build /out/app /usr/bin/\n")
+	tool := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nCOPY --from=build /out/tool /usr/bin/\n")
+
+	// act
+	appKeys := keys(t, app, anyAgent, noFiles, noImages)
+	toolKeys := keys(t, tool, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, appKeys), lastKey(t, toolKeys))
+}
