@@ -61,7 +61,7 @@ func (d *Dir) file(name string) (string, error) {
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 	sum := sha256.Sum256(content)
 
-	return hashed([]string{perm, hex.EncodeToString(sum[:])}), nil
+	return hashed([]string{name, perm, hex.EncodeToString(sum[:])}), nil
 }
 
 // hashed puts the length in front of every field, so that no field can
