@@ -57,12 +57,12 @@ func (p *planner) start(stage imagefile.Stage) (string, error) {
 		return end, nil
 	}
 
-	digests, err := baseDigests(stage, p.bases)
+	digest, err := baseDigest(stage, p.bases)
 	if err != nil {
 		return "", err
 	}
 
-	return baseKey(p.agent, stage.Base, digests), nil
+	return baseKey(p.agent, stage.Base, digest), nil
 }
 
 // stepKeys also hands back where the stage ends, which for a stage without
