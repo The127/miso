@@ -34,5 +34,12 @@ prose:
 vuln:
     go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
+# one-time dev setup after cloning: git hooks
+setup: hooks
+
+# install the git hooks
+hooks:
+    lefthook install
+
 # everything that must pass before a push
 ci: lint prose doccheck build test vuln
