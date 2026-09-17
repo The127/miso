@@ -41,7 +41,7 @@ func (p *parser) read(line sourceLine) error {
 	case "FROM":
 		return p.from(arguments)
 	case "RUN":
-		return p.add("RUN", Run{Command: arguments})
+		return p.run(arguments)
 	case "ENV":
 		return p.env(arguments)
 	default:
