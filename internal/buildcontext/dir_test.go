@@ -210,3 +210,22 @@ func TestAnAddedEmptyDirectoryChangesTheDigest(t *testing.T) {
 	require.NoError(t, withErr)
 	assert.NotEqual(t, withoutDigest, withDigest)
 }
+
+func TestAChangedDirectoryModeChangesTheDigest(t *testing.T) {
+	// arrange
+	private := t.TempDir()
+	mkdir(t, private, "etc/ssl/private")
+	chmod(t, private, "etc/ssl/private", 0o700)
+	public := t.TempDir()
+	mkdir(t, public, "etc/ssl/private")
+	chmod(t, public, "etc/ssl/private", 0o755)
+
+	// act
+	privateDigest, privateErr := open(t, private).Digest("etc")
+	publicDigest, publicErr := open(t, public).Digest("etc")
+
+	// assert
+	require.NoError(t, privateErr)
+	require.NoError(t, publicErr)
+	assert.NotEqual(t, privateDigest, publicDigest)
+}
