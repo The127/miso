@@ -465,3 +465,20 @@ func TestAMovedDirectoryChangesTheDigest(t *testing.T) {
 	require.NoError(t, besideErr)
 	assert.NotEqual(t, nestedDigest, besideDigest)
 }
+
+func TestTheSameTreeUnderANestedSourceKeepsTheDigest(t *testing.T) {
+	// arrange
+	nested := t.TempDir()
+	write(t, nested, "etc/systemd/system.conf", "LogLevel=info")
+	flat := t.TempDir()
+	write(t, flat, "conf/system.conf", "LogLevel=info")
+
+	// act
+	nestedDigest, nestedErr := open(t, nested).Digest("etc/systemd")
+	flatDigest, flatErr := open(t, flat).Digest("conf")
+
+	// assert
+	require.NoError(t, nestedErr)
+	require.NoError(t, flatErr)
+	assert.Equal(t, nestedDigest, flatDigest)
+}
