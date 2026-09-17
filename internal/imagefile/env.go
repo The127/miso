@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+// Env sets a variable for the instructions after it.
+type Env struct {
+	Key   string
+	Value string
+}
+
+func (Env) instruction() {}
+
 var errEnvUsage = errors.New("ENV needs KEY=VALUE")
 
 func (p *parser) env(arguments string) error {
