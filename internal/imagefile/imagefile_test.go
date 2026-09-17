@@ -233,3 +233,14 @@ func TestAnEnvBeforeFromIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 1: ENV before FROM")
 }
+
+func TestAnEnvWithoutVariablesIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nENV\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
+}

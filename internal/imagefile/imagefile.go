@@ -128,11 +128,18 @@ func (p *parser) from(arguments string) error {
 	return nil
 }
 
+var errEnvUsage = errors.New("ENV needs KEY=VALUE")
+
 func (p *parser) env(arguments string) error {
-	for _, assignment := range strings.Fields(arguments) {
+	assignments := strings.Fields(arguments)
+	if len(assignments) == 0 {
+		return errEnvUsage
+	}
+
+	for _, assignment := range assignments {
 		key, value, assigned := strings.Cut(assignment, "=")
 		if !assigned {
-			return errors.New("ENV needs KEY=VALUE")
+			return errEnvUsage
 		}
 
 		if err := p.add("ENV", Env{Key: key, Value: value}); err != nil {
