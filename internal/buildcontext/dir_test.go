@@ -447,3 +447,21 @@ func TestANameDoesNotRunIntoTheMode(t *testing.T) {
 	require.NoError(t, numberedErr)
 	assert.NotEqual(t, setuidDigest, numberedDigest)
 }
+
+func TestAMovedDirectoryChangesTheDigest(t *testing.T) {
+	// arrange
+	nested := t.TempDir()
+	write(t, nested, "usr/lib/systemd/system.conf", "LogLevel=info")
+	beside := t.TempDir()
+	mkdir(t, beside, "usr/lib")
+	write(t, beside, "usr/systemd/system.conf", "LogLevel=info")
+
+	// act
+	nestedDigest, nestedErr := open(t, nested).Digest("usr")
+	besideDigest, besideErr := open(t, beside).Digest("usr")
+
+	// assert
+	require.NoError(t, nestedErr)
+	require.NoError(t, besideErr)
+	assert.NotEqual(t, nestedDigest, besideDigest)
+}
