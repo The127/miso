@@ -10,7 +10,13 @@ type Plan struct {
 // Stage is a stage of a plan.
 type Stage struct {
 	BaseDigest string
-	Keys       []string
+	Steps      []Step
+}
+
+// Step is an instruction with the key of the layer it makes.
+type Step struct {
+	Instruction imagefile.Instruction
+	Key         string
 }
 
 // New plans a build. Nothing is looked up again after it.
