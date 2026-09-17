@@ -31,8 +31,8 @@ func TestAChangedContextFileChangesTheKeyOfItsCopy(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY motd /etc/\n")
 
 	// act
-	helloKeys := keys(t, stages, anyAgent, files{"motd": "hello"})
-	goodbyeKeys := keys(t, stages, anyAgent, files{"motd": "goodbye"})
+	helloKeys := keys(t, stages, anyAgent, files{"motd": "hello"}, noImages)
+	goodbyeKeys := keys(t, stages, anyAgent, files{"motd": "goodbye"}, noImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, helloKeys), lastKey(t, goodbyeKeys))
@@ -43,8 +43,8 @@ func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
 
 	// act
-	withoutKeys := keys(t, stages, anyAgent, noFiles)
-	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"})
+	withoutKeys := keys(t, stages, anyAgent, noFiles, noImages)
+	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"}, noImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
@@ -55,7 +55,7 @@ func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY nope /etc/\n")
 
 	// act
-	_, err := plan.Keys(stages, anyAgent, noFiles)
+	_, err := plan.Keys(stages, anyAgent, noFiles, noImages)
 
 	// assert
 	var planErr *imagefile.Error

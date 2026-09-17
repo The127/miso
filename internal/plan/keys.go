@@ -13,12 +13,12 @@ import (
 
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
-func Keys(stages []imagefile.Stage, agent string, context Context) ([][]string, error) {
+func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) ([][]string, error) {
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
-		parent := hashed([]string{agent, stage.Base})
+		parent := hashed([]string{agent, stage.Base, bases.Digest(stage.Base)})
 		for _, instruction := range stage.Instructions {
 			var err error
 			parent, err = stepKey(parent, instruction, last, context)
