@@ -44,3 +44,14 @@ func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: continuation runs off the end of the file")
 }
+
+func TestAContinuationOntoAnEmptyLineIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN one && \\\n\nRUN two\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: continuation onto an empty line")
+}
