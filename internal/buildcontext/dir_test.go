@@ -371,3 +371,60 @@ func TestAPipeInTheTreeIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, buildcontext.ErrSpecialFile)
 	assert.ErrorContains(t, err, "run/initctl")
 }
+
+func TestASetuidBitChangesTheDigest(t *testing.T) {
+	// arrange
+	plain := t.TempDir()
+	write(t, plain, "sudo", "binary")
+	chmod(t, plain, "sudo", 0o755)
+	setuid := t.TempDir()
+	write(t, setuid, "sudo", "binary")
+	chmod(t, setuid, "sudo", 0o755|os.ModeSetuid)
+
+	// act
+	plainDigest, plainErr := open(t, plain).Digest("sudo")
+	setuidDigest, setuidErr := open(t, setuid).Digest("sudo")
+
+	// assert
+	require.NoError(t, plainErr)
+	require.NoError(t, setuidErr)
+	assert.NotEqual(t, plainDigest, setuidDigest)
+}
+
+func TestASetgidBitChangesTheDigest(t *testing.T) {
+	// arrange
+	plain := t.TempDir()
+	mkdir(t, plain, "var/mail")
+	chmod(t, plain, "var/mail", 0o775)
+	setgid := t.TempDir()
+	mkdir(t, setgid, "var/mail")
+	chmod(t, setgid, "var/mail", 0o775|os.ModeSetgid)
+
+	// act
+	plainDigest, plainErr := open(t, plain).Digest("var")
+	setgidDigest, setgidErr := open(t, setgid).Digest("var")
+
+	// assert
+	require.NoError(t, plainErr)
+	require.NoError(t, setgidErr)
+	assert.NotEqual(t, plainDigest, setgidDigest)
+}
+
+func TestAStickyBitChangesTheDigest(t *testing.T) {
+	// arrange
+	plain := t.TempDir()
+	mkdir(t, plain, "var/tmp")
+	chmod(t, plain, "var/tmp", 0o777)
+	sticky := t.TempDir()
+	mkdir(t, sticky, "var/tmp")
+	chmod(t, sticky, "var/tmp", 0o777|os.ModeSticky)
+
+	// act
+	plainDigest, plainErr := open(t, plain).Digest("var")
+	stickyDigest, stickyErr := open(t, sticky).Digest("var")
+
+	// assert
+	require.NoError(t, plainErr)
+	require.NoError(t, stickyErr)
+	assert.NotEqual(t, plainDigest, stickyDigest)
+}
