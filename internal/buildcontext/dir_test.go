@@ -337,3 +337,22 @@ func TestALinkThatLeadsOutOfTheContextIsRejected(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, buildcontext.ErrOutsideContext)
 }
+
+func TestASourceSpelledAnotherWayKeepsTheDigest(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "etc/motd", "hello")
+	context := open(t, dir)
+
+	// act
+	plain, plainErr := context.Digest("etc")
+	dotted, dottedErr := context.Digest("./etc")
+	slashed, slashedErr := context.Digest("etc/")
+
+	// assert
+	require.NoError(t, plainErr)
+	require.NoError(t, dottedErr)
+	require.NoError(t, slashedErr)
+	assert.Equal(t, plain, dotted)
+	assert.Equal(t, plain, slashed)
+}

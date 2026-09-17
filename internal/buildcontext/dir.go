@@ -57,6 +57,9 @@ func (d *Dir) entries(source string) ([]string, error) {
 		return nil, ErrOutsideContext
 	}
 
+	// the walk takes one spelling of a path only
+	source = filepath.Clean(source)
+
 	info, err := d.root.Lstat(source)
 	if errors.Is(err, d.escapes) {
 		return nil, ErrOutsideContext
