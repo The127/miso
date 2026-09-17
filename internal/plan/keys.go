@@ -18,7 +18,11 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
-		parent := root(agent, stage.Base, bases)
+		parent, onStage := last[stage.Base]
+		if !onStage {
+			parent = root(agent, stage.Base, bases)
+		}
+
 		for _, instruction := range stage.Instructions {
 			var err error
 			parent, err = stepKey(parent, instruction, last, context)
