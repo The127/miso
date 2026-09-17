@@ -83,3 +83,14 @@ func TestAQuotedCopyPathKeepsItsSpaces(t *testing.T) {
 		imagefile.Copy{Sources: []string{"my file.txt"}, Destination: "/srv/"},
 	}, stages[0].Instructions)
 }
+
+func TestAnUnclosedQuoteInCopyIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY \"oops /srv/\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: COPY has an unclosed quote")
+}
