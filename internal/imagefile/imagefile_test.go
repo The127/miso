@@ -196,3 +196,14 @@ func TestEnvKeepsItsPlaceAmongTheRunLines(t *testing.T) {
 		imagefile.Run{Command: "second"},
 	}, stages[0].Instructions)
 }
+
+func TestEnvWithoutAValueIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nENV A\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
+}
