@@ -33,6 +33,8 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 		fields = append(fields, "COPY")
 		fields = append(fields, step.Sources...)
 		fields = append(fields, step.Destination)
+	case imagefile.Output:
+		fields = append(fields, "OUTPUT", step.Kind)
 	case imagefile.Check:
 		fields = append(fields, "CHECK", step.Command)
 	}

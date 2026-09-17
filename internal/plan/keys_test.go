@@ -123,3 +123,18 @@ func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
 	require.Len(t, twoKeys, 1)
 	assert.NotEqual(t, oneKeys[0], twoKeys[0])
 }
+
+func TestAChangedOutputKindChangesItsKey(t *testing.T) {
+	// arrange
+	disk := stage(t, "FROM scratch\nOUTPUT disk os.img\n")
+	iso := stage(t, "FROM scratch\nOUTPUT iso os.img\n")
+
+	// act
+	diskKeys := plan.Keys(disk)
+	isoKeys := plan.Keys(iso)
+
+	// assert
+	require.Len(t, diskKeys, 1)
+	require.Len(t, isoKeys, 1)
+	assert.NotEqual(t, diskKeys[0], isoKeys[0])
+}
