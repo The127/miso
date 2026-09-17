@@ -18,48 +18,60 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 		return nil, err
 	}
 
+	p := &planner{agent: agent, context: context, bases: bases, ends: map[string]string{}}
+	return p.keys(stages)
+}
+
+// planner is one planning run. Nothing else talks to the outside.
+type planner struct {
+	agent   string
+	context Context
+	bases   Bases
+	ends    map[string]string
+}
+
+func (p *planner) keys(stages []imagefile.Stage) ([][]string, error) {
 	var keys [][]string
-	last := map[string]string{}
 	for _, stage := range stages {
-		from, err := start(stage, last, agent, bases)
+		from, err := p.start(stage)
 		if err != nil {
 			return nil, err
 		}
 
-		stageKeys, end, err := stepKeys(from, stage, last, context)
+		stageKeys, end, err := p.stepKeys(from, stage)
 		if err != nil {
 			return nil, err
 		}
 
 		keys = append(keys, stageKeys)
 		if stage.Name != "" {
-			last[stage.Name] = end
+			p.ends[stage.Name] = end
 		}
 	}
 
 	return keys, nil
 }
 
-func start(stage imagefile.Stage, last map[string]string, agent string, bases Bases) (string, error) {
-	if end, onStage := last[stage.Base]; onStage {
+func (p *planner) start(stage imagefile.Stage) (string, error) {
+	if end, onStage := p.ends[stage.Base]; onStage {
 		return end, nil
 	}
 
-	digests, err := baseDigests(stage, bases)
+	digests, err := baseDigests(stage, p.bases)
 	if err != nil {
 		return "", err
 	}
 
-	return baseKey(agent, stage.Base, digests), nil
+	return baseKey(p.agent, stage.Base, digests), nil
 }
 
 // stepKeys also hands back where the stage ends, which for a stage without
 // steps is where it started.
-func stepKeys(from string, stage imagefile.Stage, last map[string]string, context Context) ([]string, string, error) {
+func (p *planner) stepKeys(from string, stage imagefile.Stage) ([]string, string, error) {
 	var keys []string
 	end := from
 	for _, instruction := range stage.Instructions {
-		key, err := stepKey(end, instruction, last, context)
+		key, err := p.stepKey(end, instruction)
 		if err != nil {
 			return nil, "", err
 		}
@@ -74,13 +86,27 @@ func stepKeys(from string, stage imagefile.Stage, last map[string]string, contex
 // stepKey chains a step to its parent, so a change early in a stage reaches
 // every key after it. Words and reads are hashed apart, so that neither
 // list can run into the other.
-func stepKey(parent string, instruction imagefile.Instruction, last map[string]string, context Context) (string, error) {
-	read, err := reads(instruction, last, context)
+func (p *planner) stepKey(parent string, instruction imagefile.Instruction) (string, error) {
+	read, err := p.reads(instruction)
 	if err != nil {
 		return "", err
 	}
 
 	return hashed([]string{parent, hashed(words(instruction)), hashed(read)}), nil
+}
+
+// reads are what a step takes from outside its own stage.
+func (p *planner) reads(instruction imagefile.Instruction) ([]string, error) {
+	step, isCopy := instruction.(imagefile.Copy)
+	if !isCopy {
+		return nil, nil
+	}
+
+	if step.From != "" {
+		return []string{p.ends[step.From]}, nil
+	}
+
+	return contextDigests(step, p.context)
 }
 
 // words are what an instruction says.
@@ -111,20 +137,6 @@ func words(instruction imagefile.Instruction) []string {
 	}
 
 	return found
-}
-
-// reads are what a step takes from outside its own stage.
-func reads(instruction imagefile.Instruction, last map[string]string, context Context) ([]string, error) {
-	step, isCopy := instruction.(imagefile.Copy)
-	if !isCopy {
-		return nil, nil
-	}
-
-	if step.From != "" {
-		return []string{last[step.From]}, nil
-	}
-
-	return contextDigests(step, context)
 }
 
 func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
