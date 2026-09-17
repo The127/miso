@@ -22,3 +22,14 @@ func TestOutputNamesItsKindAndItsFile(t *testing.T) {
 		imagefile.Output{Line: 2, Kind: "image", Name: "os.raw"},
 	}, stages[0].Instructions)
 }
+
+func TestOutputWithoutAFileNameIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nOUTPUT image\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: OUTPUT needs a kind and a file name")
+}
