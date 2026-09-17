@@ -34,22 +34,39 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	var entries []string
-	err := fs.WalkDir(d.root.FS(), path, func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		found, err := d.entry(name, below(path, name), entry.Type())
-		entries = append(entries, found)
-
-		return err
-	})
+	entries, err := d.entries(path)
 	if err != nil {
 		return "", err
 	}
 
 	return hashed(entries), nil
+}
+
+func (d *Dir) entries(source string) ([]string, error) {
+	info, err := d.root.Lstat(source)
+	if err != nil {
+		return nil, err
+	}
+
+	// the walk below would follow a link it starts on
+	if info.Mode()&fs.ModeSymlink != 0 {
+		link, err := d.entry(source, ".", fs.ModeSymlink)
+		return []string{link}, err
+	}
+
+	var entries []string
+	err = fs.WalkDir(d.root.FS(), source, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		found, err := d.entry(name, below(source, name), entry.Type())
+		entries = append(entries, found)
+
+		return err
+	})
+
+	return entries, err
 }
 
 func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error) {

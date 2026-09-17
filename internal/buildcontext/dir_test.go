@@ -291,3 +291,22 @@ func TestADirectoryThatCannotBeReadIsAnError(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, fs.ErrPermission)
 }
+
+func TestALinkAsTheSourceIsNotFollowed(t *testing.T) {
+	// arrange
+	two := t.TempDir()
+	write(t, two, "releases/v2/app", "two")
+	symlink(t, two, "current", "releases/v2")
+	three := t.TempDir()
+	write(t, three, "releases/v2/app", "three")
+	symlink(t, three, "current", "releases/v2")
+
+	// act
+	twoDigest, twoErr := open(t, two).Digest("current")
+	threeDigest, threeErr := open(t, three).Digest("current")
+
+	// assert
+	require.NoError(t, twoErr)
+	require.NoError(t, threeErr)
+	assert.Equal(t, twoDigest, threeDigest)
+}
