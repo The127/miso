@@ -14,6 +14,10 @@ import (
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
 func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) ([][]string, error) {
+	if err := Validate(stages); err != nil {
+		return nil, err
+	}
+
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
