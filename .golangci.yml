@@ -17,11 +17,17 @@ linters:
     - unconvert
     - unparam
     - usestdlibvars
+    - wsl_v5
   settings:
     exhaustive:
       default-signifies-exhaustive: true
     nolintlint:
       require-explanation: true
+    wsl_v5:
+      # house style is one rule: an empty line follows every block
+      default: none
+      enable:
+        - after-block
 
 formatters:
   enable:

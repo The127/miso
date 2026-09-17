@@ -30,6 +30,8 @@ standard systemd formats and leaves the rest to whoever runs the machine.
 - Keep comments short. Never explain what the code does, the code is the
   documentation (it cannot go stale). Comment only the why, and only when
   it is non-obvious.
+- An empty line follows every block (`if`, `for`, `switch`, ...) that is
+  not the last statement of its own block. Enforced by the linter.
 - No em-dashes and no semicolons in prose: documents, comments, and commit
   messages. Semicolons in code only where Go syntax requires them.
 - Package doc comments live in a dedicated `doc.go` per package, never on
