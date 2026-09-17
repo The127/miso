@@ -3,6 +3,8 @@ package plan
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"maps"
+	"slices"
 	"strconv"
 
 	"github.com/The127/miso/internal/imagefile"
@@ -35,8 +37,8 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 		fields = append(fields, step.Destination)
 	case imagefile.Output:
 		fields = append(fields, "OUTPUT", step.Kind)
-		for name, value := range step.Options {
-			fields = append(fields, name, value)
+		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
+			fields = append(fields, name, step.Options[name])
 		}
 	case imagefile.Check:
 		fields = append(fields, "CHECK", step.Command)
