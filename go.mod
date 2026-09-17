@@ -4,6 +4,8 @@ go 1.27
 
 tool github.com/arch-go/arch-go
 
+require github.com/stretchr/testify v1.12.1
+
 require (
 	github.com/arch-go/arch-go v1.7.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -29,6 +31,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
