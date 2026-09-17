@@ -19,6 +19,10 @@ type Dir struct {
 	// the root keeps every path below the directory, also one that tries
 	// to leave it through .. or a symlink
 	root *os.Root
+
+	// what the root says to a path that leaves it. Go does not export that
+	// error, so Open asks for one
+	escapes error
 }
 
 // Open takes the directory a build file sits in as its build context.
@@ -28,7 +32,9 @@ func Open(dir string) (*Dir, error) {
 		return nil, err
 	}
 
-	return &Dir{root: root}, nil
+	_, escapes := root.Lstat("..")
+
+	return &Dir{root: root, escapes: errors.Unwrap(escapes)}, nil
 }
 
 // Close lets go of the directory.
@@ -52,6 +58,10 @@ func (d *Dir) entries(source string) ([]string, error) {
 	}
 
 	info, err := d.root.Lstat(source)
+	if errors.Is(err, d.escapes) {
+		return nil, ErrOutsideContext
+	}
+
 	if err != nil {
 		return nil, err
 	}
