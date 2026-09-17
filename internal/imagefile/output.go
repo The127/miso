@@ -1,6 +1,9 @@
 package imagefile
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 // Output turns the stage into a file of the given kind. Which kinds exist
 // is not the parser's business.
@@ -14,6 +17,10 @@ func (Output) instruction() {}
 
 func readOutput(line int, arguments string) ([]Instruction, error) {
 	fields := strings.Fields(arguments)
+	if len(fields) < 2 {
+		return nil, errors.New("needs a kind and a file name")
+	}
+
 	kind, name := fields[0], fields[1]
 	return []Instruction{Output{Line: line, Kind: kind, Name: name}}, nil
 }
