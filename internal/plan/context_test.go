@@ -43,8 +43,8 @@ func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
 
 	// act
-	withoutKeys := keys(t, stages, anyAgent, noFiles, noImages)
-	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"}, noImages)
+	withoutKeys := keys(t, stages, anyAgent, noFiles, debianImages)
+	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"}, debianImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
