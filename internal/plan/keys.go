@@ -44,7 +44,10 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	case imagefile.Copy:
 		fields = append(fields, "COPY", last[step.From])
 		for _, source := range step.Sources {
-			fields = append(fields, source, context.Digest(source))
+			fields = append(fields, source)
+			if step.From == "" {
+				fields = append(fields, context.Digest(source))
+			}
 		}
 
 		fields = append(fields, step.Destination)
