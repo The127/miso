@@ -7,6 +7,11 @@ pre-commit:
       run: just prose
     - name: doc comment check
       run: just doccheck
+    - name: architecture check
+      glob:
+        - "**/*.go"
+        - "arch-go.yml"
+      run: just arch
 
 commit-msg:
   jobs:

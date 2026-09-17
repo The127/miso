@@ -22,6 +22,14 @@ lint:
 fmt:
     golangci-lint fmt ./...
 
+# check the package dependency rules in arch-go.yml
+arch:
+    go tool arch-go
+
+# describe the package dependency rules in prose
+arch-describe:
+    go tool arch-go describe
+
 # check that package doc comments live in doc.go
 doccheck:
     bash hack/check-doc-comments.sh
@@ -42,4 +50,4 @@ hooks:
     lefthook install
 
 # everything that must pass before a push
-ci: lint prose doccheck build test vuln
+ci: lint prose doccheck arch build test vuln
