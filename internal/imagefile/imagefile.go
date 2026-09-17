@@ -16,6 +16,9 @@ type Stage struct {
 func Parse(source string) ([]Stage, error) {
 	var stages []Stage
 	for i, line := range strings.Split(source, "\n") {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
 		keyword, rest, _ := strings.Cut(line, " ")
 		switch keyword {
 		case "FROM":

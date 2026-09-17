@@ -81,3 +81,17 @@ func TestAnUnknownInstructionIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: unknown instruction BOGUS")
 }
+
+func TestCommentLinesAreIgnored(t *testing.T) {
+	// arrange
+	source := "# the base\nFROM debian:sid\n#RUN disabled\nRUN true\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Stage{
+		{Base: "debian:sid", Commands: []string{"true"}},
+	}, stages)
+}
