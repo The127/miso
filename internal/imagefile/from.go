@@ -5,20 +5,18 @@ import (
 	"strings"
 )
 
-func (p *parser) from(arguments string) error {
-	words := strings.Fields(arguments)
-	named := len(words) == 3 && strings.EqualFold(words[1], "AS")
+func readFrom(line int, arguments string) (Stage, error) {
+	fields := strings.Fields(arguments)
+	named := len(fields) == 3 && strings.EqualFold(fields[1], "AS")
 
 	switch {
-	case len(words) == 0:
-		return errors.New("FROM needs a base")
-	case len(words) == 1:
-		p.stages = append(p.stages, Stage{Line: p.line, Base: words[0]})
+	case len(fields) == 0:
+		return Stage{}, errors.New("needs a base")
+	case len(fields) == 1:
+		return Stage{Line: line, Base: fields[0]}, nil
 	case named:
-		p.stages = append(p.stages, Stage{Line: p.line, Base: words[0], Name: words[2]})
+		return Stage{Line: line, Base: fields[0], Name: fields[2]}, nil
 	default:
-		return errors.New("FROM takes a base and an optional AS name")
+		return Stage{}, errors.New("takes a base and an optional AS name")
 	}
-
-	return nil
 }

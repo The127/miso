@@ -17,33 +17,33 @@ type Copy struct {
 
 func (Copy) instruction() {}
 
-func (p *parser) copy(arguments string) error {
-	var from string
-	var paths []string
-	found, closed := words(arguments)
-	if !closed {
-		return errors.New("COPY has an unclosed quote")
+func readCopy(line int, arguments string) ([]Instruction, error) {
+	found, err := words(arguments)
+	if err != nil {
+		return nil, err
 	}
 
+	var from string
+	var paths []string
 	for _, word := range found {
 		flag, value, _ := strings.Cut(word, "=")
 		switch {
 		case !strings.HasPrefix(flag, "--"):
 			paths = append(paths, word)
 		case flag == "--from" && value == "":
-			return errors.New("COPY --from needs a stage")
+			return nil, errors.New("--from needs a stage")
 		case flag == "--from":
 			from = value
 		default:
-			return fmt.Errorf("COPY does not know %s", flag)
+			return nil, fmt.Errorf("does not know %s", flag)
 		}
 	}
 
 	if len(paths) < 2 {
-		return errors.New("COPY needs a source and a destination")
+		return nil, errors.New("needs a source and a destination")
 	}
 
 	sources := paths[:len(paths)-1]
 	destination := paths[len(paths)-1]
-	return p.add("COPY", Copy{Line: p.line, From: from, Sources: sources, Destination: destination})
+	return []Instruction{Copy{Line: line, From: from, Sources: sources, Destination: destination}}, nil
 }

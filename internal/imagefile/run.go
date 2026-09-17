@@ -8,6 +8,6 @@ type Run struct {
 
 func (Run) instruction() {}
 
-func (p *parser) run(arguments string) error {
-	return p.add("RUN", Run{Line: p.line, Command: arguments})
+func readRun(line int, arguments string) ([]Instruction, error) {
+	return []Instruction{Run{Line: line, Command: arguments}}, nil
 }

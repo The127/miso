@@ -1,11 +1,14 @@
 package imagefile
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 // words splits text at spaces and tabs. A double quote keeps the spaces up
-// to the next one, the quotes themselves are dropped. It reports whether
-// every quote was closed.
-func words(text string) (found []string, closed bool) {
+// to the next one, the quotes themselves are dropped.
+func words(text string) ([]string, error) {
+	var found []string
 	var word strings.Builder
 	quoted := false
 	flush := func() {
@@ -27,5 +30,9 @@ func words(text string) (found []string, closed bool) {
 	}
 
 	flush()
-	return found, !quoted
+	if quoted {
+		return nil, errors.New("has an unclosed quote")
+	}
+
+	return found, nil
 }
