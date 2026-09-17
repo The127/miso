@@ -19,7 +19,7 @@ func TestCopyNamesItsSourcesAndItsDestination(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Copy{Sources: []string{"go.mod", "go.sum"}, Destination: "/src/"},
+		imagefile.Copy{Line: 2, Sources: []string{"go.mod", "go.sum"}, Destination: "/src/"},
 	}, stages[0].Instructions)
 }
 
@@ -44,7 +44,7 @@ func TestCopyFromNamesTheStageItCopiesFrom(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Copy{From: "build", Sources: []string{"/out/app"}, Destination: "/usr/bin/"},
+		imagefile.Copy{Line: 3, From: "build", Sources: []string{"/out/app"}, Destination: "/usr/bin/"},
 	}, stages[1].Instructions)
 }
 
@@ -80,7 +80,7 @@ func TestAQuotedCopyPathKeepsItsSpaces(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Copy{Sources: []string{"my file.txt"}, Destination: "/srv/"},
+		imagefile.Copy{Line: 2, Sources: []string{"my file.txt"}, Destination: "/srv/"},
 	}, stages[0].Instructions)
 }
 

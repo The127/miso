@@ -19,7 +19,7 @@ func TestABackslashContinuesTheInstructionOnTheNextLine(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Run{Command: "apt-get update &&     apt-get install -y vim"},
+		imagefile.Run{Line: 2, Command: "apt-get update &&     apt-get install -y vim"},
 	}, stages[0].Instructions)
 }
 

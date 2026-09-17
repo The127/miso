@@ -19,9 +19,9 @@ func TestEnvKeepsItsPlaceAmongTheRunLines(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Run{Command: "first"},
-		imagefile.Env{Key: "A", Value: "1"},
-		imagefile.Run{Command: "second"},
+		imagefile.Run{Line: 2, Command: "first"},
+		imagefile.Env{Line: 3, Key: "A", Value: "1"},
+		imagefile.Run{Line: 4, Command: "second"},
 	}, stages[0].Instructions)
 }
 
@@ -46,8 +46,8 @@ func TestEnvTakesSeveralVariablesOnOneLine(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Env{Key: "A", Value: "1"},
-		imagefile.Env{Key: "B", Value: "2"},
+		imagefile.Env{Line: 2, Key: "A", Value: "1"},
+		imagefile.Env{Line: 2, Key: "B", Value: "2"},
 	}, stages[0].Instructions)
 }
 
@@ -83,8 +83,8 @@ func TestAQuotedEnvValueKeepsItsSpaces(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Env{Key: "MOTD", Value: "hello world"},
-		imagefile.Env{Key: "B", Value: "2"},
+		imagefile.Env{Line: 2, Key: "MOTD", Value: "hello world"},
+		imagefile.Env{Line: 2, Key: "B", Value: "2"},
 	}, stages[0].Instructions)
 }
 

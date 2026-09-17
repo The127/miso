@@ -9,6 +9,7 @@ import (
 // Copy puts files into the image. They come from the build context, or
 // from the stage named by From.
 type Copy struct {
+	Line        int
 	From        string
 	Sources     []string
 	Destination string
@@ -44,5 +45,5 @@ func (p *parser) copy(arguments string) error {
 
 	sources := paths[:len(paths)-1]
 	destination := paths[len(paths)-1]
-	return p.add("COPY", Copy{From: from, Sources: sources, Destination: destination})
+	return p.add("COPY", Copy{Line: p.line, From: from, Sources: sources, Destination: destination})
 }

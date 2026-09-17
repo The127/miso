@@ -19,6 +19,6 @@ func TestRunKeepsItsCommandVerbatim(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Run{Command: "echo  'a  b' > /etc/motd"},
+		imagefile.Run{Line: 2, Command: "echo  'a  b' > /etc/motd"},
 	}, stages[0].Instructions)
 }

@@ -24,9 +24,11 @@ func Parse(source string) ([]Stage, error) {
 
 type parser struct {
 	stages []Stage
+	line   int
 }
 
 func (p *parser) read(line sourceLine) error {
+	p.line = line.number
 	if line.problem != nil {
 		return line.problem
 	}

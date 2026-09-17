@@ -2,6 +2,7 @@ package imagefile
 
 // Stage is a FROM line and the instructions that follow it.
 type Stage struct {
+	Line         int
 	Name         string
 	Base         string
 	Instructions []Instruction

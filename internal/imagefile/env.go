@@ -7,6 +7,7 @@ import (
 
 // Env sets a variable for the instructions after it.
 type Env struct {
+	Line  int
 	Key   string
 	Value string
 }
@@ -31,7 +32,7 @@ func (p *parser) env(arguments string) error {
 			return errEnvUsage
 		}
 
-		if err := p.add("ENV", Env{Key: key, Value: value}); err != nil {
+		if err := p.add("ENV", Env{Line: p.line, Key: key, Value: value}); err != nil {
 			return err
 		}
 	}
