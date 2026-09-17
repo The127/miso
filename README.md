@@ -36,6 +36,10 @@ AI-assisted contributions need to follow these rules:
 - **Review it yourself, before pushing.** Submit only code you have read,
   understood, and could explain and defend in review as your own.
 
+## Security
+
+Please report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
+
 ## Development setup
 
 Required tooling:
