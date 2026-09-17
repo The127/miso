@@ -151,3 +151,14 @@ func TestLineNumbersStayTrueAfterAContinuation(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 4: unknown instruction BOGUS")
 }
+
+func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN one && \\\n    two && \\\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: continuation runs off the end of the file")
+}
