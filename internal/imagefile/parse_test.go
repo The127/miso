@@ -84,3 +84,17 @@ func TestIndentationBeforeAnInstructionIsIgnored(t *testing.T) {
 		imagefile.Run{Command: "true"},
 	}, stages[0].Instructions)
 }
+
+func TestKeywordsMayBeLowercase(t *testing.T) {
+	// arrange
+	source := "from debian:sid as build\nrun true\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Stage{
+		{Name: "build", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "true"}}},
+	}, stages)
+}
