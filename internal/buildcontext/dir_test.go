@@ -117,3 +117,20 @@ func TestAChangedModificationTimeKeepsTheDigest(t *testing.T) {
 	require.NoError(t, recentErr)
 	assert.Equal(t, oldDigest, recentDigest)
 }
+
+func TestAFileThatCannotBeReadIsAnError(t *testing.T) {
+	// arrange
+	if os.Geteuid() == 0 {
+		t.Skip("root reads every file")
+	}
+
+	dir := t.TempDir()
+	write(t, dir, "shadow", "secret")
+	chmod(t, dir, "shadow", 0o000)
+
+	// act
+	_, err := open(t, dir).Digest("shadow")
+
+	// assert
+	assert.ErrorIs(t, err, fs.ErrPermission)
+}
