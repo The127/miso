@@ -61,7 +61,7 @@ func (p *parser) read(line sourceLine) error {
 	}
 
 	if len(p.stages) == 0 {
-		return fmt.Errorf("%s before FROM", keyword)
+		return fmt.Errorf("%s %w", keyword, ErrBeforeFrom)
 	}
 
 	instructions, err := read(line.number, arguments)
