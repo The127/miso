@@ -22,3 +22,15 @@ func TestRunKeepsItsCommandVerbatim(t *testing.T) {
 		imagefile.Run{Line: 2, Command: "echo  'a  b' > /etc/motd"},
 	}, stages[0].Instructions)
 }
+
+func TestRunWithoutACommandIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "needs a command")
+}
