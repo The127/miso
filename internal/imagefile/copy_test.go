@@ -22,3 +22,14 @@ func TestCopyNamesItsSourcesAndItsDestination(t *testing.T) {
 		imagefile.Copy{Sources: []string{"go.mod", "go.sum"}, Destination: "/src/"},
 	}, stages[0].Instructions)
 }
+
+func TestCopyWithoutADestinationIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY onlyone\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: COPY needs a source and a destination")
+}
