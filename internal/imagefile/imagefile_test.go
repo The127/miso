@@ -106,3 +106,14 @@ func TestAFileWithoutFromIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "no FROM instruction")
 }
+
+func TestFromWithoutABaseIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 1: FROM needs a base")
+}
