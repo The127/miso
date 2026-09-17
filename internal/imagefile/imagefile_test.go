@@ -162,3 +162,15 @@ func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: continuation runs off the end of the file")
 }
+
+func TestIndentationBeforeAnInstructionIsIgnored(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\n    RUN true\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"true"}, stages[0].Commands)
+}

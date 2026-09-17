@@ -73,11 +73,12 @@ func (p *parser) read(line sourceLine) error {
 		return errors.New("continuation runs off the end of the file")
 	}
 
-	if line.text == "" || strings.HasPrefix(line.text, "#") {
+	text := strings.TrimLeft(line.text, " \t")
+	if text == "" || strings.HasPrefix(text, "#") {
 		return nil
 	}
 
-	keyword, arguments, _ := strings.Cut(line.text, " ")
+	keyword, arguments, _ := strings.Cut(text, " ")
 	switch keyword {
 	case "FROM":
 		return p.from(arguments)
