@@ -155,3 +155,16 @@ func TestAChangedCheckChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
 }
+
+func TestACopyOfAChangedOutputGetsADifferentKey(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT portable vmhost.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT portable vmhost.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}
