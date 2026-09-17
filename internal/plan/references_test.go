@@ -41,3 +41,16 @@ func TestCopyFromAnEarlierStageIsAccepted(t *testing.T) {
 	// assert
 	assert.NoError(t, err)
 }
+
+func TestAPlanErrorKnowsItsLine(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nRUN true\nCOPY --from=nope a /b\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	var planErr *imagefile.Error
+	require.ErrorAs(t, err, &planErr)
+	assert.Equal(t, 3, planErr.Line)
+}

@@ -17,7 +17,10 @@ func Validate(stages []imagefile.Stage) error {
 		for _, instruction := range stage.Instructions {
 			copied, isCopy := instruction.(imagefile.Copy)
 			if isCopy && copied.From != "" && !known[copied.From] {
-				return fmt.Errorf("COPY --from=%s: %w", copied.From, ErrUnknownStage)
+				return &imagefile.Error{
+					Line: copied.Line,
+					Err:  fmt.Errorf("COPY --from=%s: %w", copied.From, ErrUnknownStage),
+				}
 			}
 		}
 
