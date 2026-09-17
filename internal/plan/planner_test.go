@@ -142,3 +142,16 @@ func TestAChangedEarlierOutputChangesTheKeyOfTheCheck(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
 }
+
+func TestAChangedCheckChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
+	// arrange
+	running := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK systemctl is-system-running\nCHECK test -e /etc/motd\n")
+	degraded := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK systemctl --failed\nCHECK test -e /etc/motd\n")
+
+	// act
+	runningKeys := keys(t, running, anyAgent, noFiles, noImages)
+	degradedKeys := keys(t, degraded, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
+}
