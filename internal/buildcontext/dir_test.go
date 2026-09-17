@@ -2,6 +2,7 @@ package buildcontext_test
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -19,6 +20,12 @@ func open(t *testing.T, dir string) *buildcontext.Dir {
 	t.Cleanup(func() { assert.NoError(t, context.Close()) })
 
 	return context
+}
+
+func write(t *testing.T, dir string, name string, content string) {
+	t.Helper()
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 }
 
 func TestABuildContextThatIsNotThereCannotBeOpened(t *testing.T) {
@@ -41,4 +48,21 @@ func TestAMissingPathDoesNotExist(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, fs.ErrNotExist)
+}
+
+func TestAChangedFileContentChangesTheDigest(t *testing.T) {
+	// arrange
+	hello := t.TempDir()
+	write(t, hello, "motd", "hello")
+	goodbye := t.TempDir()
+	write(t, goodbye, "motd", "goodbye")
+
+	// act
+	helloDigest, helloErr := open(t, hello).Digest("motd")
+	goodbyeDigest, goodbyeErr := open(t, goodbye).Digest("motd")
+
+	// assert
+	require.NoError(t, helloErr)
+	require.NoError(t, goodbyeErr)
+	assert.NotEqual(t, helloDigest, goodbyeDigest)
 }
