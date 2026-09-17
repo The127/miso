@@ -43,6 +43,10 @@ func readOutput(line int, arguments string) ([]Instruction, error) {
 		return nil, errors.New("needs a kind and a file name")
 	}
 
+	if len(fields) > 2 {
+		return nil, errors.New("takes a kind, a file name and options")
+	}
+
 	kind, name := fields[0], fields[1]
 	return []Instruction{Output{Line: line, Kind: kind, Name: name, Options: options}}, nil
 }
