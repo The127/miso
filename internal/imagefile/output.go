@@ -32,6 +32,10 @@ func readOutput(line int, arguments string) ([]Instruction, error) {
 		}
 
 		name, value, _ := strings.Cut(option, "=")
+		if name == "" {
+			return nil, errors.New("has an option without a name")
+		}
+
 		if _, twice := options[name]; twice {
 			return nil, fmt.Errorf("has --%s twice", name)
 		}
