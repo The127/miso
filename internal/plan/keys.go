@@ -45,7 +45,12 @@ func start(stage imagefile.Stage, last map[string]string, agent string, bases Ba
 		return end, nil
 	}
 
-	return baseKey(agent, stage, bases)
+	digests, err := baseDigests(stage, bases)
+	if err != nil {
+		return "", err
+	}
+
+	return baseKey(agent, stage.Base, digests), nil
 }
 
 // stepKeys also hands back where the stage ends, which for a stage without
