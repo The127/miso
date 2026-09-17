@@ -124,3 +124,17 @@ func TestAPlannedCheckWasBuiltOnTheOutputsBeforeIt(t *testing.T) {
 	require.Len(t, steps, 3)
 	assert.Equal(t, []string{steps[0].Key, steps[1].Key}, steps[2].BuiltOn)
 }
+
+func TestAPlannedStageKeepsItsNameAndItsBase(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS build\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 1)
+	assert.Equal(t, "build", planned.Stages[0].Name)
+	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
+}

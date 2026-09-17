@@ -9,6 +9,8 @@ type Plan struct {
 
 // Stage is a stage of a plan.
 type Stage struct {
+	Name       string
+	Base       string
 	BaseDigest string
 	Steps      []Step
 }
