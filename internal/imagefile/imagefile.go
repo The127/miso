@@ -16,7 +16,9 @@ type Stage struct {
 // Parse reads a build file into its stages, in order.
 func Parse(source string) ([]Stage, error) {
 	var p parser
-	for i, line := range strings.Split(source, "\n") {
+
+	joined := strings.ReplaceAll(source, "\\\n", "")
+	for i, line := range strings.Split(joined, "\n") {
 		if err := p.read(line); err != nil {
 			return nil, fmt.Errorf("line %d: %w", i+1, err)
 		}
