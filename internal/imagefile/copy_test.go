@@ -58,3 +58,14 @@ func TestCopyWithAnUnknownFlagIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: COPY does not know --frm")
 }
+
+func TestCopyFromWithoutAStageIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY --from= a b\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: COPY --from needs a stage")
+}
