@@ -1,0 +1,24 @@
+package imagefile_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/imagefile"
+)
+
+func TestRunKeepsItsCommandVerbatim(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN echo  'a  b' > /etc/motd\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Command: "echo  'a  b' > /etc/motd"},
+	}, stages[0].Instructions)
+}
