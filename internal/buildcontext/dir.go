@@ -3,7 +3,9 @@ package buildcontext
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
+	"strconv"
 )
 
 // Dir is a build context, a directory on the host.
@@ -30,11 +32,24 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	content, err := d.root.ReadFile(path)
-	if err != nil {
+	info, statErr := d.root.Lstat(path)
+	content, readErr := d.root.ReadFile(path)
+	if err := errors.Join(statErr, readErr); err != nil {
 		return "", err
 	}
 
+	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 	sum := sha256.Sum256(content)
-	return hex.EncodeToString(sum[:]), nil
+	return hashed([]string{perm, hex.EncodeToString(sum[:])}), nil
+}
+
+// hashed puts the length in front of every field, so that no field can
+// run into the next.
+func hashed(fields []string) string {
+	hash := sha256.New()
+	for _, field := range fields {
+		hash.Write([]byte(strconv.Itoa(len(field)) + ":" + field))
+	}
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
