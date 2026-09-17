@@ -128,3 +128,15 @@ func TestFromWithStrayWordsIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 1: FROM takes a base and an optional AS name")
 }
+
+func TestABackslashContinuesTheInstructionOnTheNextLine(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN apt-get update && \\\n    apt-get install -y vim\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"apt-get update &&     apt-get install -y vim"}, stages[0].Commands)
+}
