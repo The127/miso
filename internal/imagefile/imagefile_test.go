@@ -140,3 +140,14 @@ func TestABackslashContinuesTheInstructionOnTheNextLine(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"apt-get update &&     apt-get install -y vim"}, stages[0].Commands)
 }
+
+func TestLineNumbersStayTrueAfterAContinuation(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN true && \\\n    true\nBOGUS\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 4: unknown instruction BOGUS")
+}
