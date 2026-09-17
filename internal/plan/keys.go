@@ -72,40 +72,62 @@ func stepKeys(from string, stage imagefile.Stage, last map[string]string, contex
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
-// every key after it.
+// every key after it. Words and reads are hashed apart, so that neither
+// list can run into the other.
 func stepKey(parent string, instruction imagefile.Instruction, last map[string]string, context Context) (string, error) {
-	fields := []string{parent}
-	switch step := instruction.(type) {
-	case imagefile.Run:
-		fields = append(fields, "RUN", step.Command)
-	case imagefile.Env:
-		fields = append(fields, "ENV", step.Key, step.Value)
-	case imagefile.Copy:
-		digests, err := contextDigests(step, context)
-		if err != nil {
-			return "", err
-		}
-
-		fields = append(fields, copyFields(step, last[step.From], digests)...)
-	case imagefile.Output:
-		fields = append(fields, "OUTPUT", step.Kind)
-		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
-			fields = append(fields, name, step.Options[name])
-		}
-	case imagefile.Check:
-		fields = append(fields, "CHECK", step.Command)
+	read, err := reads(instruction, last, context)
+	if err != nil {
+		return "", err
 	}
 
-	return hashed(fields), nil
+	return hashed([]string{parent, hashed(words(instruction)), hashed(read)}), nil
 }
 
-// contextDigests are empty for a copy from a stage, that stage's key
-// already covers its files.
-func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
-	if step.From != "" {
+// words are what an instruction says.
+func words(instruction imagefile.Instruction) []string {
+	var found []string
+	switch step := instruction.(type) {
+	case imagefile.Run:
+		found = []string{"RUN", step.Command}
+	case imagefile.Env:
+		found = []string{"ENV", step.Key, step.Value}
+	case imagefile.Copy:
+		// the stage's name stays out, its key is among the reads, so a
+		// renamed stage keeps its cache
+		found = []string{"COPY"}
+		if step.From != "" {
+			found = append(found, "--from")
+		}
+
+		found = append(found, step.Sources...)
+		found = append(found, step.Destination)
+	case imagefile.Output:
+		found = []string{"OUTPUT", step.Kind}
+		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
+			found = append(found, name, step.Options[name])
+		}
+	case imagefile.Check:
+		found = []string{"CHECK", step.Command}
+	}
+
+	return found
+}
+
+// reads are what a step takes from outside its own stage.
+func reads(instruction imagefile.Instruction, last map[string]string, context Context) ([]string, error) {
+	step, isCopy := instruction.(imagefile.Copy)
+	if !isCopy {
 		return nil, nil
 	}
 
+	if step.From != "" {
+		return []string{last[step.From]}, nil
+	}
+
+	return contextDigests(step, context)
+}
+
+func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
 	var digests []string
 	for _, source := range step.Sources {
 		digest, err := context.Digest(source)
@@ -117,18 +139,6 @@ func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
 	}
 
 	return digests, nil
-}
-
-func copyFields(step imagefile.Copy, fromKey string, digests []string) []string {
-	fields := []string{"COPY", fromKey}
-	for i, source := range step.Sources {
-		fields = append(fields, source)
-		if i < len(digests) {
-			fields = append(fields, digests[i])
-		}
-	}
-
-	return append(fields, step.Destination)
 }
 
 // hashed puts the length in front of every field, which keeps "a b" apart
