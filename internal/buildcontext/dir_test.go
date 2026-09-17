@@ -428,3 +428,22 @@ func TestAStickyBitChangesTheDigest(t *testing.T) {
 	require.NoError(t, stickyErr)
 	assert.NotEqual(t, plainDigest, stickyDigest)
 }
+
+func TestANameDoesNotRunIntoTheMode(t *testing.T) {
+	// arrange
+	setuid := t.TempDir()
+	write(t, setuid, "bin/sudo", "binary")
+	chmod(t, setuid, "bin/sudo", 0o755|os.ModeSetuid)
+	numbered := t.TempDir()
+	write(t, numbered, "bin/sudo4", "binary")
+	chmod(t, numbered, "bin/sudo4", 0o755)
+
+	// act
+	setuidDigest, setuidErr := open(t, setuid).Digest("bin")
+	numberedDigest, numberedErr := open(t, numbered).Digest("bin")
+
+	// assert
+	require.NoError(t, setuidErr)
+	require.NoError(t, numberedErr)
+	assert.NotEqual(t, setuidDigest, numberedDigest)
+}
