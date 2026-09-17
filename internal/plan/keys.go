@@ -26,6 +26,8 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 	switch step := instruction.(type) {
 	case imagefile.Run:
 		kind, text = "RUN", step.Command
+	case imagefile.Env:
+		kind, text = "ENV", step.Key+"="+step.Value
 	case imagefile.Check:
 		kind, text = "CHECK", step.Command
 	}
