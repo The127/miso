@@ -1,3 +1,3 @@
 package plan
 
-var RunKey = runKey
+var StepKey = stepKey
