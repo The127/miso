@@ -33,6 +33,7 @@ func TestAnInstructionBeforeFromIsRejected(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "line 1: RUN before FROM")
+	assert.ErrorIs(t, err, imagefile.ErrBeforeFrom)
 }
 
 func TestAnUnknownInstructionIsRejected(t *testing.T) {
