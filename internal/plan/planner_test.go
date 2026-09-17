@@ -116,3 +116,16 @@ func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
 	// assert
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
 }
+
+func TestAChangedOutputChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nCHECK true\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nCHECK true\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}
