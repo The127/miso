@@ -30,6 +30,12 @@ func write(t *testing.T, dir string, name string, content string) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 }
 
+func mkdir(t *testing.T, dir string, name string) {
+	t.Helper()
+
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, name), 0o750))
+}
+
 func chmod(t *testing.T, dir string, name string, mode os.FileMode) {
 	t.Helper()
 
@@ -185,4 +191,22 @@ func TestTheSameTreeUnderAnotherNameKeepsTheDigest(t *testing.T) {
 	require.NoError(t, etcErr)
 	require.NoError(t, configErr)
 	assert.Equal(t, etcDigest, configDigest)
+}
+
+func TestAnAddedEmptyDirectoryChangesTheDigest(t *testing.T) {
+	// arrange
+	without := t.TempDir()
+	write(t, without, "etc/motd", "hello")
+	with := t.TempDir()
+	write(t, with, "etc/motd", "hello")
+	mkdir(t, with, "etc/cron.d")
+
+	// act
+	withoutDigest, withoutErr := open(t, without).Digest("etc")
+	withDigest, withErr := open(t, with).Digest("etc")
+
+	// assert
+	require.NoError(t, withoutErr)
+	require.NoError(t, withErr)
+	assert.NotEqual(t, withoutDigest, withDigest)
 }
