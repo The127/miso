@@ -63,3 +63,14 @@ func TestOutputWithTheSameOptionTwiceIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: OUTPUT has --size twice")
 }
+
+func TestOutputWithStrayWordsIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nOUTPUT image os.raw extra\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: OUTPUT takes a kind, a file name and options")
+}
