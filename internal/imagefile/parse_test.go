@@ -19,8 +19,8 @@ func TestInstructionsBelongToTheStageTheyFollow(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Stage{
-		{Name: "one", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "first"}}},
-		{Name: "two", Base: "one", Instructions: []imagefile.Instruction{imagefile.Run{Command: "second"}}},
+		{Line: 1, Name: "one", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Line: 2, Command: "first"}}},
+		{Line: 3, Name: "two", Base: "one", Instructions: []imagefile.Instruction{imagefile.Run{Line: 4, Command: "second"}}},
 	}, stages)
 }
 
@@ -56,7 +56,7 @@ func TestCommentLinesAreIgnored(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Stage{
-		{Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "true"}}},
+		{Line: 2, Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Line: 4, Command: "true"}}},
 	}, stages)
 }
 
@@ -81,7 +81,7 @@ func TestIndentationBeforeAnInstructionIsIgnored(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Instruction{
-		imagefile.Run{Command: "true"},
+		imagefile.Run{Line: 2, Command: "true"},
 	}, stages[0].Instructions)
 }
 
@@ -95,6 +95,24 @@ func TestKeywordsMayBeLowercase(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Stage{
-		{Name: "build", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "true"}}},
+		{Line: 1, Name: "build", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Line: 2, Command: "true"}}},
+	}, stages)
+}
+
+func TestEveryInstructionRemembersTheLineItStartsOn(t *testing.T) {
+	// arrange
+	source := "# a comment\nFROM debian:sid\nRUN one && \\\n    two\nENV A=1\nCOPY a /b\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Stage{
+		{Line: 2, Base: "debian:sid", Instructions: []imagefile.Instruction{
+			imagefile.Run{Line: 3, Command: "one &&     two"},
+			imagefile.Env{Line: 5, Key: "A", Value: "1"},
+			imagefile.Copy{Line: 6, Sources: []string{"a"}, Destination: "/b"},
+		}},
 	}, stages)
 }
