@@ -42,6 +42,7 @@ func TestFromWithoutABaseIsRejected(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "line 1: FROM needs a base")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
 }
 
 func TestFromWithStrayWordsIsRejected(t *testing.T) {

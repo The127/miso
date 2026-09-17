@@ -65,7 +65,7 @@ func (p *parser) read(line sourceLine) error {
 
 	instructions, err := read(line.number, arguments)
 	if err != nil {
-		return fmt.Errorf("%s %w", keyword, err)
+		return &argumentsError{keyword: keyword, complaint: err}
 	}
 
 	stage := &p.stages[len(p.stages)-1]
@@ -76,7 +76,7 @@ func (p *parser) read(line sourceLine) error {
 func (p *parser) open(line int, arguments string) error {
 	stage, err := readFrom(line, arguments)
 	if err != nil {
-		return fmt.Errorf("FROM %w", err)
+		return &argumentsError{keyword: "FROM", complaint: err}
 	}
 
 	p.stages = append(p.stages, stage)

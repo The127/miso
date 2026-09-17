@@ -17,6 +17,9 @@ var (
 
 	// ErrContinuation is a backslash with no line to continue on.
 	ErrContinuation = errors.New("continuation")
+
+	// ErrArguments is a known instruction with arguments it cannot take.
+	ErrArguments = errors.New("bad arguments")
 )
 
 // Error is a problem in a build file, at a line.
@@ -31,4 +34,18 @@ func (e *Error) Error() string {
 
 func (e *Error) Unwrap() error {
 	return e.Err
+}
+
+// argumentsError is what a reader objects to, said after its keyword.
+type argumentsError struct {
+	keyword   string
+	complaint error
+}
+
+func (e *argumentsError) Error() string {
+	return e.keyword + " " + e.complaint.Error()
+}
+
+func (e *argumentsError) Is(target error) bool {
+	return target == ErrArguments
 }
