@@ -21,7 +21,12 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 
 	var keys [][]string
 	for _, stage := range planned.Stages {
-		keys = append(keys, stage.Keys)
+		var stageKeys []string
+		for _, step := range stage.Steps {
+			stageKeys = append(stageKeys, step.Key)
+		}
+
+		keys = append(keys, stageKeys)
 	}
 
 	return keys, nil
@@ -43,12 +48,12 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 			return Plan{}, err
 		}
 
-		keys, end, err := p.stepKeys(from, stage)
+		steps, end, err := p.steps(from, stage)
 		if err != nil {
 			return Plan{}, err
 		}
 
-		planned.Stages = append(planned.Stages, Stage{BaseDigest: digest, Keys: keys})
+		planned.Stages = append(planned.Stages, Stage{BaseDigest: digest, Steps: steps})
 		if stage.Name != "" {
 			p.ends[stage.Name] = end
 		}
@@ -70,10 +75,10 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 	return baseKey(p.agent, stage.Base, digest), digest, nil
 }
 
-// stepKeys also hands back where the stage ends, which for a stage without
+// steps also hands back where the stage ends, which for a stage without
 // steps is where it started.
-func (p *planner) stepKeys(from string, stage imagefile.Stage) ([]string, string, error) {
-	var keys []string
+func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, error) {
+	var steps []Step
 	end := from
 	for _, instruction := range stage.Instructions {
 		key, err := p.stepKey(end, instruction)
@@ -81,11 +86,11 @@ func (p *planner) stepKeys(from string, stage imagefile.Stage) ([]string, string
 			return nil, "", err
 		}
 
-		keys = append(keys, key)
+		steps = append(steps, Step{Instruction: instruction, Key: key})
 		end = key
 	}
 
-	return keys, end, nil
+	return steps, end, nil
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
