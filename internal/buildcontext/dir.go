@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Dir is a build context, a directory on the host.
@@ -39,7 +40,7 @@ func (d *Dir) Digest(path string) (string, error) {
 			return err
 		}
 
-		file, err := d.file(name)
+		file, err := d.file(name, below(path, name))
 		files = append(files, file)
 
 		return err
@@ -51,7 +52,7 @@ func (d *Dir) Digest(path string) (string, error) {
 	return hashed(files), nil
 }
 
-func (d *Dir) file(name string) (string, error) {
+func (d *Dir) file(name string, below string) (string, error) {
 	info, statErr := d.root.Lstat(name)
 	content, readErr := d.root.ReadFile(name)
 	if err := errors.Join(statErr, readErr); err != nil {
@@ -61,7 +62,17 @@ func (d *Dir) file(name string) (string, error) {
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 	sum := sha256.Sum256(content)
 
-	return hashed([]string{name, perm, hex.EncodeToString(sum[:])}), nil
+	return hashed([]string{below, perm, hex.EncodeToString(sum[:])}), nil
+}
+
+// below is a path as seen from the source of the copy. The source's own
+// name stays out of a digest, the instruction already says it.
+func below(source string, name string) string {
+	if name == source {
+		return "."
+	}
+
+	return strings.TrimPrefix(name, source+"/")
 }
 
 // hashed puts the length in front of every field, so that no field can
