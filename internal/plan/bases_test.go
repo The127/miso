@@ -38,3 +38,16 @@ func TestScratchIsNotLookedUp(t *testing.T) {
 	// assert
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
 }
+
+func TestAStageBasedOnAChangedStageGetsDifferentKeys(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch AS build\nRUN make vim\nFROM build\nRUN make install\n")
+	nano := parse(t, "FROM scratch AS build\nRUN make nano\nFROM build\nRUN make install\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
