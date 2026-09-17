@@ -26,3 +26,14 @@ func checkOutputs(stage imagefile.Stage, written map[string]bool) error {
 
 	return nil
 }
+
+func outputNames(stage imagefile.Stage) map[string]bool {
+	names := map[string]bool{}
+	for _, instruction := range stage.Instructions {
+		if output, isOutput := instruction.(imagefile.Output); isOutput {
+			names[output.Name] = true
+		}
+	}
+
+	return names
+}

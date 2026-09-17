@@ -4,7 +4,7 @@ import "github.com/The127/miso/internal/imagefile"
 
 // Validate checks that the stages make sense together.
 func Validate(stages []imagefile.Stage) error {
-	known := map[string]bool{}
+	known := map[string]map[string]bool{}
 	written := map[string]bool{}
 	for _, stage := range stages {
 		if err := checkName(stage, known); err != nil {
@@ -24,7 +24,7 @@ func Validate(stages []imagefile.Stage) error {
 		}
 
 		if stage.Name != "" {
-			known[stage.Name] = true
+			known[stage.Name] = outputNames(stage)
 		}
 	}
 
