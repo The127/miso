@@ -30,3 +30,16 @@ func TestCopyFromAnEarlierStageIsAccepted(t *testing.T) {
 	// assert
 	assert.NoError(t, err)
 }
+
+func TestACopyOfAnOutputTheStageDoesNotHaveIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nFROM scratch\nCOPY --from=vmhost tools.raw /var/components/\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrUnknownOutput)
+	assert.ErrorContains(t, err, "line 4")
+	assert.ErrorContains(t, err, "tools.raw")
+}
