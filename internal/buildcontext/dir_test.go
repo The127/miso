@@ -323,3 +323,17 @@ func TestASourceThatLeavesTheContextIsRejected(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, buildcontext.ErrOutsideContext)
 }
+
+func TestALinkThatLeadsOutOfTheContextIsRejected(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "secrets/password", "hunter2")
+	write(t, dir, "context/motd", "hello")
+	symlink(t, dir, "context/out", filepath.Join(dir, "secrets"))
+
+	// act
+	_, err := open(t, filepath.Join(dir, "context")).Digest("out/password")
+
+	// assert
+	assert.ErrorIs(t, err, buildcontext.ErrOutsideContext)
+}
