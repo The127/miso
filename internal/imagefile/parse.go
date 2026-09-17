@@ -44,6 +44,8 @@ func (p *parser) read(line sourceLine) error {
 		return p.run(arguments)
 	case "ENV":
 		return p.env(arguments)
+	case "COPY":
+		return p.copy(arguments)
 	default:
 		return fmt.Errorf("unknown instruction %s", keyword)
 	}
