@@ -14,28 +14,27 @@ type Env struct {
 
 func (Env) instruction() {}
 
-var errEnvUsage = errors.New("ENV needs KEY=VALUE")
+var errEnvUsage = errors.New("needs KEY=VALUE")
 
-func (p *parser) env(arguments string) error {
-	assignments, closed := words(arguments)
-	if !closed {
-		return errors.New("ENV has an unclosed quote")
+func readEnv(line int, arguments string) ([]Instruction, error) {
+	assignments, err := words(arguments)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(assignments) == 0 {
-		return errEnvUsage
+		return nil, errEnvUsage
 	}
 
+	var variables []Instruction
 	for _, assignment := range assignments {
 		key, value, assigned := strings.Cut(assignment, "=")
 		if !assigned {
-			return errEnvUsage
+			return nil, errEnvUsage
 		}
 
-		if err := p.add("ENV", Env{Line: p.line, Key: key, Value: value}); err != nil {
-			return err
-		}
+		variables = append(variables, Env{Line: line, Key: key, Value: value})
 	}
 
-	return nil
+	return variables, nil
 }

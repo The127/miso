@@ -22,13 +22,16 @@ func Parse(source string) ([]Stage, error) {
 	return p.stages, nil
 }
 
+// reader turns the arguments of one instruction into what goes into the
+// stage. Its errors read on from the keyword, which the parser puts in
+// front: "needs a base" becomes "FROM needs a base".
+type reader func(line int, arguments string) ([]Instruction, error)
+
 type parser struct {
 	stages []Stage
-	line   int
 }
 
 func (p *parser) read(line sourceLine) error {
-	p.line = line.number
 	if line.problem != nil {
 		return line.problem
 	}
@@ -38,27 +41,43 @@ func (p *parser) read(line sourceLine) error {
 		return nil
 	}
 
-	keyword, arguments, _ := strings.Cut(text, " ")
-	switch strings.ToUpper(keyword) {
-	case "FROM":
-		return p.from(arguments)
-	case "RUN":
-		return p.run(arguments)
-	case "ENV":
-		return p.env(arguments)
-	case "COPY":
-		return p.copy(arguments)
-	default:
-		return fmt.Errorf("unknown instruction %s", keyword)
-	}
-}
+	written, arguments, _ := strings.Cut(text, " ")
+	keyword := strings.ToUpper(written)
 
-func (p *parser) add(keyword string, instruction Instruction) error {
+	var read reader
+	switch keyword {
+	case "FROM":
+		return p.open(line.number, arguments)
+	case "RUN":
+		read = readRun
+	case "ENV":
+		read = readEnv
+	case "COPY":
+		read = readCopy
+	default:
+		return fmt.Errorf("unknown instruction %s", written)
+	}
+
 	if len(p.stages) == 0 {
 		return fmt.Errorf("%s before FROM", keyword)
 	}
 
+	instructions, err := read(line.number, arguments)
+	if err != nil {
+		return fmt.Errorf("%s %w", keyword, err)
+	}
+
 	stage := &p.stages[len(p.stages)-1]
-	stage.Instructions = append(stage.Instructions, instruction)
+	stage.Instructions = append(stage.Instructions, instructions...)
+	return nil
+}
+
+func (p *parser) open(line int, arguments string) error {
+	stage, err := readFrom(line, arguments)
+	if err != nil {
+		return fmt.Errorf("FROM %w", err)
+	}
+
+	p.stages = append(p.stages, stage)
 	return nil
 }
