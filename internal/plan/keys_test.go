@@ -10,56 +10,71 @@ import (
 	"github.com/The127/miso/internal/plan"
 )
 
-func steps(t *testing.T, source string) []imagefile.Instruction {
+func stage(t *testing.T, source string) imagefile.Stage {
 	t.Helper()
 
 	stages := parse(t, source)
 	require.Len(t, stages, 1)
 
-	return stages[0].Instructions
+	return stages[0]
 }
 
 func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	// arrange
-	vim := steps(t, "FROM scratch\nRUN apt-get install vim\n")
-	nano := steps(t, "FROM scratch\nRUN apt-get install nano\n")
-	require.Len(t, vim, 1)
-	require.Len(t, nano, 1)
+	vim := stage(t, "FROM scratch\nRUN apt-get install vim\n")
+	nano := stage(t, "FROM scratch\nRUN apt-get install nano\n")
 
 	// act
-	vimKey := plan.StepKey("", vim[0])
-	nanoKey := plan.StepKey("", nano[0])
+	vimKeys := plan.Keys(vim)
+	nanoKeys := plan.Keys(nano)
 
 	// assert
-	assert.NotEqual(t, vimKey, nanoKey)
+	require.Len(t, vimKeys, 1)
+	require.Len(t, nanoKeys, 1)
+	assert.NotEqual(t, vimKeys[0], nanoKeys[0])
 }
 
 func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
 	// arrange
-	updated := steps(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
-	upgraded := steps(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
-	require.Len(t, updated, 2)
-	require.Len(t, upgraded, 2)
+	updated := stage(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
+	upgraded := stage(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
 
 	// act
-	updatedKey := plan.StepKey(plan.StepKey("", updated[0]), updated[1])
-	upgradedKey := plan.StepKey(plan.StepKey("", upgraded[0]), upgraded[1])
+	updatedKeys := plan.Keys(updated)
+	upgradedKeys := plan.Keys(upgraded)
 
 	// assert
-	assert.NotEqual(t, updatedKey, upgradedKey)
+	require.Len(t, updatedKeys, 2)
+	require.Len(t, upgradedKeys, 2)
+	assert.NotEqual(t, updatedKeys[1], upgradedKeys[1])
 }
 
 func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	// arrange
-	found := steps(t, "FROM scratch\nRUN true\nCHECK true\n")
-	require.Len(t, found, 2)
-	require.IsType(t, imagefile.Run{}, found[0])
-	require.IsType(t, imagefile.Check{}, found[1])
+	run := stage(t, "FROM scratch\nRUN true\n")
+	check := stage(t, "FROM scratch\nCHECK true\n")
 
 	// act
-	runKey := plan.StepKey("", found[0])
-	checkKey := plan.StepKey("", found[1])
+	runKeys := plan.Keys(run)
+	checkKeys := plan.Keys(check)
 
 	// assert
-	assert.NotEqual(t, runKey, checkKey)
+	require.Len(t, runKeys, 1)
+	require.Len(t, checkKeys, 1)
+	assert.NotEqual(t, runKeys[0], checkKeys[0])
+}
+
+func TestADifferentBaseChangesTheKeys(t *testing.T) {
+	// arrange
+	sid := stage(t, "FROM debian:sid\nRUN true\n")
+	trixie := stage(t, "FROM debian:trixie\nRUN true\n")
+
+	// act
+	sidKeys := plan.Keys(sid)
+	trixieKeys := plan.Keys(trixie)
+
+	// assert
+	require.Len(t, sidKeys, 1)
+	require.Len(t, trixieKeys, 1)
+	assert.NotEqual(t, sidKeys[0], trixieKeys[0])
 }
