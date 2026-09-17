@@ -41,8 +41,7 @@ func (p *parser) read(line string) error {
 	keyword, arguments, _ := strings.Cut(line, " ")
 	switch keyword {
 	case "FROM":
-		p.from(arguments)
-		return nil
+		return p.from(arguments)
 	case "RUN":
 		return p.run(arguments)
 	default:
@@ -50,9 +49,14 @@ func (p *parser) read(line string) error {
 	}
 }
 
-func (p *parser) from(arguments string) {
+func (p *parser) from(arguments string) error {
 	base, name, _ := strings.Cut(arguments, " AS ")
+	if base == "" {
+		return errors.New("FROM needs a base")
+	}
+
 	p.stages = append(p.stages, Stage{Name: name, Base: base})
+	return nil
 }
 
 func (p *parser) run(command string) error {
