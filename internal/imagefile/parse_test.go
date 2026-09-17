@@ -71,6 +71,7 @@ func TestAFileWithoutFromIsRejected(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "no FROM instruction")
+	assert.ErrorIs(t, err, imagefile.ErrNoFrom)
 }
 
 func TestIndentationBeforeAnInstructionIsIgnored(t *testing.T) {
