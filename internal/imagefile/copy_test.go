@@ -47,3 +47,14 @@ func TestCopyFromNamesTheStageItCopiesFrom(t *testing.T) {
 		imagefile.Copy{From: "build", Sources: []string{"/out/app"}, Destination: "/usr/bin/"},
 	}, stages[1].Instructions)
 }
+
+func TestCopyWithAnUnknownFlagIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY --frm=build a b\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: COPY does not know --frm")
+}
