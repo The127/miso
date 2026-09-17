@@ -1,6 +1,10 @@
 package buildcontext
 
-import "os"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
+)
 
 // Dir is a build context, a directory on the host.
 type Dir struct {
@@ -26,6 +30,11 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	_, err := d.root.Lstat(path)
-	return "", err
+	content, err := d.root.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	sum := sha256.Sum256(content)
+	return hex.EncodeToString(sum[:]), nil
 }
