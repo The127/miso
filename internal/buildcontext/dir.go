@@ -148,7 +148,8 @@ func (d *Dir) entry(name string, inside string) (string, error) {
 			return "", err
 		}
 
-		return hashed([]string{"link", inside, permissions(mode), target}), nil
+		// a link has no mode of its own that a copy could keep
+		return hashed([]string{"link", inside, "", target}), nil
 	case mode.IsRegular():
 		sum, err := d.content(name)
 		if err != nil {
