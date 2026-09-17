@@ -52,60 +52,99 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	entries, err := d.entries(path)
+	var sums []string
+	err := d.walk(path, func(found entry) error {
+		content := ""
+		if found.kind == kindFile {
+			var err error
+			if content, err = d.content(found.name); err != nil {
+				return err
+			}
+		}
+
+		sums = append(sums, found.sum(content))
+
+		return nil
+	})
 	if err != nil {
 		return "", err
 	}
 
-	return format + ":" + hashed(entries), nil
+	return format + ":" + hashed(sums), nil
 }
 
-func (d *Dir) entries(source string) ([]string, error) {
+type kind string
+
+const (
+	kindFile      kind = "file"
+	kindDirectory kind = "directory"
+	kindLink      kind = "link"
+)
+
+// entry is one thing a copy carries, and all that a digest or a payload
+// may know of it.
+type entry struct {
+	kind kind
+
+	// as seen from the source
+	path string
+
+	// empty for a link, which has none of its own that a copy could keep
+	mode string
+
+	// of a link, as written
+	target string
+
+	// where a file's content is, as seen from the build context
+	name string
+}
+
+// sum takes the hash of a file's content, so that a payload can stream the
+// content first and sum the entry after.
+func (e entry) sum(content string) string {
+	payload := e.target
+	if e.kind == kindFile {
+		payload = content
+	}
+
+	return hashed([]string{string(e.kind), e.path, e.mode, payload})
+}
+
+// walk visits the entries of a source in the one order every digest and
+// every payload share.
+func (d *Dir) walk(source string, visit func(entry) error) error {
 	if !filepath.IsLocal(source) {
-		return nil, ErrOutsideContext
+		return ErrOutsideContext
 	}
 
 	// the walk takes one spelling of a path only
 	source = filepath.Clean(source)
 	if err := d.throughLink(source); err != nil {
-		return nil, err
+		return err
 	}
 
-	info, err := d.root.Lstat(source)
+	first, err := d.look(source, ".")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// the walk below would follow a link it starts on
-	if info.Mode()&fs.ModeSymlink != 0 {
-		link, err := d.entry(source, ".")
-		if err != nil {
-			return nil, err
-		}
-
-		return []string{link}, nil
+	if first.kind == kindLink {
+		return visit(first)
 	}
 
-	var entries []string
-	err = fs.WalkDir(d.root.FS(), source, func(name string, _ fs.DirEntry, err error) error {
+	return fs.WalkDir(d.root.FS(), source, func(name string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		found, err := d.entry(name, below(source, name))
+		found, err := d.look(name, below(source, name))
 		if err != nil {
 			return err
 		}
 
-		entries = append(entries, found)
-
-		return nil
+		return visit(found)
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return entries, nil
 }
 
 // throughLink looks at every part of a source path but the last. The root
@@ -128,38 +167,32 @@ func (d *Dir) throughLink(source string) error {
 	return nil
 }
 
-// entry takes what a thing is and its mode from one look at it. The
-// directory listing is older, and the thing may have been swapped since.
-func (d *Dir) entry(name string, inside string) (string, error) {
+// look takes what a thing is and its mode from one look at it. A directory
+// listing is older, and the thing may have been swapped since.
+func (d *Dir) look(name string, path string) (entry, error) {
 	info, err := d.root.Lstat(name)
 	if err != nil {
-		return "", err
+		return entry{}, err
 	}
 
 	mode := info.Mode()
 	switch {
 	case mode.IsDir():
-		return hashed([]string{"directory", inside, permissions(mode), ""}), nil
+		return entry{kind: kindDirectory, path: path, mode: permissions(mode)}, nil
 	case mode&fs.ModeSymlink != 0:
 		// a link means a place in the image, not on the host, so it is
 		// never followed here
 		target, err := d.root.Readlink(name)
 		if err != nil {
-			return "", err
+			return entry{}, err
 		}
 
-		// a link has no mode of its own that a copy could keep
-		return hashed([]string{"link", inside, "", target}), nil
+		return entry{kind: kindLink, path: path, target: target}, nil
 	case mode.IsRegular():
-		sum, err := d.content(name)
-		if err != nil {
-			return "", err
-		}
-
-		return hashed([]string{"file", inside, permissions(mode), sum}), nil
+		return entry{kind: kindFile, path: path, mode: permissions(mode), name: name}, nil
 	default:
 		// opening a pipe would wait for a writer forever
-		return "", fmt.Errorf("%s: %w", name, ErrSpecialFile)
+		return entry{}, fmt.Errorf("%s: %w", name, ErrSpecialFile)
 	}
 }
 
