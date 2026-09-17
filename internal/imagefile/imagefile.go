@@ -16,11 +16,9 @@ type Stage struct {
 // Parse reads a build file into its stages, in order.
 func Parse(source string) ([]Stage, error) {
 	var p parser
-
-	joined := strings.ReplaceAll(source, "\\\n", "")
-	for i, line := range strings.Split(joined, "\n") {
-		if err := p.read(line); err != nil {
-			return nil, fmt.Errorf("line %d: %w", i+1, err)
+	for _, line := range sourceLines(source) {
+		if err := p.read(line.text); err != nil {
+			return nil, fmt.Errorf("line %d: %w", line.number, err)
 		}
 	}
 
@@ -29,6 +27,34 @@ func Parse(source string) ([]Stage, error) {
 	}
 
 	return p.stages, nil
+}
+
+// sourceLine is a line with its continuations joined in, numbered by where
+// it starts in the file.
+type sourceLine struct {
+	number int
+	text   string
+}
+
+func sourceLines(source string) []sourceLine {
+	var lines []sourceLine
+	var current sourceLine
+	for i, physical := range strings.Split(source, "\n") {
+		if current.number == 0 {
+			current.number = i + 1
+		}
+
+		head, continued := strings.CutSuffix(physical, "\\")
+		current.text += head
+		if continued {
+			continue
+		}
+
+		lines = append(lines, current)
+		current = sourceLine{}
+	}
+
+	return lines
 }
 
 type parser struct {
