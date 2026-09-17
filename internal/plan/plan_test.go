@@ -94,3 +94,18 @@ func TestAPlannedCopyKeepsTheDigestsOfItsFiles(t *testing.T) {
 	require.Len(t, planned.Stages[0].Steps, 1)
 	assert.Equal(t, []plan.File{{Path: "motd", Digest: "hello"}, {Path: "issue", Digest: "welcome"}}, planned.Stages[0].Steps[0].Files)
 }
+
+func TestAPlannedRunAfterAnOutputWasBuiltOnTheRunBeforeIt(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nRUN make\nOUTPUT disk os.img\nRUN make install\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 1)
+	steps := planned.Stages[0].Steps
+	require.Len(t, steps, 3)
+	assert.Equal(t, []string{steps[0].Key}, steps[2].BuiltOn)
+}

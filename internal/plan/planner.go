@@ -86,7 +86,7 @@ func (p *planner) step(parent string, instruction imagefile.Instruction) (Step, 
 	}
 
 	key := hashed([]string{parent, hashed(words(instruction)), hashed(p.reads(instruction, files))})
-	return Step{Instruction: instruction, Key: key, Files: files}, nil
+	return Step{Instruction: instruction, Key: key, BuiltOn: []string{parent}, Files: files}, nil
 }
 
 // files are what a step takes from the build context.
