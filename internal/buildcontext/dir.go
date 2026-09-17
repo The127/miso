@@ -55,6 +55,8 @@ func (d *Dir) Digest(path string) (string, error) {
 func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error) {
 	info, statErr := d.root.Lstat(name)
 
+	called := "directory"
+
 	var payload string
 	var readErr error
 	switch {
@@ -62,8 +64,10 @@ func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error)
 	case kind&fs.ModeSymlink != 0:
 		// a link means a place in the image, not on the host, so it is
 		// never followed here
+		called = "link"
 		payload, readErr = d.root.Readlink(name)
 	default:
+		called = "file"
 		payload, readErr = d.content(name)
 	}
 
@@ -73,7 +77,7 @@ func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error)
 
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 
-	return hashed([]string{below, perm, payload}), nil
+	return hashed([]string{called, below, perm, payload}), nil
 }
 
 func (d *Dir) content(name string) (string, error) {
