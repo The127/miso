@@ -76,52 +76,68 @@ func (d *Dir) entries(source string) ([]string, error) {
 
 	// the walk below would follow a link it starts on
 	if info.Mode()&fs.ModeSymlink != 0 {
-		link, err := d.entry(source, ".", fs.ModeSymlink)
-		return []string{link}, err
+		link, err := d.entry(source, ".")
+		if err != nil {
+			return nil, err
+		}
+
+		return []string{link}, nil
 	}
 
 	var entries []string
-	err = fs.WalkDir(d.root.FS(), source, func(name string, entry fs.DirEntry, err error) error {
+	err = fs.WalkDir(d.root.FS(), source, func(name string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		found, err := d.entry(name, below(source, name), entry.Type())
+		found, err := d.entry(name, below(source, name))
+		if err != nil {
+			return err
+		}
+
 		entries = append(entries, found)
 
-		return err
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return entries, err
+	return entries, nil
 }
 
-func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error) {
-	info, statErr := d.root.Lstat(name)
+// entry takes what a thing is and its mode from one look at it. The
+// directory listing is older, and the thing may have been swapped since.
+func (d *Dir) entry(name string, inside string) (string, error) {
+	info, err := d.root.Lstat(name)
+	if err != nil {
+		return "", err
+	}
 
-	called := "directory"
-
-	var payload string
-	var readErr error
+	mode := info.Mode()
 	switch {
-	case kind.IsDir():
-	case kind&fs.ModeSymlink != 0:
+	case mode.IsDir():
+		return hashed([]string{"directory", inside, permissions(mode), ""}), nil
+	case mode&fs.ModeSymlink != 0:
 		// a link means a place in the image, not on the host, so it is
 		// never followed here
-		called = "link"
-		payload, readErr = d.root.Readlink(name)
-	case kind.IsRegular():
-		called = "file"
-		payload, readErr = d.content(name)
+		target, err := d.root.Readlink(name)
+		if err != nil {
+			return "", err
+		}
+
+		return hashed([]string{"link", inside, permissions(mode), target}), nil
+	case mode.IsRegular():
+		sum, err := d.content(name)
+		if err != nil {
+			return "", err
+		}
+
+		return hashed([]string{"file", inside, permissions(mode), sum}), nil
 	default:
 		// opening a pipe would wait for a writer forever
 		return "", fmt.Errorf("%s: %w", name, ErrSpecialFile)
 	}
-
-	if err := errors.Join(statErr, readErr); err != nil {
-		return "", err
-	}
-
-	return hashed([]string{called, below, permissions(info.Mode()), payload}), nil
 }
 
 // permissions are the twelve bits of a unix mode in octal, like 4755. Go
