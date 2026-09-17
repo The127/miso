@@ -37,7 +37,7 @@ func (p *parser) read(line sourceLine) error {
 	}
 
 	keyword, arguments, _ := strings.Cut(text, " ")
-	switch keyword {
+	switch strings.ToUpper(keyword) {
 	case "FROM":
 		return p.from(arguments)
 	case "RUN":

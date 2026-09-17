@@ -7,7 +7,7 @@ import (
 
 func (p *parser) from(arguments string) error {
 	words := strings.Fields(arguments)
-	named := len(words) == 3 && words[1] == "AS"
+	named := len(words) == 3 && strings.EqualFold(words[1], "AS")
 
 	switch {
 	case len(words) == 0:
