@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -355,4 +356,18 @@ func TestASourceSpelledAnotherWayKeepsTheDigest(t *testing.T) {
 	require.NoError(t, slashedErr)
 	assert.Equal(t, plain, dotted)
 	assert.Equal(t, plain, slashed)
+}
+
+func TestAPipeInTheTreeIsRejected(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "run/motd", "hello")
+	require.NoError(t, syscall.Mkfifo(filepath.Join(dir, "run/initctl"), 0o600))
+
+	// act
+	_, err := open(t, dir).Digest("run")
+
+	// assert
+	assert.ErrorIs(t, err, buildcontext.ErrSpecialFile)
+	assert.ErrorContains(t, err, "run/initctl")
 }

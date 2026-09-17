@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,6 +14,10 @@ import (
 
 // ErrOutsideContext is a source that is not below the build context.
 var ErrOutsideContext = errors.New("outside the build context")
+
+// ErrSpecialFile is something in the build context that is no file, no
+// directory and no link, such as a pipe or a device. A copy cannot carry it.
+var ErrSpecialFile = errors.New("special file")
 
 // Dir is a build context, a directory on the host.
 type Dir struct {
@@ -104,9 +109,12 @@ func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error)
 		// never followed here
 		called = "link"
 		payload, readErr = d.root.Readlink(name)
-	default:
+	case kind.IsRegular():
 		called = "file"
 		payload, readErr = d.content(name)
+	default:
+		// opening a pipe would wait for a writer forever
+		return "", fmt.Errorf("%s: %w", name, ErrSpecialFile)
 	}
 
 	if err := errors.Join(statErr, readErr); err != nil {
