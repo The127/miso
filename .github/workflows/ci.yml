@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  # lets the codecov upload authenticate through oidc, without a secret
+  id-token: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -30,6 +32,6 @@ jobs:
       - name: upload coverage to codecov
         uses: codecov/codecov-action@v7
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           files: ./coverage.out
           flags: unit
