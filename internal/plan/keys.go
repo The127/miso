@@ -12,14 +12,14 @@ import (
 
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
-func Keys(stages []imagefile.Stage, agent string) [][]string {
+func Keys(stages []imagefile.Stage, agent string, context Context) [][]string {
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
 		parent := hashed([]string{agent, stage.Base})
 		for _, instruction := range stage.Instructions {
-			parent = stepKey(parent, instruction, last)
+			parent = stepKey(parent, instruction, last, context)
 			stageKeys = append(stageKeys, parent)
 		}
 
@@ -34,7 +34,7 @@ func Keys(stages []imagefile.Stage, agent string) [][]string {
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
 // every key after it.
-func stepKey(parent string, instruction imagefile.Instruction, last map[string]string) string {
+func stepKey(parent string, instruction imagefile.Instruction, last map[string]string, context Context) string {
 	fields := []string{parent}
 	switch step := instruction.(type) {
 	case imagefile.Run:
@@ -43,7 +43,10 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
 		fields = append(fields, "COPY", last[step.From])
-		fields = append(fields, step.Sources...)
+		for _, source := range step.Sources {
+			fields = append(fields, source, context.Digest(source))
+		}
+
 		fields = append(fields, step.Destination)
 	case imagefile.Output:
 		fields = append(fields, "OUTPUT", step.Kind)
