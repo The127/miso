@@ -16,16 +16,20 @@ type Stage struct {
 func Parse(source string) ([]Stage, error) {
 	var stages []Stage
 	for i, line := range strings.Split(source, "\n") {
-		if strings.HasPrefix(line, "FROM ") {
+		keyword, rest, _ := strings.Cut(line, " ")
+		switch keyword {
+		case "FROM":
 			base, name := from(line)
 			stages = append(stages, Stage{Name: name, Base: base})
-		}
-		if command, ok := strings.CutPrefix(line, "RUN "); ok {
+		case "RUN":
 			if len(stages) == 0 {
 				return nil, fmt.Errorf("line %d: RUN before FROM", i+1)
 			}
 			current := &stages[len(stages)-1]
-			current.Commands = append(current.Commands, command)
+			current.Commands = append(current.Commands, rest)
+		case "":
+		default:
+			return nil, fmt.Errorf("line %d: unknown instruction %s", i+1, keyword)
 		}
 	}
 	return stages, nil
