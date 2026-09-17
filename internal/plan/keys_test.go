@@ -93,3 +93,18 @@ func TestAChangedEnvChangesTheKeysAfterIt(t *testing.T) {
 	require.Len(t, nanoKeys, 2)
 	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
 }
+
+func TestAChangedCopyDestinationChangesItsKey(t *testing.T) {
+	// arrange
+	etc := stage(t, "FROM scratch\nCOPY motd /etc/\n")
+	srv := stage(t, "FROM scratch\nCOPY motd /srv/\n")
+
+	// act
+	etcKeys := plan.Keys(etc)
+	srvKeys := plan.Keys(srv)
+
+	// assert
+	require.Len(t, etcKeys, 1)
+	require.Len(t, srvKeys, 1)
+	assert.NotEqual(t, etcKeys[0], srvKeys[0])
+}

@@ -3,6 +3,7 @@ package plan
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 
 	"github.com/The127/miso/internal/imagefile"
 )
@@ -28,6 +29,8 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 		kind, text = "RUN", step.Command
 	case imagefile.Env:
 		kind, text = "ENV", step.Key+"="+step.Value
+	case imagefile.Copy:
+		kind, text = "COPY", strings.Join(step.Sources, " ")+" "+step.Destination
 	case imagefile.Check:
 		kind, text = "CHECK", step.Command
 	}
