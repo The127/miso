@@ -76,7 +76,7 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	case imagefile.Env:
 		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
-		copied, err := copyFields(step, last, context)
+		copied, err := copyFields(step, last[step.From], context)
 		if err != nil {
 			return "", err
 		}
@@ -94,8 +94,8 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	return hashed(fields), nil
 }
 
-func copyFields(step imagefile.Copy, last map[string]string, context Context) ([]string, error) {
-	fields := []string{"COPY", last[step.From]}
+func copyFields(step imagefile.Copy, fromKey string, context Context) ([]string, error) {
+	fields := []string{"COPY", fromKey}
 	for _, source := range step.Sources {
 		fields = append(fields, source)
 		if step.From != "" {
