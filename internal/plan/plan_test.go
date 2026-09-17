@@ -36,3 +36,17 @@ func TestAPlannedStepKnowsItsInstruction(t *testing.T) {
 	assert.Equal(t, stages[0].Instructions[0], planned.Stages[0].Steps[0].Instruction)
 	assert.NotEmpty(t, planned.Stages[0].Steps[0].Key)
 }
+
+func TestAPlannedCopyKeepsTheDigestsOfItsFiles(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nCOPY motd issue /etc/\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, files{"motd": "hello", "issue": "welcome"}, noImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 1)
+	require.Len(t, planned.Stages[0].Steps, 1)
+	assert.Equal(t, []plan.File{{Path: "motd", Digest: "hello"}, {Path: "issue", Digest: "welcome"}}, planned.Stages[0].Steps[0].Files)
+}

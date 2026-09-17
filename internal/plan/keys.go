@@ -81,42 +81,53 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 	var steps []Step
 	end := from
 	for _, instruction := range stage.Instructions {
-		key, err := p.stepKey(end, instruction)
+		step, err := p.step(end, instruction)
 		if err != nil {
 			return nil, "", err
 		}
 
-		steps = append(steps, Step{Instruction: instruction, Key: key})
-		end = key
+		steps = append(steps, step)
+		end = step.Key
 	}
 
 	return steps, end, nil
 }
 
-// stepKey chains a step to its parent, so a change early in a stage reaches
+// step chains a step to its parent, so a change early in a stage reaches
 // every key after it. Words and reads are hashed apart, so that neither
 // list can run into the other.
-func (p *planner) stepKey(parent string, instruction imagefile.Instruction) (string, error) {
-	read, err := p.reads(instruction)
+func (p *planner) step(parent string, instruction imagefile.Instruction) (Step, error) {
+	files, err := p.files(instruction)
 	if err != nil {
-		return "", err
+		return Step{}, err
 	}
 
-	return hashed([]string{parent, hashed(words(instruction)), hashed(read)}), nil
+	key := hashed([]string{parent, hashed(words(instruction)), hashed(p.reads(instruction, files))})
+	return Step{Instruction: instruction, Key: key, Files: files}, nil
 }
 
-// reads are what a step takes from outside its own stage.
-func (p *planner) reads(instruction imagefile.Instruction) ([]string, error) {
+// files are what a step takes from the build context.
+func (p *planner) files(instruction imagefile.Instruction) ([]File, error) {
 	step, isCopy := instruction.(imagefile.Copy)
-	if !isCopy {
+	if !isCopy || step.From != "" {
 		return nil, nil
 	}
 
-	if step.From != "" {
-		return []string{p.ends[step.From]}, nil
+	return contextFiles(step, p.context)
+}
+
+// reads are what a step takes from outside its own stage.
+func (p *planner) reads(instruction imagefile.Instruction, files []File) []string {
+	if step, isCopy := instruction.(imagefile.Copy); isCopy && step.From != "" {
+		return []string{p.ends[step.From]}
 	}
 
-	return contextDigests(step, p.context)
+	var digests []string
+	for _, file := range files {
+		digests = append(digests, file.Digest)
+	}
+
+	return digests
 }
 
 // words are what an instruction says.
@@ -149,18 +160,18 @@ func words(instruction imagefile.Instruction) []string {
 	return found
 }
 
-func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
-	var digests []string
+func contextFiles(step imagefile.Copy, context Context) ([]File, error) {
+	var files []File
 	for _, source := range step.Sources {
 		digest, err := context.Digest(source)
 		if err != nil {
 			return nil, at(step.Line, fmt.Errorf("COPY %s: %w", source, err))
 		}
 
-		digests = append(digests, digest)
+		files = append(files, File{Path: source, Digest: digest})
 	}
 
-	return digests, nil
+	return files, nil
 }
 
 // hashed puts the length in front of every field, which keeps "a b" apart
