@@ -21,24 +21,19 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
-		var stageKeys []string
-		parent, err := start(stage, last, agent, bases)
+		from, err := start(stage, last, agent, bases)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, instruction := range stage.Instructions {
-			parent, err = stepKey(parent, instruction, last, context)
-			if err != nil {
-				return nil, err
-			}
-
-			stageKeys = append(stageKeys, parent)
+		stageKeys, end, err := stepKeys(from, stage, last, context)
+		if err != nil {
+			return nil, err
 		}
 
 		keys = append(keys, stageKeys)
 		if stage.Name != "" {
-			last[stage.Name] = parent
+			last[stage.Name] = end
 		}
 	}
 
@@ -51,6 +46,24 @@ func start(stage imagefile.Stage, last map[string]string, agent string, bases Ba
 	}
 
 	return baseKey(agent, stage, bases)
+}
+
+// stepKeys also hands back where the stage ends, which for a stage without
+// steps is where it started.
+func stepKeys(from string, stage imagefile.Stage, last map[string]string, context Context) ([]string, string, error) {
+	var keys []string
+	end := from
+	for _, instruction := range stage.Instructions {
+		key, err := stepKey(end, instruction, last, context)
+		if err != nil {
+			return nil, "", err
+		}
+
+		keys = append(keys, key)
+		end = key
+	}
+
+	return keys, end, nil
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
