@@ -95,3 +95,14 @@ func TestCommentLinesAreIgnored(t *testing.T) {
 		{Base: "debian:sid", Commands: []string{"true"}},
 	}, stages)
 }
+
+func TestAFileWithoutFromIsRejected(t *testing.T) {
+	// arrange
+	source := "# nothing but a comment\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "no FROM instruction")
+}

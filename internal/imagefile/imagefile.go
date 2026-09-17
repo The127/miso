@@ -1,6 +1,7 @@
 package imagefile
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -34,6 +35,9 @@ func Parse(source string) ([]Stage, error) {
 		default:
 			return nil, fmt.Errorf("line %d: unknown instruction %s", i+1, keyword)
 		}
+	}
+	if len(stages) == 0 {
+		return nil, errors.New("no FROM instruction")
 	}
 	return stages, nil
 }
