@@ -1,6 +1,8 @@
 package buildcontext_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -252,4 +254,23 @@ func TestAChangedLinkTargetChangesTheDigest(t *testing.T) {
 	require.NoError(t, utcErr)
 	require.NoError(t, berlinErr)
 	assert.NotEqual(t, utcDigest, berlinDigest)
+}
+
+func TestALinkIsNotAFileThatLooksLikeIt(t *testing.T) {
+	// arrange
+	sum := sha256.Sum256([]byte("hello"))
+	file := t.TempDir()
+	write(t, file, "etc/motd", "hello")
+	chmod(t, file, "etc/motd", 0o777)
+	link := t.TempDir()
+	symlink(t, link, "etc/motd", hex.EncodeToString(sum[:]))
+
+	// act
+	fileDigest, fileErr := open(t, file).Digest("etc")
+	linkDigest, linkErr := open(t, link).Digest("etc")
+
+	// assert
+	require.NoError(t, fileErr)
+	require.NoError(t, linkErr)
+	assert.NotEqual(t, fileDigest, linkDigest)
 }
