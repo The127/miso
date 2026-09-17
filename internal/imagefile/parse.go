@@ -55,6 +55,8 @@ func (p *parser) read(line sourceLine) error {
 		read = readCopy
 	case "OUTPUT":
 		read = readOutput
+	case "CHECK":
+		read = readCheck
 	default:
 		return fmt.Errorf("%w %s", ErrUnknownInstruction, written)
 	}
