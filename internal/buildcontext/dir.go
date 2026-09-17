@@ -34,14 +34,14 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	var files []string
+	var entries []string
 	err := fs.WalkDir(d.root.FS(), path, func(name string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() {
+		if err != nil {
 			return err
 		}
 
-		file, err := d.file(name, below(path, name))
-		files = append(files, file)
+		found, err := d.entry(name, below(path, name), entry.IsDir())
+		entries = append(entries, found)
 
 		return err
 	})
@@ -49,7 +49,15 @@ func (d *Dir) Digest(path string) (string, error) {
 		return "", err
 	}
 
-	return hashed(files), nil
+	return hashed(entries), nil
+}
+
+func (d *Dir) entry(name string, below string, isDir bool) (string, error) {
+	if isDir {
+		return hashed([]string{below}), nil
+	}
+
+	return d.file(name, below)
 }
 
 func (d *Dir) file(name string, below string) (string, error) {
