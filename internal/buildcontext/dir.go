@@ -13,6 +13,10 @@ import (
 	"strings"
 )
 
+// format names the way a digest is made. A change to what goes into a
+// digest, or how, gets a new name, so that no old digest can match a new one.
+const format = "miso-context-1"
+
 // ErrOutsideContext is a source that is not below the build context.
 var ErrOutsideContext = errors.New("outside the build context")
 
@@ -53,7 +57,7 @@ func (d *Dir) Digest(path string) (string, error) {
 		return "", err
 	}
 
-	return hashed(entries), nil
+	return format + ":" + hashed(entries), nil
 }
 
 func (d *Dir) entries(source string) ([]string, error) {
