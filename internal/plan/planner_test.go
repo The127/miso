@@ -233,3 +233,16 @@ func TestACopyOfAnOutputKeepsItsKeyWhenAnotherOutputChanges(t *testing.T) {
 	// assert
 	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
 }
+
+func TestAChangedCheckKeepsTheKeysOfAStageBasedOnItsStage(t *testing.T) {
+	// arrange
+	running := parse(t, "FROM scratch AS os\nOUTPUT disk os.img\nCHECK systemctl is-system-running\nFROM os\nRUN apt-get install -y vim\n")
+	degraded := parse(t, "FROM scratch AS os\nOUTPUT disk os.img\nCHECK systemctl --failed\nFROM os\nRUN apt-get install -y vim\n")
+
+	// act
+	runningKeys := keys(t, running, anyAgent, noFiles, noImages)
+	degradedKeys := keys(t, degraded, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
+}
