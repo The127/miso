@@ -50,7 +50,7 @@ func start(stage imagefile.Stage, last map[string]string, agent string, bases Ba
 		return end, nil
 	}
 
-	return root(agent, stage, bases)
+	return baseKey(agent, stage, bases)
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
