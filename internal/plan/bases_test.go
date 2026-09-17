@@ -81,3 +81,15 @@ func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	assert.ErrorIs(t, err, errNoSuchImage)
 	assert.ErrorContains(t, err, "nope")
 }
+
+func TestAStageBasedOnAnEmptyStageStillStartsOnItsBase(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS base\nFROM base\nRUN true\n")
+
+	// act
+	oldKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:old"})
+	newKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:new"})
+
+	// assert
+	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
+}
