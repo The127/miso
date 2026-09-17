@@ -482,3 +482,22 @@ func TestTheSameTreeUnderANestedSourceKeepsTheDigest(t *testing.T) {
 	require.NoError(t, flatErr)
 	assert.Equal(t, nestedDigest, flatDigest)
 }
+
+func TestTheWholeContextIsASourceLikeAnyDirectory(t *testing.T) {
+	// arrange
+	whole := t.TempDir()
+	write(t, whole, "motd", "hello")
+	chmod(t, whole, ".", 0o750)
+	part := t.TempDir()
+	write(t, part, "sub/motd", "hello")
+	chmod(t, part, "sub", 0o750)
+
+	// act
+	wholeDigest, wholeErr := open(t, whole).Digest(".")
+	partDigest, partErr := open(t, part).Digest("sub")
+
+	// assert
+	require.NoError(t, wholeErr)
+	require.NoError(t, partErr)
+	assert.Equal(t, wholeDigest, partDigest)
+}
