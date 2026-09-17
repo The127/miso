@@ -17,6 +17,7 @@ type Stage struct {
 type Step struct {
 	Instruction imagefile.Instruction
 	Key         string
+	BuiltOn     []string
 	Files       []File
 }
 
