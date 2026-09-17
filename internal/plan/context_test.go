@@ -28,3 +28,15 @@ func TestAChangedContextFileChangesTheKeyOfItsCopy(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, helloKeys), lastKey(t, goodbyeKeys))
 }
+
+func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
+
+	// act
+	withoutKeys := plan.Keys(stages, anyAgent, noFiles)
+	withKeys := plan.Keys(stages, anyAgent, files{"/out": "unrelated"})
+
+	// assert
+	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
+}
