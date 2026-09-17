@@ -131,7 +131,7 @@ func (p *parser) from(arguments string) error {
 var errEnvUsage = errors.New("ENV needs KEY=VALUE")
 
 func (p *parser) env(arguments string) error {
-	assignments := strings.Fields(arguments)
+	assignments := words(arguments)
 	if len(assignments) == 0 {
 		return errEnvUsage
 	}
@@ -148,6 +148,34 @@ func (p *parser) env(arguments string) error {
 	}
 
 	return nil
+}
+
+// words splits text at spaces and tabs. A double quote keeps the spaces up
+// to the next one, the quotes themselves are dropped.
+func words(text string) []string {
+	var found []string
+	var word strings.Builder
+	quoted := false
+	flush := func() {
+		if word.Len() > 0 {
+			found = append(found, word.String())
+			word.Reset()
+		}
+	}
+
+	for _, r := range text {
+		switch {
+		case r == '"':
+			quoted = !quoted
+		case !quoted && (r == ' ' || r == '\t'):
+			flush()
+		default:
+			word.WriteRune(r)
+		}
+	}
+
+	flush()
+	return found
 }
 
 func (p *parser) add(keyword string, instruction Instruction) error {

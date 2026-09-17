@@ -244,3 +244,18 @@ func TestAnEnvWithoutVariablesIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
 }
+
+func TestAQuotedEnvValueKeepsItsSpaces(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nENV MOTD=\"hello world\" B=2\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Env{Key: "MOTD", Value: "hello world"},
+		imagefile.Env{Key: "B", Value: "2"},
+	}, stages[0].Instructions)
+}
