@@ -94,3 +94,14 @@ func TestAnUnclosedQuoteInCopyIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: COPY has an unclosed quote")
 }
+
+func TestCopyWithFromTwiceIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY --from=one --from=two a /b\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: COPY has --from twice")
+}

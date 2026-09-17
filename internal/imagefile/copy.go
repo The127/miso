@@ -3,7 +3,6 @@ package imagefile
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // Copy puts files into the image. They come from the build context, or
@@ -23,20 +22,20 @@ func readCopy(line int, arguments string) ([]Instruction, error) {
 		return nil, err
 	}
 
-	var from string
-	var paths []string
-	for _, word := range found {
-		flag, value, _ := strings.Cut(word, "=")
-		switch {
-		case !strings.HasPrefix(flag, "--"):
-			paths = append(paths, word)
-		case flag == "--from" && value == "":
-			return nil, errors.New("--from needs a stage")
-		case flag == "--from":
-			from = value
-		default:
-			return nil, fmt.Errorf("does not know %s", flag)
+	paths, options, err := splitOptions(found)
+	if err != nil {
+		return nil, err
+	}
+
+	for name := range options {
+		if name != "from" {
+			return nil, fmt.Errorf("does not know --%s", name)
 		}
+	}
+
+	from, named := options["from"]
+	if named && from == "" {
+		return nil, errors.New("--from needs a stage")
 	}
 
 	if len(paths) < 2 {
