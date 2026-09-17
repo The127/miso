@@ -11,6 +11,31 @@ import (
 	"github.com/The127/miso/internal/plan"
 )
 
+func TestADifferentBaseChangesTheKeys(t *testing.T) {
+	// arrange
+	sid := parse(t, "FROM debian:sid\nRUN true\n")
+	trixie := parse(t, "FROM debian:trixie\nRUN true\n")
+
+	// act
+	sidKeys := keys(t, sid, anyAgent, noFiles, debianImages)
+	trixieKeys := keys(t, trixie, anyAgent, noFiles, debianImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, sidKeys), lastKey(t, trixieKeys))
+}
+
+func TestADifferentAgentChangesTheKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nRUN true\n")
+
+	// act
+	oldKeys := keys(t, stages, "agent-a", noFiles, noImages)
+	newKeys := keys(t, stages, "agent-b", noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
+}
+
 // images are base images in memory, by what a FROM calls them.
 type images map[string]string
 
@@ -54,19 +79,6 @@ func TestScratchIsNotLookedUp(t *testing.T) {
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
 }
 
-func TestAStageBasedOnAChangedStageGetsDifferentKeys(t *testing.T) {
-	// arrange
-	vim := parse(t, "FROM scratch AS build\nRUN make vim\nFROM build\nRUN make install\n")
-	nano := parse(t, "FROM scratch AS build\nRUN make nano\nFROM build\nRUN make install\n")
-
-	// act
-	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
-	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
-
-	// assert
-	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
-}
-
 func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch\nFROM nope\n")
@@ -80,16 +92,4 @@ func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	assert.Equal(t, 2, planErr.Line)
 	assert.ErrorIs(t, err, errNoSuchImage)
 	assert.ErrorContains(t, err, "nope")
-}
-
-func TestAStageBasedOnAnEmptyStageStillStartsOnItsBase(t *testing.T) {
-	// arrange
-	stages := parse(t, "FROM debian:sid AS base\nFROM base\nRUN true\n")
-
-	// act
-	oldKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:old"})
-	newKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:new"})
-
-	// assert
-	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
 }

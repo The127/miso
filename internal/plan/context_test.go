@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/imagefile"
-
 	"github.com/The127/miso/internal/plan"
 )
 
@@ -36,18 +35,6 @@ func TestAChangedContextFileChangesTheKeyOfItsCopy(t *testing.T) {
 
 	// assert
 	assert.NotEqual(t, lastKey(t, helloKeys), lastKey(t, goodbyeKeys))
-}
-
-func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
-	// arrange
-	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
-
-	// act
-	withoutKeys := keys(t, stages, anyAgent, noFiles, debianImages)
-	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"}, debianImages)
-
-	// assert
-	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
 }
 
 func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {

@@ -6,8 +6,52 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
 )
+
+const anyAgent = "agent"
+
+func keys(t *testing.T, stages []imagefile.Stage, agent string, context plan.Context, bases plan.Bases) [][]string {
+	t.Helper()
+
+	planned, err := plan.New(stages, agent, context, bases)
+	require.NoError(t, err)
+
+	var found [][]string
+	for _, stage := range planned.Stages {
+		var stageKeys []string
+		for _, step := range stage.Steps {
+			stageKeys = append(stageKeys, step.Key)
+		}
+
+		found = append(found, stageKeys)
+	}
+
+	return found
+}
+
+func lastKey(t *testing.T, found [][]string) string {
+	t.Helper()
+
+	require.NotEmpty(t, found)
+	stage := found[len(found)-1]
+	require.NotEmpty(t, stage)
+
+	return stage[len(stage)-1]
+}
+
+func TestAnInvalidBuildFileGetsNoPlan(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nCOPY --from=nope a /b\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrUnknownStage)
+	assert.Empty(t, planned.Stages)
+}
 
 func TestAPlanKeepsTheBaseDigestItWasKeyedWith(t *testing.T) {
 	// arrange
