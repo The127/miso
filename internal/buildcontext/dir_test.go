@@ -274,3 +274,20 @@ func TestALinkIsNotAFileThatLooksLikeIt(t *testing.T) {
 	require.NoError(t, linkErr)
 	assert.NotEqual(t, fileDigest, linkDigest)
 }
+
+func TestADirectoryThatCannotBeReadIsAnError(t *testing.T) {
+	// arrange
+	if os.Geteuid() == 0 {
+		t.Skip("root reads every directory")
+	}
+
+	dir := t.TempDir()
+	mkdir(t, dir, "etc/ssl/private")
+	chmod(t, dir, "etc/ssl/private", 0o000)
+
+	// act
+	_, err := open(t, dir).Digest("etc")
+
+	// assert
+	assert.ErrorIs(t, err, fs.ErrPermission)
+}
