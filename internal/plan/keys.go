@@ -10,13 +10,21 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
-// Keys are the cache keys of a stage, one for each instruction.
-func Keys(stage imagefile.Stage) []string {
-	var keys []string
-	parent := stage.Base
-	for _, instruction := range stage.Instructions {
-		parent = stepKey(parent, instruction)
-		keys = append(keys, parent)
+// Keys are the cache keys of a build, one for each instruction of each
+// stage.
+func Keys(stages []imagefile.Stage) [][]string {
+	var keys [][]string
+	last := map[string]string{}
+	for _, stage := range stages {
+		var stageKeys []string
+		parent := stage.Base
+		for _, instruction := range stage.Instructions {
+			parent = stepKey(parent, instruction, last)
+			stageKeys = append(stageKeys, parent)
+		}
+
+		keys = append(keys, stageKeys)
+		last[stage.Name] = parent
 	}
 
 	return keys
@@ -24,7 +32,7 @@ func Keys(stage imagefile.Stage) []string {
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
 // every key after it.
-func stepKey(parent string, instruction imagefile.Instruction) string {
+func stepKey(parent string, instruction imagefile.Instruction, last map[string]string) string {
 	fields := []string{parent}
 	switch step := instruction.(type) {
 	case imagefile.Run:
@@ -32,7 +40,7 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 	case imagefile.Env:
 		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
-		fields = append(fields, "COPY")
+		fields = append(fields, "COPY", last[step.From])
 		fields = append(fields, step.Sources...)
 		fields = append(fields, step.Destination)
 	case imagefile.Output:

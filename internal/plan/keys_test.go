@@ -6,165 +6,158 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
 )
 
-func stage(t *testing.T, source string) imagefile.Stage {
+func lastKey(t *testing.T, keys [][]string) string {
 	t.Helper()
 
-	stages := parse(t, source)
-	require.Len(t, stages, 1)
+	require.NotEmpty(t, keys)
+	stage := keys[len(keys)-1]
+	require.NotEmpty(t, stage)
 
-	return stages[0]
+	return stage[len(stage)-1]
 }
 
 func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	// arrange
-	vim := stage(t, "FROM scratch\nRUN apt-get install vim\n")
-	nano := stage(t, "FROM scratch\nRUN apt-get install nano\n")
+	vim := parse(t, "FROM scratch\nRUN apt-get install vim\n")
+	nano := parse(t, "FROM scratch\nRUN apt-get install nano\n")
 
 	// act
 	vimKeys := plan.Keys(vim)
 	nanoKeys := plan.Keys(nano)
 
 	// assert
-	require.Len(t, vimKeys, 1)
-	require.Len(t, nanoKeys, 1)
-	assert.NotEqual(t, vimKeys[0], nanoKeys[0])
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
 
 func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
 	// arrange
-	updated := stage(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
-	upgraded := stage(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
+	updated := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
+	upgraded := parse(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
 
 	// act
 	updatedKeys := plan.Keys(updated)
 	upgradedKeys := plan.Keys(upgraded)
 
 	// assert
-	require.Len(t, updatedKeys, 2)
-	require.Len(t, upgradedKeys, 2)
-	assert.NotEqual(t, updatedKeys[1], upgradedKeys[1])
+	assert.NotEqual(t, lastKey(t, updatedKeys), lastKey(t, upgradedKeys))
 }
 
 func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	// arrange
-	run := stage(t, "FROM scratch\nRUN true\n")
-	check := stage(t, "FROM scratch\nCHECK true\n")
+	run := parse(t, "FROM scratch\nRUN true\n")
+	check := parse(t, "FROM scratch\nCHECK true\n")
 
 	// act
 	runKeys := plan.Keys(run)
 	checkKeys := plan.Keys(check)
 
 	// assert
-	require.Len(t, runKeys, 1)
-	require.Len(t, checkKeys, 1)
-	assert.NotEqual(t, runKeys[0], checkKeys[0])
+	assert.NotEqual(t, lastKey(t, runKeys), lastKey(t, checkKeys))
 }
 
 func TestADifferentBaseChangesTheKeys(t *testing.T) {
 	// arrange
-	sid := stage(t, "FROM debian:sid\nRUN true\n")
-	trixie := stage(t, "FROM debian:trixie\nRUN true\n")
+	sid := parse(t, "FROM debian:sid\nRUN true\n")
+	trixie := parse(t, "FROM debian:trixie\nRUN true\n")
 
 	// act
 	sidKeys := plan.Keys(sid)
 	trixieKeys := plan.Keys(trixie)
 
 	// assert
-	require.Len(t, sidKeys, 1)
-	require.Len(t, trixieKeys, 1)
-	assert.NotEqual(t, sidKeys[0], trixieKeys[0])
+	assert.NotEqual(t, lastKey(t, sidKeys), lastKey(t, trixieKeys))
 }
 
 func TestAChangedEnvChangesTheKeysAfterIt(t *testing.T) {
 	// arrange
-	vim := stage(t, "FROM scratch\nENV EDITOR=vim\nRUN true\n")
-	nano := stage(t, "FROM scratch\nENV EDITOR=nano\nRUN true\n")
+	vim := parse(t, "FROM scratch\nENV EDITOR=vim\nRUN true\n")
+	nano := parse(t, "FROM scratch\nENV EDITOR=nano\nRUN true\n")
 
 	// act
 	vimKeys := plan.Keys(vim)
 	nanoKeys := plan.Keys(nano)
 
 	// assert
-	require.Len(t, vimKeys, 2)
-	require.Len(t, nanoKeys, 2)
-	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
 
 func TestAChangedCopyDestinationChangesItsKey(t *testing.T) {
 	// arrange
-	etc := stage(t, "FROM scratch\nCOPY motd /etc/\n")
-	srv := stage(t, "FROM scratch\nCOPY motd /srv/\n")
+	etc := parse(t, "FROM scratch\nCOPY motd /etc/\n")
+	srv := parse(t, "FROM scratch\nCOPY motd /srv/\n")
 
 	// act
 	etcKeys := plan.Keys(etc)
 	srvKeys := plan.Keys(srv)
 
 	// assert
-	require.Len(t, etcKeys, 1)
-	require.Len(t, srvKeys, 1)
-	assert.NotEqual(t, etcKeys[0], srvKeys[0])
+	assert.NotEqual(t, lastKey(t, etcKeys), lastKey(t, srvKeys))
 }
 
 func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
 	// arrange
-	one := stage(t, "FROM scratch\nCOPY \"a b\" /c\n")
-	two := stage(t, "FROM scratch\nCOPY a b /c\n")
+	one := parse(t, "FROM scratch\nCOPY \"a b\" /c\n")
+	two := parse(t, "FROM scratch\nCOPY a b /c\n")
 
 	// act
 	oneKeys := plan.Keys(one)
 	twoKeys := plan.Keys(two)
 
 	// assert
-	require.Len(t, oneKeys, 1)
-	require.Len(t, twoKeys, 1)
-	assert.NotEqual(t, oneKeys[0], twoKeys[0])
+	assert.NotEqual(t, lastKey(t, oneKeys), lastKey(t, twoKeys))
 }
 
 func TestAChangedOutputKindChangesItsKey(t *testing.T) {
 	// arrange
-	disk := stage(t, "FROM scratch\nOUTPUT disk os.img\n")
-	iso := stage(t, "FROM scratch\nOUTPUT iso os.img\n")
+	disk := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
+	iso := parse(t, "FROM scratch\nOUTPUT iso os.img\n")
 
 	// act
 	diskKeys := plan.Keys(disk)
 	isoKeys := plan.Keys(iso)
 
 	// assert
-	require.Len(t, diskKeys, 1)
-	require.Len(t, isoKeys, 1)
-	assert.NotEqual(t, diskKeys[0], isoKeys[0])
+	assert.NotEqual(t, lastKey(t, diskKeys), lastKey(t, isoKeys))
 }
 
 func TestAChangedOutputOptionChangesItsKey(t *testing.T) {
 	// arrange
-	small := stage(t, "FROM scratch\nOUTPUT disk os.img --size=4G\n")
-	large := stage(t, "FROM scratch\nOUTPUT disk os.img --size=8G\n")
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\n")
 
 	// act
 	smallKeys := plan.Keys(small)
 	largeKeys := plan.Keys(large)
 
 	// assert
-	require.Len(t, smallKeys, 1)
-	require.Len(t, largeKeys, 1)
-	assert.NotEqual(t, smallKeys[0], largeKeys[0])
+	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
 }
 
 func TestOutputOptionsInADifferentOrderKeepTheKey(t *testing.T) {
 	// arrange
-	sizeFirst := stage(t, "FROM scratch\nOUTPUT disk os.img --size=4G --verity --label=root\n")
-	sizeLast := stage(t, "FROM scratch\nOUTPUT disk os.img --label=root --verity --size=4G\n")
+	sizeFirst := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G --verity --label=root\n")
+	sizeLast := parse(t, "FROM scratch\nOUTPUT disk os.img --label=root --verity --size=4G\n")
 
 	// act
 	sizeFirstKeys := plan.Keys(sizeFirst)
 	sizeLastKeys := plan.Keys(sizeLast)
 
 	// assert
-	require.Len(t, sizeFirstKeys, 1)
-	require.Len(t, sizeLastKeys, 1)
-	assert.Equal(t, sizeFirstKeys[0], sizeLastKeys[0])
+	assert.Equal(t, lastKey(t, sizeFirstKeys), lastKey(t, sizeLastKeys))
+}
+
+func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM debian:sid AS build\nRUN make vim\nFROM scratch\nCOPY --from=build /out /\n")
+	nano := parse(t, "FROM debian:sid AS build\nRUN make nano\nFROM scratch\nCOPY --from=build /out /\n")
+
+	// act
+	vimKeys := plan.Keys(vim)
+	nanoKeys := plan.Keys(nano)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
