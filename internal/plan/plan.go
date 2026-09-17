@@ -32,6 +32,12 @@ func New(stages []imagefile.Stage, agent string, context Context, bases Bases) (
 		return Plan{}, err
 	}
 
-	p := &planner{agent: agent, context: context, bases: bases, ends: map[string]string{}}
+	p := &planner{
+		agent:   agent,
+		context: context,
+		bases:   bases,
+		ends:    map[string]string{},
+		outputs: map[string]map[string]string{},
+	}
 	return p.plan(stages)
 }
