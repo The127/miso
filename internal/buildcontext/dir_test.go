@@ -152,3 +152,20 @@ func TestAChangedFileDeepInATreeChangesTheDigest(t *testing.T) {
 	require.NoError(t, loudErr)
 	assert.NotEqual(t, quietDigest, loudDigest)
 }
+
+func TestARenamedFileChangesTheDigest(t *testing.T) {
+	// arrange
+	motd := t.TempDir()
+	write(t, motd, "etc/motd", "hello")
+	issue := t.TempDir()
+	write(t, issue, "etc/issue", "hello")
+
+	// act
+	motdDigest, motdErr := open(t, motd).Digest("etc")
+	issueDigest, issueErr := open(t, issue).Digest("etc")
+
+	// assert
+	require.NoError(t, motdErr)
+	require.NoError(t, issueErr)
+	assert.NotEqual(t, motdDigest, issueDigest)
+}
