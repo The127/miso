@@ -8,7 +8,7 @@ type Stage struct {
 	Instructions []Instruction
 }
 
-// Instruction is one step of a stage: a Run, an Env or a Copy.
+// Instruction is one step of a stage: a Run, an Env, a Copy or an Output.
 type Instruction interface {
 	instruction()
 }
