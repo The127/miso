@@ -72,7 +72,7 @@ func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	stages := parse(t, "FROM scratch\nFROM nope\n")
 
 	// act
-	_, err := plan.Keys(stages, anyAgent, noFiles, noImages)
+	_, err := plan.New(stages, anyAgent, noFiles, noImages)
 
 	// assert
 	var planErr *imagefile.Error
