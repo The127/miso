@@ -1,7 +1,7 @@
 package imagefile
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -24,7 +24,7 @@ func sourceLines(source string) []sourceLine {
 		}
 
 		if continuing && strings.TrimSpace(physical) == "" {
-			current.problem = errors.New("continuation onto an empty line")
+			current.problem = fmt.Errorf("%w onto an empty line", ErrContinuation)
 			lines = append(lines, current)
 			continuing = false
 			continue
@@ -39,7 +39,7 @@ func sourceLines(source string) []sourceLine {
 	}
 
 	if continuing {
-		current.problem = errors.New("continuation runs off the end of the file")
+		current.problem = fmt.Errorf("%w runs off the end of the file", ErrContinuation)
 		lines = append(lines, current)
 	}
 

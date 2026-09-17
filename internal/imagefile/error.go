@@ -14,6 +14,9 @@ var (
 
 	// ErrBeforeFrom is an instruction with no stage to belong to.
 	ErrBeforeFrom = errors.New("before FROM")
+
+	// ErrContinuation is a backslash with no line to continue on.
+	ErrContinuation = errors.New("continuation")
 )
 
 // Error is a problem in a build file, at a line.

@@ -43,6 +43,7 @@ func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "line 2: continuation runs off the end of the file")
+	assert.ErrorIs(t, err, imagefile.ErrContinuation)
 }
 
 func TestAContinuationOntoAnEmptyLineIsRejected(t *testing.T) {
