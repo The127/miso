@@ -40,7 +40,7 @@ func (d *Dir) Digest(path string) (string, error) {
 			return err
 		}
 
-		found, err := d.entry(name, below(path, name), entry.IsDir())
+		found, err := d.entry(name, below(path, name), entry.Type())
 		entries = append(entries, found)
 
 		return err
@@ -52,13 +52,19 @@ func (d *Dir) Digest(path string) (string, error) {
 	return hashed(entries), nil
 }
 
-func (d *Dir) entry(name string, below string, isDir bool) (string, error) {
+func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error) {
 	info, statErr := d.root.Lstat(name)
 
-	var content string
+	var payload string
 	var readErr error
-	if !isDir {
-		content, readErr = d.content(name)
+	switch {
+	case kind.IsDir():
+	case kind&fs.ModeSymlink != 0:
+		// a link means a place in the image, not on the host, so it is
+		// never followed here
+		payload, readErr = d.root.Readlink(name)
+	default:
+		payload, readErr = d.content(name)
 	}
 
 	if err := errors.Join(statErr, readErr); err != nil {
@@ -67,7 +73,7 @@ func (d *Dir) entry(name string, below string, isDir bool) (string, error) {
 
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 
-	return hashed([]string{below, perm, content}), nil
+	return hashed([]string{below, perm, payload}), nil
 }
 
 func (d *Dir) content(name string) (string, error) {

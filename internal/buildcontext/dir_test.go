@@ -36,6 +36,13 @@ func mkdir(t *testing.T, dir string, name string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, name), 0o750))
 }
 
+func symlink(t *testing.T, dir string, name string, target string) {
+	t.Helper()
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o750))
+	require.NoError(t, os.Symlink(target, filepath.Join(dir, name)))
+}
+
 func chmod(t *testing.T, dir string, name string, mode os.FileMode) {
 	t.Helper()
 
@@ -228,4 +235,21 @@ func TestAChangedDirectoryModeChangesTheDigest(t *testing.T) {
 	require.NoError(t, privateErr)
 	require.NoError(t, publicErr)
 	assert.NotEqual(t, privateDigest, publicDigest)
+}
+
+func TestAChangedLinkTargetChangesTheDigest(t *testing.T) {
+	// arrange
+	utc := t.TempDir()
+	symlink(t, utc, "etc/localtime", "/usr/share/zoneinfo/UTC")
+	berlin := t.TempDir()
+	symlink(t, berlin, "etc/localtime", "/usr/share/zoneinfo/Europe/Berlin")
+
+	// act
+	utcDigest, utcErr := open(t, utc).Digest("etc")
+	berlinDigest, berlinErr := open(t, berlin).Digest("etc")
+
+	// assert
+	require.NoError(t, utcErr)
+	require.NoError(t, berlinErr)
+	assert.NotEqual(t, utcDigest, berlinDigest)
 }
