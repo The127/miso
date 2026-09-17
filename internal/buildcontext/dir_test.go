@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,12 @@ func chmod(t *testing.T, dir string, name string, mode os.FileMode) {
 	t.Helper()
 
 	require.NoError(t, os.Chmod(filepath.Join(dir, name), mode))
+}
+
+func touch(t *testing.T, dir string, name string, when time.Time) {
+	t.Helper()
+
+	require.NoError(t, os.Chtimes(filepath.Join(dir, name), when, when))
 }
 
 func TestABuildContextThatIsNotThereCannotBeOpened(t *testing.T) {
@@ -90,4 +97,23 @@ func TestAChangedFileModeChangesTheDigest(t *testing.T) {
 	require.NoError(t, plainErr)
 	require.NoError(t, executableErr)
 	assert.NotEqual(t, plainDigest, executableDigest)
+}
+
+func TestAChangedModificationTimeKeepsTheDigest(t *testing.T) {
+	// arrange
+	old := t.TempDir()
+	write(t, old, "motd", "hello")
+	touch(t, old, "motd", time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC))
+	recent := t.TempDir()
+	write(t, recent, "motd", "hello")
+	touch(t, recent, "motd", time.Date(2026, time.September, 17, 0, 0, 0, 0, time.UTC))
+
+	// act
+	oldDigest, oldErr := open(t, old).Digest("motd")
+	recentDigest, recentErr := open(t, recent).Digest("motd")
+
+	// assert
+	require.NoError(t, oldErr)
+	require.NoError(t, recentErr)
+	assert.Equal(t, oldDigest, recentDigest)
 }
