@@ -19,7 +19,11 @@ func (Copy) instruction() {}
 func (p *parser) copy(arguments string) error {
 	var from string
 	var paths []string
-	found, _ := words(arguments)
+	found, closed := words(arguments)
+	if !closed {
+		return errors.New("COPY has an unclosed quote")
+	}
+
 	for _, word := range found {
 		flag, value, _ := strings.Cut(word, "=")
 		switch {
