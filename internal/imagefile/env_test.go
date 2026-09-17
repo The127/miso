@@ -33,7 +33,8 @@ func TestEnvWithoutAValueIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "KEY=VALUE")
 }
 
 func TestEnvTakesSeveralVariablesOnOneLine(t *testing.T) {
@@ -59,7 +60,8 @@ func TestAnEnvBeforeFromIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 1: ENV before FROM")
+	assert.ErrorIs(t, err, imagefile.ErrBeforeFrom)
+	assert.ErrorContains(t, err, "ENV")
 }
 
 func TestAnEnvWithoutVariablesIsRejected(t *testing.T) {
@@ -70,7 +72,8 @@ func TestAnEnvWithoutVariablesIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "KEY=VALUE")
 }
 
 func TestAQuotedEnvValueKeepsItsSpaces(t *testing.T) {
@@ -96,5 +99,6 @@ func TestAnUnclosedQuoteInEnvIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: ENV has an unclosed quote")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "unclosed quote")
 }

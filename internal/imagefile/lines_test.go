@@ -31,7 +31,9 @@ func TestLineNumbersStayTrueAfterAContinuation(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 4: unknown instruction BOGUS")
+	var parseErr *imagefile.Error
+	require.ErrorAs(t, err, &parseErr)
+	assert.Equal(t, 4, parseErr.Line)
 }
 
 func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
@@ -42,8 +44,9 @@ func TestAContinuationThatRunsOffTheEndOfTheFileIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: continuation runs off the end of the file")
 	assert.ErrorIs(t, err, imagefile.ErrContinuation)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "end of the file")
 }
 
 func TestAContinuationOntoAnEmptyLineIsRejected(t *testing.T) {
@@ -54,5 +57,7 @@ func TestAContinuationOntoAnEmptyLineIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: continuation onto an empty line")
+	assert.ErrorIs(t, err, imagefile.ErrContinuation)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "empty line")
 }

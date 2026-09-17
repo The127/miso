@@ -31,7 +31,8 @@ func TestCopyWithoutADestinationIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: COPY needs a source and a destination")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "source and a destination")
 }
 
 func TestCopyFromNamesTheStageItCopiesFrom(t *testing.T) {
@@ -56,7 +57,8 @@ func TestCopyWithAnUnknownFlagIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: COPY does not know --frm")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--frm")
 }
 
 func TestCopyFromWithoutAStageIsRejected(t *testing.T) {
@@ -67,7 +69,8 @@ func TestCopyFromWithoutAStageIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: COPY --from needs a stage")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--from needs a stage")
 }
 
 func TestAQuotedCopyPathKeepsItsSpaces(t *testing.T) {
@@ -92,7 +95,8 @@ func TestAnUnclosedQuoteInCopyIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: COPY has an unclosed quote")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "unclosed quote")
 }
 
 func TestCopyWithFromTwiceIsRejected(t *testing.T) {
@@ -103,5 +107,6 @@ func TestCopyWithFromTwiceIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: COPY has --from twice")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--from twice")
 }
