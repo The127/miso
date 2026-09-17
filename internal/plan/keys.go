@@ -76,12 +76,12 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	case imagefile.Env:
 		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
-		copied, err := copyFields(step, last[step.From], context)
+		digests, err := contextDigests(step, context)
 		if err != nil {
 			return "", err
 		}
 
-		fields = append(fields, copied...)
+		fields = append(fields, copyFields(step, last[step.From], digests)...)
 	case imagefile.Output:
 		fields = append(fields, "OUTPUT", step.Kind)
 		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
@@ -94,23 +94,36 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	return hashed(fields), nil
 }
 
-func copyFields(step imagefile.Copy, fromKey string, context Context) ([]string, error) {
-	fields := []string{"COPY", fromKey}
-	for _, source := range step.Sources {
-		fields = append(fields, source)
-		if step.From != "" {
-			continue
-		}
+// contextDigests are empty for a copy from a stage, that stage's key
+// already covers its files.
+func contextDigests(step imagefile.Copy, context Context) ([]string, error) {
+	if step.From != "" {
+		return nil, nil
+	}
 
+	var digests []string
+	for _, source := range step.Sources {
 		digest, err := context.Digest(source)
 		if err != nil {
 			return nil, at(step.Line, fmt.Errorf("COPY %s: %w", source, err))
 		}
 
-		fields = append(fields, digest)
+		digests = append(digests, digest)
 	}
 
-	return append(fields, step.Destination), nil
+	return digests, nil
+}
+
+func copyFields(step imagefile.Copy, fromKey string, digests []string) []string {
+	fields := []string{"COPY", fromKey}
+	for i, source := range step.Sources {
+		fields = append(fields, source)
+		if i < len(digests) {
+			fields = append(fields, digests[i])
+		}
+	}
+
+	return append(fields, step.Destination)
 }
 
 // hashed puts the length in front of every field, which keeps "a b" apart
