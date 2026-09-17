@@ -70,3 +70,14 @@ func TestAnInstructionBeforeFromIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 1: RUN before FROM")
 }
+
+func TestAnUnknownInstructionIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nBOGUS value\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: unknown instruction BOGUS")
+}
