@@ -9,6 +9,9 @@ var (
 	// ErrUnknownInstruction is a line that starts with no keyword we know.
 	ErrUnknownInstruction = errors.New("unknown instruction")
 
+	// ErrNoFrom is a build file without a single stage.
+	ErrNoFrom = errors.New("no FROM instruction")
+
 	// ErrBeforeFrom is an instruction with no stage to belong to.
 	ErrBeforeFrom = errors.New("before FROM")
 )
