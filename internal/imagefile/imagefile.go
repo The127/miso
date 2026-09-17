@@ -15,38 +15,52 @@ type Stage struct {
 
 // Parse reads a build file into its stages, in order.
 func Parse(source string) ([]Stage, error) {
-	var stages []Stage
+	var p parser
 	for i, line := range strings.Split(source, "\n") {
-		if strings.HasPrefix(line, "#") {
-			continue
-		}
-		keyword, rest, _ := strings.Cut(line, " ")
-		switch keyword {
-		case "FROM":
-			base, name := from(line)
-			stages = append(stages, Stage{Name: name, Base: base})
-		case "RUN":
-			if len(stages) == 0 {
-				return nil, fmt.Errorf("line %d: RUN before FROM", i+1)
-			}
-			current := &stages[len(stages)-1]
-			current.Commands = append(current.Commands, rest)
-		case "":
-		default:
-			return nil, fmt.Errorf("line %d: unknown instruction %s", i+1, keyword)
+		if err := p.read(line); err != nil {
+			return nil, fmt.Errorf("line %d: %w", i+1, err)
 		}
 	}
-	if len(stages) == 0 {
+
+	if len(p.stages) == 0 {
 		return nil, errors.New("no FROM instruction")
 	}
-	return stages, nil
+
+	return p.stages, nil
 }
 
-func from(line string) (base, name string) {
-	fields := strings.Fields(line)
-	base = fields[1]
-	if len(fields) > 3 {
-		name = fields[3]
+type parser struct {
+	stages []Stage
+}
+
+func (p *parser) read(line string) error {
+	if line == "" || strings.HasPrefix(line, "#") {
+		return nil
 	}
-	return base, name
+
+	keyword, arguments, _ := strings.Cut(line, " ")
+	switch keyword {
+	case "FROM":
+		p.from(arguments)
+		return nil
+	case "RUN":
+		return p.run(arguments)
+	default:
+		return fmt.Errorf("unknown instruction %s", keyword)
+	}
+}
+
+func (p *parser) from(arguments string) {
+	base, name, _ := strings.Cut(arguments, " AS ")
+	p.stages = append(p.stages, Stage{Name: name, Base: base})
+}
+
+func (p *parser) run(command string) error {
+	if len(p.stages) == 0 {
+		return errors.New("RUN before FROM")
+	}
+
+	stage := &p.stages[len(p.stages)-1]
+	stage.Commands = append(stage.Commands, command)
+	return nil
 }
