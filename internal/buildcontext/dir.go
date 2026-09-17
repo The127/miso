@@ -16,6 +16,10 @@ import (
 // ErrOutsideContext is a source that is not below the build context.
 var ErrOutsideContext = errors.New("outside the build context")
 
+// ErrThroughLink is a source whose path goes through a link. A link of the
+// build context is never followed on the host.
+var ErrThroughLink = errors.New("goes through a link")
+
 // ErrSpecialFile is something in the build context that is no file, no
 // directory and no link, such as a pipe or a device. A copy cannot carry it.
 var ErrSpecialFile = errors.New("special file")
@@ -65,6 +69,9 @@ func (d *Dir) entries(source string) ([]string, error) {
 
 	// the walk takes one spelling of a path only
 	source = filepath.Clean(source)
+	if err := d.throughLink(source); err != nil {
+		return nil, err
+	}
 
 	info, err := d.root.Lstat(source)
 	if errors.Is(err, d.escapes) {
@@ -105,6 +112,26 @@ func (d *Dir) entries(source string) ([]string, error) {
 	}
 
 	return entries, nil
+}
+
+// throughLink looks at every part of a source path but the last. The root
+// would follow a link there as long as it stays inside.
+func (d *Dir) throughLink(source string) error {
+	parts := strings.Split(filepath.ToSlash(source), "/")
+	for i := 1; i < len(parts); i++ {
+		parent := strings.Join(parts[:i], "/")
+
+		info, err := d.root.Lstat(parent)
+		if err != nil {
+			return err
+		}
+
+		if info.Mode()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("%s: %w", parent, ErrThroughLink)
+		}
+	}
+
+	return nil
 }
 
 // entry takes what a thing is and its mode from one look at it. The

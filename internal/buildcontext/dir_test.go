@@ -336,7 +336,7 @@ func TestALinkThatLeadsOutOfTheContextIsRejected(t *testing.T) {
 	_, err := open(t, filepath.Join(dir, "context")).Digest("out/password")
 
 	// assert
-	assert.ErrorIs(t, err, buildcontext.ErrOutsideContext)
+	assert.ErrorIs(t, err, buildcontext.ErrThroughLink)
 }
 
 func TestASourceSpelledAnotherWayKeepsTheDigest(t *testing.T) {
@@ -519,4 +519,18 @@ func TestALinkInATreeIsNotFollowed(t *testing.T) {
 	require.NoError(t, twoErr)
 	require.NoError(t, threeErr)
 	assert.Equal(t, twoDigest, threeDigest)
+}
+
+func TestASourceThroughALinkIsRejected(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "releases/v2/app", "two")
+	symlink(t, dir, "current", "releases/v2")
+
+	// act
+	_, err := open(t, dir).Digest("current/app")
+
+	// assert
+	assert.ErrorIs(t, err, buildcontext.ErrThroughLink)
+	assert.ErrorContains(t, err, "current")
 }
