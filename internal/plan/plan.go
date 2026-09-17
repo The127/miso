@@ -17,6 +17,13 @@ type Stage struct {
 type Step struct {
 	Instruction imagefile.Instruction
 	Key         string
+	Files       []File
+}
+
+// File is a file of the build context, as it was when the plan was made.
+type File struct {
+	Path   string
+	Digest string
 }
 
 // New plans a build. Nothing is looked up again after it.
