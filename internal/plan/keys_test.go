@@ -108,3 +108,18 @@ func TestAChangedCopyDestinationChangesItsKey(t *testing.T) {
 	require.Len(t, srvKeys, 1)
 	assert.NotEqual(t, etcKeys[0], srvKeys[0])
 }
+
+func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
+	// arrange
+	one := stage(t, "FROM scratch\nCOPY \"a b\" /c\n")
+	two := stage(t, "FROM scratch\nCOPY a b /c\n")
+
+	// act
+	oneKeys := plan.Keys(one)
+	twoKeys := plan.Keys(two)
+
+	// assert
+	require.Len(t, oneKeys, 1)
+	require.Len(t, twoKeys, 1)
+	assert.NotEqual(t, oneKeys[0], twoKeys[0])
+}
