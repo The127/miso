@@ -11,7 +11,7 @@ func Parse(source string) ([]Stage, error) {
 	var p parser
 	for _, line := range sourceLines(source) {
 		if err := p.read(line); err != nil {
-			return nil, fmt.Errorf("line %d: %w", line.number, err)
+			return nil, &Error{Line: line.number, Err: err}
 		}
 	}
 
