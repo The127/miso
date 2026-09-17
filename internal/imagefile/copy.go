@@ -19,7 +19,8 @@ func (Copy) instruction() {}
 func (p *parser) copy(arguments string) error {
 	var from string
 	var paths []string
-	for _, word := range strings.Fields(arguments) {
+	found, _ := words(arguments)
+	for _, word := range found {
 		flag, value, _ := strings.Cut(word, "=")
 		switch {
 		case !strings.HasPrefix(flag, "--"):

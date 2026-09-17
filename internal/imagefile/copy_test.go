@@ -69,3 +69,17 @@ func TestCopyFromWithoutAStageIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: COPY --from needs a stage")
 }
+
+func TestAQuotedCopyPathKeepsItsSpaces(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY \"my file.txt\" /srv/\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Copy{Sources: []string{"my file.txt"}, Destination: "/srv/"},
+	}, stages[0].Instructions)
+}
