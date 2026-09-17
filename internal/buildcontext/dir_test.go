@@ -28,6 +28,12 @@ func write(t *testing.T, dir string, name string, content string) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 }
 
+func chmod(t *testing.T, dir string, name string, mode os.FileMode) {
+	t.Helper()
+
+	require.NoError(t, os.Chmod(filepath.Join(dir, name), mode))
+}
+
 func TestABuildContextThatIsNotThereCannotBeOpened(t *testing.T) {
 	// arrange
 	missing := filepath.Join(t.TempDir(), "nope")
@@ -65,4 +71,23 @@ func TestAChangedFileContentChangesTheDigest(t *testing.T) {
 	require.NoError(t, helloErr)
 	require.NoError(t, goodbyeErr)
 	assert.NotEqual(t, helloDigest, goodbyeDigest)
+}
+
+func TestAChangedFileModeChangesTheDigest(t *testing.T) {
+	// arrange
+	plain := t.TempDir()
+	write(t, plain, "run.sh", "#!/bin/sh")
+	chmod(t, plain, "run.sh", 0o644)
+	executable := t.TempDir()
+	write(t, executable, "run.sh", "#!/bin/sh")
+	chmod(t, executable, "run.sh", 0o755)
+
+	// act
+	plainDigest, plainErr := open(t, plain).Digest("run.sh")
+	executableDigest, executableErr := open(t, executable).Digest("run.sh")
+
+	// assert
+	require.NoError(t, plainErr)
+	require.NoError(t, executableErr)
+	assert.NotEqual(t, plainDigest, executableDigest)
 }
