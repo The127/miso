@@ -47,8 +47,8 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 	return baseKey(p.agent, stage.Base, digest), digest, nil
 }
 
-// steps also hands back where the stage ends. Until a copy can name the
-// output it takes, that is everything in the stage.
+// steps also hands back where the stage's root file system ends, which for
+// a stage without steps is where it started.
 func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, error) {
 	var steps []Step
 	rootfs := from
@@ -73,7 +73,7 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		}
 	}
 
-	return steps, hashed(append([]string{rootfs}, artifacts...)), nil
+	return steps, rootfs, nil
 }
 
 // step chains a step to its parent, so a change early in a stage reaches
