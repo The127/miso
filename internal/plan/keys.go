@@ -3,7 +3,7 @@ package plan
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"strings"
+	"strconv"
 
 	"github.com/The127/miso/internal/imagefile"
 )
@@ -23,18 +23,25 @@ func Keys(stage imagefile.Stage) []string {
 // stepKey chains a step to its parent, so a change early in a stage reaches
 // every key after it.
 func stepKey(parent string, instruction imagefile.Instruction) string {
-	var kind, text string
+	fields := []string{parent}
 	switch step := instruction.(type) {
 	case imagefile.Run:
-		kind, text = "RUN", step.Command
+		fields = append(fields, "RUN", step.Command)
 	case imagefile.Env:
-		kind, text = "ENV", step.Key+"="+step.Value
+		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
-		kind, text = "COPY", strings.Join(step.Sources, " ")+" "+step.Destination
+		fields = append(fields, "COPY")
+		fields = append(fields, step.Sources...)
+		fields = append(fields, step.Destination)
 	case imagefile.Check:
-		kind, text = "CHECK", step.Command
+		fields = append(fields, "CHECK", step.Command)
 	}
 
-	sum := sha256.Sum256([]byte(parent + "\n" + kind + "\n" + text))
-	return hex.EncodeToString(sum[:])
+	// the length in front keeps "a b" apart from "a" and "b"
+	hash := sha256.New()
+	for _, field := range fields {
+		hash.Write([]byte(strconv.Itoa(len(field)) + ":" + field))
+	}
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
