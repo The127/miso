@@ -104,8 +104,7 @@ func (p *parser) read(line sourceLine) error {
 	case "RUN":
 		return p.add("RUN", Run{Command: arguments})
 	case "ENV":
-		key, value, _ := strings.Cut(arguments, "=")
-		return p.add("ENV", Env{Key: key, Value: value})
+		return p.env(arguments)
 	default:
 		return fmt.Errorf("unknown instruction %s", keyword)
 	}
@@ -127,6 +126,15 @@ func (p *parser) from(arguments string) error {
 	}
 
 	return nil
+}
+
+func (p *parser) env(arguments string) error {
+	key, value, assigned := strings.Cut(arguments, "=")
+	if !assigned {
+		return errors.New("ENV needs KEY=VALUE")
+	}
+
+	return p.add("ENV", Env{Key: key, Value: value})
 }
 
 func (p *parser) add(keyword string, instruction Instruction) error {
