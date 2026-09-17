@@ -228,3 +228,19 @@ func TestAStepKeepsItsKeyWhenALaterStepChanges(t *testing.T) {
 	assert.Equal(t, vimKeys[0][0], nanoKeys[0][0])
 	assert.NotEqual(t, vimKeys[0][1], nanoKeys[0][1])
 }
+
+func TestAStageKeepsItsKeysWhenALaterStageChanges(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install vim\n")
+	nano := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install nano\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	require.Len(t, vimKeys, 2)
+	require.Len(t, nanoKeys, 2)
+	assert.Equal(t, vimKeys[0], nanoKeys[0])
+	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
+}
