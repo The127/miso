@@ -1,0 +1,13 @@
+# Package dependency rules, checked by `just arch`. Patterns are regular
+# expressions after arch-go's rewriting, so a single package is anchored
+# with $ and `x.**` covers x and everything below it.
+version: 1
+threshold:
+  compliance: 100
+  coverage: 100
+dependenciesRules:
+  # a command only wires, what it needs of ours lives under internal
+  - package: '**.cmd.**'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.**'
