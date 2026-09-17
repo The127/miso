@@ -50,4 +50,4 @@ hooks:
     lefthook install
 
 # everything that must pass before a push
-ci: lint prose doccheck arch build test vuln
+ci: lint prose doccheck arch build cover vuln
