@@ -169,3 +169,20 @@ func TestARenamedFileChangesTheDigest(t *testing.T) {
 	require.NoError(t, issueErr)
 	assert.NotEqual(t, motdDigest, issueDigest)
 }
+
+func TestTheSameTreeUnderAnotherNameKeepsTheDigest(t *testing.T) {
+	// arrange
+	etc := t.TempDir()
+	write(t, etc, "etc/motd", "hello")
+	config := t.TempDir()
+	write(t, config, "config/motd", "hello")
+
+	// act
+	etcDigest, etcErr := open(t, etc).Digest("etc")
+	configDigest, configErr := open(t, config).Digest("config")
+
+	// assert
+	require.NoError(t, etcErr)
+	require.NoError(t, configErr)
+	assert.Equal(t, etcDigest, configDigest)
+}
