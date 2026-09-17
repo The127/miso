@@ -17,6 +17,18 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the plan checks what the build file says before anything is built. It
+  # knows the language and nothing else of ours, and it never touches a
+  # process, the network or the kernel
+  - package: '**.internal.plan$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.imagefile$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
+        - syscall
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
