@@ -135,3 +135,5 @@ fabric.properties
 
 ### Project ###
 docs/
+# compiled binary
+/bin/
