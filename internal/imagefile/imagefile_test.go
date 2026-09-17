@@ -207,3 +207,29 @@ func TestEnvWithoutAValueIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 2: ENV needs KEY=VALUE")
 }
+
+func TestEnvTakesSeveralVariablesOnOneLine(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nENV A=1 B=2\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Env{Key: "A", Value: "1"},
+		imagefile.Env{Key: "B", Value: "2"},
+	}, stages[0].Instructions)
+}
+
+func TestAnEnvBeforeFromIsRejected(t *testing.T) {
+	// arrange
+	source := "ENV A=1\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 1: ENV before FROM")
+}
