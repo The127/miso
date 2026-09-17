@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -153,15 +154,22 @@ func permissions(mode fs.FileMode) string {
 	return strconv.FormatUint(bits, 8)
 }
 
+// content streams a file into its hash, a source may be a disk image of
+// many gigabytes.
 func (d *Dir) content(name string) (string, error) {
-	content, err := d.root.ReadFile(name)
+	file, err := d.root.Open(name)
 	if err != nil {
 		return "", err
 	}
 
-	sum := sha256.Sum256(content)
+	defer func() { _ = file.Close() }()
 
-	return hex.EncodeToString(sum[:]), nil
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 // below is a path as seen from the source of the copy. The source's own
