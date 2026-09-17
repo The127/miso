@@ -42,7 +42,9 @@ func TestRunKeepsItsCommandVerbatim(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, []string{"echo  'a  b' > /etc/motd"}, stages[0].Commands)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Command: "echo  'a  b' > /etc/motd"},
+	}, stages[0].Instructions)
 }
 
 func TestInstructionsBelongToTheStageTheyFollow(t *testing.T) {
@@ -55,8 +57,8 @@ func TestInstructionsBelongToTheStageTheyFollow(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Stage{
-		{Name: "one", Base: "debian:sid", Commands: []string{"first"}},
-		{Name: "two", Base: "one", Commands: []string{"second"}},
+		{Name: "one", Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "first"}}},
+		{Name: "two", Base: "one", Instructions: []imagefile.Instruction{imagefile.Run{Command: "second"}}},
 	}, stages)
 }
 
@@ -92,7 +94,7 @@ func TestCommentLinesAreIgnored(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, []imagefile.Stage{
-		{Base: "debian:sid", Commands: []string{"true"}},
+		{Base: "debian:sid", Instructions: []imagefile.Instruction{imagefile.Run{Command: "true"}}},
 	}, stages)
 }
 
@@ -138,7 +140,9 @@ func TestABackslashContinuesTheInstructionOnTheNextLine(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, []string{"apt-get update &&     apt-get install -y vim"}, stages[0].Commands)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Command: "apt-get update &&     apt-get install -y vim"},
+	}, stages[0].Instructions)
 }
 
 func TestLineNumbersStayTrueAfterAContinuation(t *testing.T) {
@@ -172,5 +176,23 @@ func TestIndentationBeforeAnInstructionIsIgnored(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, []string{"true"}, stages[0].Commands)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Command: "true"},
+	}, stages[0].Instructions)
+}
+
+func TestEnvKeepsItsPlaceAmongTheRunLines(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN first\nENV A=1\nRUN second\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Command: "first"},
+		imagefile.Env{Key: "A", Value: "1"},
+		imagefile.Run{Command: "second"},
+	}, stages[0].Instructions)
 }

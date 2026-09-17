@@ -8,10 +8,29 @@ import (
 
 // Stage is a FROM line and the instructions that follow it.
 type Stage struct {
-	Name     string
-	Base     string
-	Commands []string
+	Name         string
+	Base         string
+	Instructions []Instruction
 }
+
+// Instruction is one step of a stage: a Run or an Env.
+type Instruction interface {
+	instruction()
+}
+
+// Run is a shell command, kept verbatim.
+type Run struct {
+	Command string
+}
+
+// Env sets a variable for the instructions after it.
+type Env struct {
+	Key   string
+	Value string
+}
+
+func (Run) instruction() {}
+func (Env) instruction() {}
 
 // Parse reads a build file into its stages, in order.
 func Parse(source string) ([]Stage, error) {
@@ -83,7 +102,10 @@ func (p *parser) read(line sourceLine) error {
 	case "FROM":
 		return p.from(arguments)
 	case "RUN":
-		return p.run(arguments)
+		return p.add("RUN", Run{Command: arguments})
+	case "ENV":
+		key, value, _ := strings.Cut(arguments, "=")
+		return p.add("ENV", Env{Key: key, Value: value})
 	default:
 		return fmt.Errorf("unknown instruction %s", keyword)
 	}
@@ -107,12 +129,12 @@ func (p *parser) from(arguments string) error {
 	return nil
 }
 
-func (p *parser) run(command string) error {
+func (p *parser) add(keyword string, instruction Instruction) error {
 	if len(p.stages) == 0 {
-		return errors.New("RUN before FROM")
+		return fmt.Errorf("%s before FROM", keyword)
 	}
 
 	stage := &p.stages[len(p.stages)-1]
-	stage.Commands = append(stage.Commands, command)
+	stage.Instructions = append(stage.Instructions, instruction)
 	return nil
 }
