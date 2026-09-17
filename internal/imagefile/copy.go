@@ -24,6 +24,8 @@ func (p *parser) copy(arguments string) error {
 		switch {
 		case !strings.HasPrefix(flag, "--"):
 			paths = append(paths, word)
+		case flag == "--from" && value == "":
+			return errors.New("COPY --from needs a stage")
 		case flag == "--from":
 			from = value
 		default:
