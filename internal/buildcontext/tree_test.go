@@ -33,6 +33,12 @@ func chmod(t *testing.T, dir string, name string, mode os.FileMode) {
 	t.Helper()
 
 	require.NoError(t, os.Chmod(filepath.Join(dir, name), mode))
+
+	// some file systems keep no modes, and the kernel drops a setgid bit
+	// for a group the caller is not in. A test about modes means nothing then
+	info, err := os.Lstat(filepath.Join(dir, name))
+	require.NoError(t, err)
+	require.Equal(t, mode, info.Mode()&(os.ModePerm|os.ModeSetuid|os.ModeSetgid|os.ModeSticky), "the file system did not keep the mode")
 }
 
 func touch(t *testing.T, dir string, name string, when time.Time) {
