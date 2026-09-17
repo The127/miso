@@ -138,3 +138,18 @@ func TestAChangedOutputKindChangesItsKey(t *testing.T) {
 	require.Len(t, isoKeys, 1)
 	assert.NotEqual(t, diskKeys[0], isoKeys[0])
 }
+
+func TestAChangedOutputOptionChangesItsKey(t *testing.T) {
+	// arrange
+	small := stage(t, "FROM scratch\nOUTPUT disk os.img --size=4G\n")
+	large := stage(t, "FROM scratch\nOUTPUT disk os.img --size=8G\n")
+
+	// act
+	smallKeys := plan.Keys(small)
+	largeKeys := plan.Keys(large)
+
+	// assert
+	require.Len(t, smallKeys, 1)
+	require.Len(t, largeKeys, 1)
+	assert.NotEqual(t, smallKeys[0], largeKeys[0])
+}

@@ -35,6 +35,9 @@ func stepKey(parent string, instruction imagefile.Instruction) string {
 		fields = append(fields, step.Destination)
 	case imagefile.Output:
 		fields = append(fields, "OUTPUT", step.Kind)
+		for name, value := range step.Options {
+			fields = append(fields, name, value)
+		}
 	case imagefile.Check:
 		fields = append(fields, "CHECK", step.Command)
 	}
