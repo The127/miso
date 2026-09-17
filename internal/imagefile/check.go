@@ -10,5 +10,10 @@ type Check struct {
 func (Check) instruction() {}
 
 func readCheck(line int, arguments string) ([]Instruction, error) {
-	return []Instruction{Check{Line: line, Command: arguments}}, nil
+	command, err := shellCommand(arguments)
+	if err != nil {
+		return nil, err
+	}
+
+	return []Instruction{Check{Line: line, Command: command}}, nil
 }
