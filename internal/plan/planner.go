@@ -49,15 +49,27 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 // steps is where it started.
 func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, error) {
 	var steps []Step
-	end := from
+	rootfs, end := from, from
 	for _, instruction := range stage.Instructions {
-		step, err := p.step(end, instruction)
+		parent := rootfs
+		switch instruction.(type) {
+		case imagefile.Output, imagefile.Check:
+			parent = end
+		}
+
+		step, err := p.step(parent, instruction)
 		if err != nil {
 			return nil, "", err
 		}
 
 		steps = append(steps, step)
 		end = step.Key
+
+		// an OUTPUT leaves the root file system as it is, so the steps
+		// after it do not build on it
+		if _, isOutput := instruction.(imagefile.Output); !isOutput {
+			rootfs = step.Key
+		}
 	}
 
 	return steps, end, nil
