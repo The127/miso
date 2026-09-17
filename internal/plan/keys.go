@@ -22,17 +22,12 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
-		parent, onStage := last[stage.Base]
-		if !onStage {
-			var err error
-			parent, err = root(agent, stage, bases)
-			if err != nil {
-				return nil, err
-			}
+		parent, err := start(stage, last, agent, bases)
+		if err != nil {
+			return nil, err
 		}
 
 		for _, instruction := range stage.Instructions {
-			var err error
 			parent, err = stepKey(parent, instruction, last, context)
 			if err != nil {
 				return nil, err
@@ -48,6 +43,14 @@ func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) 
 	}
 
 	return keys, nil
+}
+
+func start(stage imagefile.Stage, last map[string]string, agent string, bases Bases) (string, error) {
+	if end, onStage := last[stage.Base]; onStage {
+		return end, nil
+	}
+
+	return root(agent, stage, bases)
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
