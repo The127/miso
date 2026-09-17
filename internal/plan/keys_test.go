@@ -257,3 +257,16 @@ func TestAChangedCopySourceChangesItsKey(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, appKeys), lastKey(t, toolKeys))
 }
+
+func TestAChangedEnvNameChangesTheKeysAfterIt(t *testing.T) {
+	// arrange
+	editor := parse(t, "FROM scratch\nENV EDITOR=vim\nRUN true\n")
+	visual := parse(t, "FROM scratch\nENV VISUAL=vim\nRUN true\n")
+
+	// act
+	editorKeys := keys(t, editor, anyAgent, noFiles, noImages)
+	visualKeys := keys(t, visual, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, editorKeys), lastKey(t, visualKeys))
+}
