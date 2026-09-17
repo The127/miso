@@ -259,3 +259,14 @@ func TestAQuotedEnvValueKeepsItsSpaces(t *testing.T) {
 		imagefile.Env{Key: "B", Value: "2"},
 	}, stages[0].Instructions)
 }
+
+func TestAnUnclosedQuoteInEnvIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nENV A=\"oops\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: ENV has an unclosed quote")
+}
