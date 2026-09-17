@@ -153,3 +153,18 @@ func TestAChangedOutputOptionChangesItsKey(t *testing.T) {
 	require.Len(t, largeKeys, 1)
 	assert.NotEqual(t, smallKeys[0], largeKeys[0])
 }
+
+func TestOutputOptionsInADifferentOrderKeepTheKey(t *testing.T) {
+	// arrange
+	sizeFirst := stage(t, "FROM scratch\nOUTPUT disk os.img --size=4G --verity --label=root\n")
+	sizeLast := stage(t, "FROM scratch\nOUTPUT disk os.img --label=root --verity --size=4G\n")
+
+	// act
+	sizeFirstKeys := plan.Keys(sizeFirst)
+	sizeLastKeys := plan.Keys(sizeLast)
+
+	// assert
+	require.Len(t, sizeFirstKeys, 1)
+	require.Len(t, sizeLastKeys, 1)
+	assert.Equal(t, sizeFirstKeys[0], sizeLastKeys[0])
+}
