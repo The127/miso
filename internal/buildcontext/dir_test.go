@@ -534,3 +534,16 @@ func TestASourceThroughALinkIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, buildcontext.ErrThroughLink)
 	assert.ErrorContains(t, err, "current")
 }
+
+func TestADigestNamesItsFormat(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "motd", "hello")
+
+	// act
+	digest, err := open(t, dir).Digest("motd")
+
+	// assert
+	require.NoError(t, err)
+	assert.Regexp(t, `^miso-context-1:[0-9a-f]{64}$`, digest)
+}
