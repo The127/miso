@@ -14,6 +14,10 @@ func Validate(stages []imagefile.Stage) error {
 			return err
 		}
 
+		if err := checkChecks(stage); err != nil {
+			return err
+		}
+
 		known[stage.Name] = true
 	}
 
