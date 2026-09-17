@@ -50,12 +50,20 @@ func (p *parser) read(line string) error {
 }
 
 func (p *parser) from(arguments string) error {
-	base, name, _ := strings.Cut(arguments, " AS ")
-	if base == "" {
+	words := strings.Fields(arguments)
+	named := len(words) == 3 && words[1] == "AS"
+
+	switch {
+	case len(words) == 0:
 		return errors.New("FROM needs a base")
+	case len(words) == 1:
+		p.stages = append(p.stages, Stage{Base: words[0]})
+	case named:
+		p.stages = append(p.stages, Stage{Base: words[0], Name: words[2]})
+	default:
+		return errors.New("FROM takes a base and an optional AS name")
 	}
 
-	p.stages = append(p.stages, Stage{Name: name, Base: base})
 	return nil
 }
 

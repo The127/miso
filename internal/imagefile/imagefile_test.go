@@ -117,3 +117,14 @@ func TestFromWithoutABaseIsRejected(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "line 1: FROM needs a base")
 }
+
+func TestFromWithStrayWordsIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid build\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 1: FROM takes a base and an optional AS name")
+}
