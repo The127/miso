@@ -52,3 +52,14 @@ func TestOutputKeepsItsOptions(t *testing.T) {
 		},
 	}, stages[0].Instructions)
 }
+
+func TestOutputWithTheSameOptionTwiceIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nOUTPUT image os.raw --size=8G --size=16G\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.EqualError(t, err, "line 2: OUTPUT has --size twice")
+}

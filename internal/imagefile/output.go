@@ -2,6 +2,7 @@ package imagefile
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -31,6 +32,10 @@ func readOutput(line int, arguments string) ([]Instruction, error) {
 		}
 
 		name, value, _ := strings.Cut(option, "=")
+		if _, twice := options[name]; twice {
+			return nil, fmt.Errorf("has --%s twice", name)
+		}
+
 		options[name] = value
 	}
 
