@@ -64,11 +64,8 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 
 		steps = append(steps, step)
 		switch instruction.(type) {
-		case imagefile.Output:
+		case imagefile.Output, imagefile.Check:
 			artifacts = append(artifacts, step.Key)
-		case imagefile.Check:
-			artifacts = append(artifacts, step.Key)
-			rootfs = step.Key
 		default:
 			rootfs = step.Key
 		}
