@@ -26,6 +26,7 @@ func open(t *testing.T, dir string) *buildcontext.Dir {
 func write(t *testing.T, dir string, name string, content string) {
 	t.Helper()
 
+	require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 }
 
@@ -133,4 +134,21 @@ func TestAFileThatCannotBeReadIsAnError(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, fs.ErrPermission)
+}
+
+func TestAChangedFileDeepInATreeChangesTheDigest(t *testing.T) {
+	// arrange
+	quiet := t.TempDir()
+	write(t, quiet, "etc/systemd/system.conf", "LogLevel=info")
+	loud := t.TempDir()
+	write(t, loud, "etc/systemd/system.conf", "LogLevel=debug")
+
+	// act
+	quietDigest, quietErr := open(t, quiet).Digest("etc")
+	loudDigest, loudErr := open(t, loud).Digest("etc")
+
+	// assert
+	require.NoError(t, quietErr)
+	require.NoError(t, loudErr)
+	assert.NotEqual(t, quietDigest, loudDigest)
 }

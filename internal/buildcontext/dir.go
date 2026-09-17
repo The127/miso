@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io/fs"
 	"os"
 	"strconv"
 )
@@ -32,14 +33,34 @@ func (d *Dir) Close() error {
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
-	info, statErr := d.root.Lstat(path)
-	content, readErr := d.root.ReadFile(path)
+	var files []string
+	err := fs.WalkDir(d.root.FS(), path, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+
+		file, err := d.file(name)
+		files = append(files, file)
+
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return hashed(files), nil
+}
+
+func (d *Dir) file(name string) (string, error) {
+	info, statErr := d.root.Lstat(name)
+	content, readErr := d.root.ReadFile(name)
 	if err := errors.Join(statErr, readErr); err != nil {
 		return "", err
 	}
 
 	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
 	sum := sha256.Sum256(content)
+
 	return hashed([]string{perm, hex.EncodeToString(sum[:])}), nil
 }
 
