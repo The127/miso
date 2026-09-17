@@ -3,6 +3,7 @@ package plan
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -12,14 +13,19 @@ import (
 
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
-func Keys(stages []imagefile.Stage, agent string, context Context) [][]string {
+func Keys(stages []imagefile.Stage, agent string, context Context) ([][]string, error) {
 	var keys [][]string
 	last := map[string]string{}
 	for _, stage := range stages {
 		var stageKeys []string
 		parent := hashed([]string{agent, stage.Base})
 		for _, instruction := range stage.Instructions {
-			parent = stepKey(parent, instruction, last, context)
+			var err error
+			parent, err = stepKey(parent, instruction, last, context)
+			if err != nil {
+				return nil, err
+			}
+
 			stageKeys = append(stageKeys, parent)
 		}
 
@@ -29,12 +35,12 @@ func Keys(stages []imagefile.Stage, agent string, context Context) [][]string {
 		}
 	}
 
-	return keys
+	return keys, nil
 }
 
 // stepKey chains a step to its parent, so a change early in a stage reaches
 // every key after it.
-func stepKey(parent string, instruction imagefile.Instruction, last map[string]string, context Context) string {
+func stepKey(parent string, instruction imagefile.Instruction, last map[string]string, context Context) (string, error) {
 	fields := []string{parent}
 	switch step := instruction.(type) {
 	case imagefile.Run:
@@ -42,15 +48,12 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 	case imagefile.Env:
 		fields = append(fields, "ENV", step.Key, step.Value)
 	case imagefile.Copy:
-		fields = append(fields, "COPY", last[step.From])
-		for _, source := range step.Sources {
-			fields = append(fields, source)
-			if step.From == "" {
-				fields = append(fields, context.Digest(source))
-			}
+		copied, err := copyFields(step, last, context)
+		if err != nil {
+			return "", err
 		}
 
-		fields = append(fields, step.Destination)
+		fields = append(fields, copied...)
 	case imagefile.Output:
 		fields = append(fields, "OUTPUT", step.Kind)
 		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
@@ -60,7 +63,26 @@ func stepKey(parent string, instruction imagefile.Instruction, last map[string]s
 		fields = append(fields, "CHECK", step.Command)
 	}
 
-	return hashed(fields)
+	return hashed(fields), nil
+}
+
+func copyFields(step imagefile.Copy, last map[string]string, context Context) ([]string, error) {
+	fields := []string{"COPY", last[step.From]}
+	for _, source := range step.Sources {
+		fields = append(fields, source)
+		if step.From != "" {
+			continue
+		}
+
+		digest, err := context.Digest(source)
+		if err != nil {
+			return nil, at(step.Line, fmt.Errorf("COPY %s: %w", source, err))
+		}
+
+		fields = append(fields, digest)
+	}
+
+	return append(fields, step.Destination), nil
 }
 
 // hashed puts the length in front of every field, which keeps "a b" apart

@@ -1,9 +1,13 @@
 package plan_test
 
 import (
+	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/imagefile"
 
 	"github.com/The127/miso/internal/plan"
 )
@@ -11,8 +15,13 @@ import (
 // files is a context in memory, a file's content stands in for its digest.
 type files map[string]string
 
-func (f files) Digest(path string) string {
-	return f[path]
+func (f files) Digest(path string) (string, error) {
+	content, found := f[path]
+	if !found {
+		return "", fs.ErrNotExist
+	}
+
+	return content, nil
 }
 
 var noFiles = files{}
@@ -22,8 +31,8 @@ func TestAChangedContextFileChangesTheKeyOfItsCopy(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY motd /etc/\n")
 
 	// act
-	helloKeys := plan.Keys(stages, anyAgent, files{"motd": "hello"})
-	goodbyeKeys := plan.Keys(stages, anyAgent, files{"motd": "goodbye"})
+	helloKeys := keys(t, stages, anyAgent, files{"motd": "hello"})
+	goodbyeKeys := keys(t, stages, anyAgent, files{"motd": "goodbye"})
 
 	// assert
 	assert.NotEqual(t, lastKey(t, helloKeys), lastKey(t, goodbyeKeys))
@@ -34,9 +43,24 @@ func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
 
 	// act
-	withoutKeys := plan.Keys(stages, anyAgent, noFiles)
-	withKeys := plan.Keys(stages, anyAgent, files{"/out": "unrelated"})
+	withoutKeys := keys(t, stages, anyAgent, noFiles)
+	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"})
 
 	// assert
 	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
+}
+
+func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nCOPY nope /etc/\n")
+
+	// act
+	_, err := plan.Keys(stages, anyAgent, noFiles)
+
+	// assert
+	var planErr *imagefile.Error
+	require.ErrorAs(t, err, &planErr)
+	assert.Equal(t, 2, planErr.Line)
+	assert.ErrorIs(t, err, fs.ErrNotExist)
+	assert.ErrorContains(t, err, "nope")
 }
