@@ -1,6 +1,9 @@
 package imagefile
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Stage is a FROM line and the instructions that follow it.
 type Stage struct {
@@ -10,19 +13,22 @@ type Stage struct {
 }
 
 // Parse reads a build file into its stages, in order.
-func Parse(source string) []Stage {
+func Parse(source string) ([]Stage, error) {
 	var stages []Stage
-	for _, line := range strings.Split(source, "\n") {
+	for i, line := range strings.Split(source, "\n") {
 		if strings.HasPrefix(line, "FROM ") {
 			base, name := from(line)
 			stages = append(stages, Stage{Name: name, Base: base})
 		}
 		if command, ok := strings.CutPrefix(line, "RUN "); ok {
+			if len(stages) == 0 {
+				return nil, fmt.Errorf("line %d: RUN before FROM", i+1)
+			}
 			current := &stages[len(stages)-1]
 			current.Commands = append(current.Commands, command)
 		}
 	}
-	return stages
+	return stages, nil
 }
 
 func from(line string) (base, name string) {
