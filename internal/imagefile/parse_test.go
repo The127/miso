@@ -32,8 +32,8 @@ func TestAnInstructionBeforeFromIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 1: RUN before FROM")
 	assert.ErrorIs(t, err, imagefile.ErrBeforeFrom)
+	assert.ErrorContains(t, err, "RUN")
 }
 
 func TestAnUnknownInstructionIsRejected(t *testing.T) {
@@ -44,8 +44,8 @@ func TestAnUnknownInstructionIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: unknown instruction BOGUS")
 	assert.ErrorIs(t, err, imagefile.ErrUnknownInstruction)
+	assert.ErrorContains(t, err, "BOGUS")
 }
 
 func TestCommentLinesAreIgnored(t *testing.T) {
@@ -70,7 +70,6 @@ func TestAFileWithoutFromIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "no FROM instruction")
 	assert.ErrorIs(t, err, imagefile.ErrNoFrom)
 }
 

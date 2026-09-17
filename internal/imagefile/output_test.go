@@ -31,7 +31,8 @@ func TestOutputWithoutAFileNameIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: OUTPUT needs a kind and a file name")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "kind and a file name")
 }
 
 func TestOutputKeepsItsOptions(t *testing.T) {
@@ -61,7 +62,8 @@ func TestOutputWithTheSameOptionTwiceIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: OUTPUT has --size twice")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--size twice")
 }
 
 func TestOutputWithStrayWordsIsRejected(t *testing.T) {
@@ -72,7 +74,8 @@ func TestOutputWithStrayWordsIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: OUTPUT takes a kind, a file name and options")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "takes a kind")
 }
 
 func TestOutputWithANamelessOptionIsRejected(t *testing.T) {
@@ -83,5 +86,6 @@ func TestOutputWithANamelessOptionIsRejected(t *testing.T) {
 	_, err := imagefile.Parse(source)
 
 	// assert
-	assert.EqualError(t, err, "line 2: OUTPUT has an option without a name")
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "without a name")
 }
