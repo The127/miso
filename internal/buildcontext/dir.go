@@ -121,9 +121,20 @@ func (d *Dir) entry(name string, below string, kind fs.FileMode) (string, error)
 		return "", err
 	}
 
-	perm := strconv.FormatUint(uint64(info.Mode().Perm()), 8)
+	return hashed([]string{called, below, permissions(info.Mode()), payload}), nil
+}
 
-	return hashed([]string{called, below, perm, payload}), nil
+// permissions are the twelve bits of a unix mode in octal, like 4755. Go
+// keeps the upper three apart from the nine that Perm gives.
+func permissions(mode fs.FileMode) string {
+	bits := uint64(mode.Perm())
+	for flag, bit := range map[fs.FileMode]uint64{fs.ModeSetuid: 0o4000, fs.ModeSetgid: 0o2000, fs.ModeSticky: 0o1000} {
+		if mode&flag != 0 {
+			bits |= bit
+		}
+	}
+
+	return strconv.FormatUint(bits, 8)
 }
 
 func (d *Dir) content(name string) (string, error) {
