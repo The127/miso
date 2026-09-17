@@ -181,3 +181,29 @@ func TestAChangedOutputKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 	// assert
 	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
 }
+
+func TestACopyOfAChangedEarlierOutputGetsADifferentKey(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw --size=1G\nOUTPUT portable tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw --size=2G\nOUTPUT portable tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}
+
+func TestAChangedOutputKeepsTheKeyOfTheOutputAfterIt(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nOUTPUT portable app.raw\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT portable app.raw\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}

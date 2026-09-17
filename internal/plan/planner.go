@@ -45,16 +45,16 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 	return baseKey(p.agent, stage.Base, digest), digest, nil
 }
 
-// steps also hands back where the stage ends, which for a stage without
-// steps is where it started.
+// steps also hands back where the stage ends. Until a copy can name the
+// output it takes, that is everything in the stage.
 func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, error) {
 	var steps []Step
-	rootfs, end := from, from
+	rootfs := from
+	var artifacts []string
 	for _, instruction := range stage.Instructions {
 		parent := rootfs
-		switch instruction.(type) {
-		case imagefile.Output, imagefile.Check:
-			parent = end
+		if _, isCheck := instruction.(imagefile.Check); isCheck {
+			parent = hashed(artifacts)
 		}
 
 		step, err := p.step(parent, instruction)
@@ -63,16 +63,18 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		}
 
 		steps = append(steps, step)
-		end = step.Key
-
-		// an OUTPUT leaves the root file system as it is, so the steps
-		// after it do not build on it
-		if _, isOutput := instruction.(imagefile.Output); !isOutput {
+		switch instruction.(type) {
+		case imagefile.Output:
+			artifacts = append(artifacts, step.Key)
+		case imagefile.Check:
+			artifacts = append(artifacts, step.Key)
+			rootfs = step.Key
+		default:
 			rootfs = step.Key
 		}
 	}
 
-	return steps, end, nil
+	return steps, hashed(append([]string{rootfs}, artifacts...)), nil
 }
 
 // step chains a step to its parent, so a change early in a stage reaches
