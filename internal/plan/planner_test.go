@@ -168,3 +168,16 @@ func TestACopyOfAChangedOutputGetsADifferentKey(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
 }
+
+func TestAChangedOutputKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nRUN apt-get install -y vim\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nRUN apt-get install -y vim\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}
