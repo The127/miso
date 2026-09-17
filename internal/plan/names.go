@@ -18,7 +18,7 @@ func checkName(stage imagefile.Stage, known map[string]bool) error {
 		return at(stage.Line, fmt.Errorf("stage %s: %w", stage.Name, ErrReservedStage))
 	}
 
-	if stage.Name != "" && known[stage.Name] {
+	if known[stage.Name] {
 		return at(stage.Line, fmt.Errorf("stage %s: %w", stage.Name, ErrDuplicateStage))
 	}
 

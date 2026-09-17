@@ -23,7 +23,9 @@ func Validate(stages []imagefile.Stage) error {
 			return err
 		}
 
-		known[stage.Name] = true
+		if stage.Name != "" {
+			known[stage.Name] = true
+		}
 	}
 
 	return nil
