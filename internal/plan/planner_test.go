@@ -220,3 +220,16 @@ func TestAChangedCheckKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 	// assert
 	assert.Equal(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
 }
+
+func TestACopyOfAnOutputKeepsItsKeyWhenAnotherOutputChanges(t *testing.T) {
+	// arrange
+	small := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nOUTPUT portable tools.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nOUTPUT portable tools.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+
+	// act
+	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
+}

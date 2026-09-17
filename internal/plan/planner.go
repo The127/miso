@@ -8,6 +8,7 @@ type planner struct {
 	context Context
 	bases   Bases
 	ends    map[string]string
+	outputs map[string]map[string]string
 }
 
 func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
@@ -26,6 +27,7 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 		planned.Stages = append(planned.Stages, Stage{BaseDigest: digest, Steps: steps})
 		if stage.Name != "" {
 			p.ends[stage.Name] = end
+			p.outputs[stage.Name] = outputKeys(steps)
 		}
 	}
 
@@ -100,7 +102,7 @@ func (p *planner) files(instruction imagefile.Instruction) ([]File, error) {
 // reads are what a step takes from outside its own stage.
 func (p *planner) reads(instruction imagefile.Instruction, files []File) []string {
 	if step, isCopy := instruction.(imagefile.Copy); isCopy && step.From != "" {
-		return []string{p.ends[step.From]}
+		return p.stageReads(step)
 	}
 
 	var digests []string
@@ -109,4 +111,31 @@ func (p *planner) reads(instruction imagefile.Instruction, files []File) []strin
 	}
 
 	return digests
+}
+
+// stageReads are one key for each source: that of the output it names, or
+// else where the stage ends.
+func (p *planner) stageReads(step imagefile.Copy) []string {
+	var read []string
+	for _, source := range step.Sources {
+		key, isOutput := p.outputs[step.From][source]
+		if !isOutput {
+			key = p.ends[step.From]
+		}
+
+		read = append(read, key)
+	}
+
+	return read
+}
+
+func outputKeys(steps []Step) map[string]string {
+	keys := map[string]string{}
+	for _, step := range steps {
+		if output, isOutput := step.Instruction.(imagefile.Output); isOutput {
+			keys[output.Name] = step.Key
+		}
+	}
+
+	return keys
 }
