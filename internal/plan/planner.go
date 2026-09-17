@@ -1,6 +1,10 @@
 package plan
 
-import "github.com/The127/miso/internal/imagefile"
+import (
+	"slices"
+
+	"github.com/The127/miso/internal/imagefile"
+)
 
 // planner is one planning run. Nothing else talks to the outside.
 type planner struct {
@@ -54,12 +58,13 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 	rootfs := from
 	var artifacts []string
 	for _, instruction := range stage.Instructions {
-		parent := rootfs
+		builtOn := []string{rootfs}
 		if _, isCheck := instruction.(imagefile.Check); isCheck {
-			parent = hashed(artifacts)
+			// a copy, the steps must not share one list that still grows
+			builtOn = slices.Clone(artifacts)
 		}
 
-		step, err := p.step(parent, instruction)
+		step, err := p.step(builtOn, instruction)
 		if err != nil {
 			return nil, "", err
 		}
@@ -76,17 +81,17 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 	return steps, rootfs, nil
 }
 
-// step chains a step to its parent, so a change early in a stage reaches
-// every key after it. Words and reads are hashed apart, so that neither
-// list can run into the other.
-func (p *planner) step(parent string, instruction imagefile.Instruction) (Step, error) {
+// step chains a step to what it is built on, so a change early in a stage
+// reaches every key after it. The three lists are hashed apart, so that
+// none can run into another.
+func (p *planner) step(builtOn []string, instruction imagefile.Instruction) (Step, error) {
 	files, err := p.files(instruction)
 	if err != nil {
 		return Step{}, err
 	}
 
-	key := hashed([]string{parent, hashed(words(instruction)), hashed(p.reads(instruction, files))})
-	return Step{Instruction: instruction, Key: key, BuiltOn: []string{parent}, Files: files}, nil
+	key := hashed([]string{hashed(builtOn), hashed(words(instruction)), hashed(p.reads(instruction, files))})
+	return Step{Instruction: instruction, Key: key, BuiltOn: builtOn, Files: files}, nil
 }
 
 // files are what a step takes from the build context.
