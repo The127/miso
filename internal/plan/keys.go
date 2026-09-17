@@ -14,12 +14,17 @@ import (
 // Keys are the cache keys of a build, one for each instruction of each
 // stage.
 func Keys(stages []imagefile.Stage, agent string, context Context, bases Bases) ([][]string, error) {
-	if err := Validate(stages); err != nil {
+	planned, err := New(stages, agent, context, bases)
+	if err != nil {
 		return nil, err
 	}
 
-	p := &planner{agent: agent, context: context, bases: bases, ends: map[string]string{}}
-	return p.keys(stages)
+	var keys [][]string
+	for _, stage := range planned.Stages {
+		keys = append(keys, stage.Keys)
+	}
+
+	return keys, nil
 }
 
 // planner is one planning run. Nothing else talks to the outside.
@@ -30,39 +35,39 @@ type planner struct {
 	ends    map[string]string
 }
 
-func (p *planner) keys(stages []imagefile.Stage) ([][]string, error) {
-	var keys [][]string
+func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
+	var planned Plan
 	for _, stage := range stages {
-		from, err := p.start(stage)
+		from, digest, err := p.start(stage)
 		if err != nil {
-			return nil, err
+			return Plan{}, err
 		}
 
-		stageKeys, end, err := p.stepKeys(from, stage)
+		keys, end, err := p.stepKeys(from, stage)
 		if err != nil {
-			return nil, err
+			return Plan{}, err
 		}
 
-		keys = append(keys, stageKeys)
+		planned.Stages = append(planned.Stages, Stage{BaseDigest: digest, Keys: keys})
 		if stage.Name != "" {
 			p.ends[stage.Name] = end
 		}
 	}
 
-	return keys, nil
+	return planned, nil
 }
 
-func (p *planner) start(stage imagefile.Stage) (string, error) {
+func (p *planner) start(stage imagefile.Stage) (key string, digest string, err error) {
 	if end, onStage := p.ends[stage.Base]; onStage {
-		return end, nil
+		return end, "", nil
 	}
 
-	digest, err := baseDigest(stage, p.bases)
+	digest, err = baseDigest(stage, p.bases)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return baseKey(p.agent, stage.Base, digest), nil
+	return baseKey(p.agent, stage.Base, digest), digest, nil
 }
 
 // stepKeys also hands back where the stage ends, which for a stage without
