@@ -161,3 +161,16 @@ func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
 	// assert
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
+
+func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM debian:sid\nRUN make vim\nFROM scratch\nCOPY motd /etc/\n")
+	nano := parse(t, "FROM debian:sid\nRUN make nano\nFROM scratch\nCOPY motd /etc/\n")
+
+	// act
+	vimKeys := plan.Keys(vim)
+	nanoKeys := plan.Keys(nano)
+
+	// assert
+	assert.Equal(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}

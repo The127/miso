@@ -24,7 +24,9 @@ func Keys(stages []imagefile.Stage) [][]string {
 		}
 
 		keys = append(keys, stageKeys)
-		last[stage.Name] = parent
+		if stage.Name != "" {
+			last[stage.Name] = parent
+		}
 	}
 
 	return keys
