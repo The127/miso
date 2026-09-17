@@ -501,3 +501,22 @@ func TestTheWholeContextIsASourceLikeAnyDirectory(t *testing.T) {
 	require.NoError(t, partErr)
 	assert.Equal(t, wholeDigest, partDigest)
 }
+
+func TestALinkInATreeIsNotFollowed(t *testing.T) {
+	// arrange
+	two := t.TempDir()
+	write(t, two, "releases/app", "two")
+	symlink(t, two, "opt/app", "../releases/app")
+	three := t.TempDir()
+	write(t, three, "releases/app", "three")
+	symlink(t, three, "opt/app", "../releases/app")
+
+	// act
+	twoDigest, twoErr := open(t, two).Digest("opt")
+	threeDigest, threeErr := open(t, three).Digest("opt")
+
+	// assert
+	require.NoError(t, twoErr)
+	require.NoError(t, threeErr)
+	assert.Equal(t, twoDigest, threeDigest)
+}
