@@ -6,9 +6,13 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+// ErrOutsideContext is a source that is not below the build context.
+var ErrOutsideContext = errors.New("outside the build context")
 
 // Dir is a build context, a directory on the host.
 type Dir struct {
@@ -43,6 +47,10 @@ func (d *Dir) Digest(path string) (string, error) {
 }
 
 func (d *Dir) entries(source string) ([]string, error) {
+	if !filepath.IsLocal(source) {
+		return nil, ErrOutsideContext
+	}
+
 	info, err := d.root.Lstat(source)
 	if err != nil {
 		return nil, err

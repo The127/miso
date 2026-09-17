@@ -310,3 +310,16 @@ func TestALinkAsTheSourceIsNotFollowed(t *testing.T) {
 	require.NoError(t, threeErr)
 	assert.Equal(t, twoDigest, threeDigest)
 }
+
+func TestASourceThatLeavesTheContextIsRejected(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "context/motd", "hello")
+	write(t, dir, "secret", "hunter2")
+
+	// act
+	_, err := open(t, filepath.Join(dir, "context")).Digest("../secret")
+
+	// assert
+	assert.ErrorIs(t, err, buildcontext.ErrOutsideContext)
+}
