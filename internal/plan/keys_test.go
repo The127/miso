@@ -4,42 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/The127/miso/internal/imagefile"
-	"github.com/The127/miso/internal/plan"
 )
-
-const anyAgent = "agent"
-
-func keys(t *testing.T, stages []imagefile.Stage, agent string, context plan.Context, bases plan.Bases) [][]string {
-	t.Helper()
-
-	planned, err := plan.New(stages, agent, context, bases)
-	require.NoError(t, err)
-
-	var found [][]string
-	for _, stage := range planned.Stages {
-		var stageKeys []string
-		for _, step := range stage.Steps {
-			stageKeys = append(stageKeys, step.Key)
-		}
-
-		found = append(found, stageKeys)
-	}
-
-	return found
-}
-
-func lastKey(t *testing.T, found [][]string) string {
-	t.Helper()
-
-	require.NotEmpty(t, found)
-	stage := found[len(found)-1]
-	require.NotEmpty(t, stage)
-
-	return stage[len(stage)-1]
-}
 
 func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	// arrange
@@ -54,19 +19,6 @@ func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
 
-func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
-	// arrange
-	updated := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
-	upgraded := parse(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
-
-	// act
-	updatedKeys := keys(t, updated, anyAgent, noFiles, noImages)
-	upgradedKeys := keys(t, upgraded, anyAgent, noFiles, noImages)
-
-	// assert
-	assert.NotEqual(t, lastKey(t, updatedKeys), lastKey(t, upgradedKeys))
-}
-
 func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	// arrange
 	run := parse(t, "FROM scratch\nOUTPUT disk os.img\nRUN true\n")
@@ -78,19 +30,6 @@ func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 
 	// assert
 	assert.NotEqual(t, lastKey(t, runKeys), lastKey(t, checkKeys))
-}
-
-func TestADifferentBaseChangesTheKeys(t *testing.T) {
-	// arrange
-	sid := parse(t, "FROM debian:sid\nRUN true\n")
-	trixie := parse(t, "FROM debian:trixie\nRUN true\n")
-
-	// act
-	sidKeys := keys(t, sid, anyAgent, noFiles, debianImages)
-	trixieKeys := keys(t, trixie, anyAgent, noFiles, debianImages)
-
-	// assert
-	assert.NotEqual(t, lastKey(t, sidKeys), lastKey(t, trixieKeys))
 }
 
 func TestAChangedEnvChangesTheKeysAfterIt(t *testing.T) {
@@ -169,90 +108,6 @@ func TestOutputOptionsInADifferentOrderKeepTheKey(t *testing.T) {
 
 	// assert
 	assert.Equal(t, lastKey(t, sizeFirstKeys), lastKey(t, sizeLastKeys))
-}
-
-func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
-	// arrange
-	vim := parse(t, "FROM debian:sid AS build\nRUN make vim\nFROM scratch\nCOPY --from=build /out /\n")
-	nano := parse(t, "FROM debian:sid AS build\nRUN make nano\nFROM scratch\nCOPY --from=build /out /\n")
-
-	// act
-	vimKeys := keys(t, vim, anyAgent, noFiles, debianImages)
-	nanoKeys := keys(t, nano, anyAgent, noFiles, debianImages)
-
-	// assert
-	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
-}
-
-func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
-	// arrange
-	vim := parse(t, "FROM debian:sid\nRUN make vim\nFROM scratch\nCOPY motd /etc/\n")
-	nano := parse(t, "FROM debian:sid\nRUN make nano\nFROM scratch\nCOPY motd /etc/\n")
-
-	// act
-	vimKeys := keys(t, vim, anyAgent, files{"motd": "hello"}, debianImages)
-	nanoKeys := keys(t, nano, anyAgent, files{"motd": "hello"}, debianImages)
-
-	// assert
-	assert.Equal(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
-}
-
-func TestADifferentAgentChangesTheKeys(t *testing.T) {
-	// arrange
-	stages := parse(t, "FROM scratch\nRUN true\n")
-
-	// act
-	oldKeys := keys(t, stages, "agent-a", noFiles, noImages)
-	newKeys := keys(t, stages, "agent-b", noFiles, noImages)
-
-	// assert
-	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
-}
-
-func TestAnInvalidBuildFileGetsNoPlan(t *testing.T) {
-	// arrange
-	stages := parse(t, "FROM scratch\nCOPY --from=nope a /b\n")
-
-	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
-
-	// assert
-	assert.ErrorIs(t, err, plan.ErrUnknownStage)
-	assert.Empty(t, planned.Stages)
-}
-
-func TestAStepKeepsItsKeyWhenALaterStepChanges(t *testing.T) {
-	// arrange
-	vim := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
-	nano := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install nano\n")
-
-	// act
-	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
-	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
-
-	// assert
-	require.Len(t, vimKeys, 1)
-	require.Len(t, nanoKeys, 1)
-	require.Len(t, vimKeys[0], 2)
-	require.Len(t, nanoKeys[0], 2)
-	assert.Equal(t, vimKeys[0][0], nanoKeys[0][0])
-	assert.NotEqual(t, vimKeys[0][1], nanoKeys[0][1])
-}
-
-func TestAStageKeepsItsKeysWhenALaterStageChanges(t *testing.T) {
-	// arrange
-	vim := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install vim\n")
-	nano := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install nano\n")
-
-	// act
-	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
-	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
-
-	// assert
-	require.Len(t, vimKeys, 2)
-	require.Len(t, nanoKeys, 2)
-	assert.Equal(t, vimKeys[0], nanoKeys[0])
-	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
 }
 
 func TestAChangedCopySourceChangesItsKey(t *testing.T) {

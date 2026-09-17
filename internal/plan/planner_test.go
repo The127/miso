@@ -1,0 +1,118 @@
+package plan_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
+	// arrange
+	updated := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
+	upgraded := parse(t, "FROM scratch\nRUN apt-get upgrade\nRUN apt-get install vim\n")
+
+	// act
+	updatedKeys := keys(t, updated, anyAgent, noFiles, noImages)
+	upgradedKeys := keys(t, upgraded, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, updatedKeys), lastKey(t, upgradedKeys))
+}
+
+func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM debian:sid AS build\nRUN make vim\nFROM scratch\nCOPY --from=build /out /\n")
+	nano := parse(t, "FROM debian:sid AS build\nRUN make nano\nFROM scratch\nCOPY --from=build /out /\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, debianImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, debianImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
+
+func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM debian:sid\nRUN make vim\nFROM scratch\nCOPY motd /etc/\n")
+	nano := parse(t, "FROM debian:sid\nRUN make nano\nFROM scratch\nCOPY motd /etc/\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, files{"motd": "hello"}, debianImages)
+	nanoKeys := keys(t, nano, anyAgent, files{"motd": "hello"}, debianImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
+
+func TestAStepKeepsItsKeyWhenALaterStepChanges(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install vim\n")
+	nano := parse(t, "FROM scratch\nRUN apt-get update\nRUN apt-get install nano\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	require.Len(t, vimKeys, 1)
+	require.Len(t, nanoKeys, 1)
+	require.Len(t, vimKeys[0], 2)
+	require.Len(t, nanoKeys[0], 2)
+	assert.Equal(t, vimKeys[0][0], nanoKeys[0][0])
+	assert.NotEqual(t, vimKeys[0][1], nanoKeys[0][1])
+}
+
+func TestAStageKeepsItsKeysWhenALaterStageChanges(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install vim\n")
+	nano := parse(t, "FROM scratch AS build\nRUN make\nFROM scratch\nRUN apt-get install nano\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	require.Len(t, vimKeys, 2)
+	require.Len(t, nanoKeys, 2)
+	assert.Equal(t, vimKeys[0], nanoKeys[0])
+	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
+}
+
+func TestAStageBasedOnAChangedStageGetsDifferentKeys(t *testing.T) {
+	// arrange
+	vim := parse(t, "FROM scratch AS build\nRUN make vim\nFROM build\nRUN make install\n")
+	nano := parse(t, "FROM scratch AS build\nRUN make nano\nFROM build\nRUN make install\n")
+
+	// act
+	vimKeys := keys(t, vim, anyAgent, noFiles, noImages)
+	nanoKeys := keys(t, nano, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
+}
+
+func TestAStageBasedOnAnEmptyStageStillStartsOnItsBase(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS base\nFROM base\nRUN true\n")
+
+	// act
+	oldKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:old"})
+	newKeys := keys(t, stages, anyAgent, noFiles, images{"debian:sid": "sha256:new"})
+
+	// assert
+	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
+}
+
+func TestACopyFromAStageDoesNotLookInTheContext(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS build\nRUN make\nFROM scratch\nCOPY --from=build /out /\n")
+
+	// act
+	withoutKeys := keys(t, stages, anyAgent, noFiles, debianImages)
+	withKeys := keys(t, stages, anyAgent, files{"/out": "unrelated"}, debianImages)
+
+	// assert
+	assert.Equal(t, lastKey(t, withoutKeys), lastKey(t, withKeys))
+}
