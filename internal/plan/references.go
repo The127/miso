@@ -10,21 +10,12 @@ import (
 // ErrUnknownStage is a reference to a stage that no earlier FROM named.
 var ErrUnknownStage = errors.New("unknown stage")
 
-// Validate checks that the stages make sense together.
-func Validate(stages []imagefile.Stage) error {
-	known := map[string]bool{}
-	for _, stage := range stages {
-		for _, instruction := range stage.Instructions {
-			copied, isCopy := instruction.(imagefile.Copy)
-			if isCopy && copied.From != "" && !known[copied.From] {
-				return &imagefile.Error{
-					Line: copied.Line,
-					Err:  fmt.Errorf("COPY --from=%s: %w", copied.From, ErrUnknownStage),
-				}
-			}
+func checkReferences(stage imagefile.Stage, known map[string]bool) error {
+	for _, instruction := range stage.Instructions {
+		copied, isCopy := instruction.(imagefile.Copy)
+		if isCopy && copied.From != "" && !known[copied.From] {
+			return at(copied.Line, fmt.Errorf("COPY --from=%s: %w", copied.From, ErrUnknownStage))
 		}
-
-		known[stage.Name] = true
 	}
 
 	return nil
