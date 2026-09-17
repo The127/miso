@@ -2,7 +2,6 @@ package imagefile
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -18,39 +17,17 @@ type Output struct {
 func (Output) instruction() {}
 
 func readOutput(line int, arguments string) ([]Instruction, error) {
-	var fields []string
-	var options map[string]string
-	for _, word := range strings.Fields(arguments) {
-		option, isOption := strings.CutPrefix(word, "--")
-		if !isOption {
-			fields = append(fields, word)
-			continue
-		}
-
-		if options == nil {
-			options = map[string]string{}
-		}
-
-		name, value, _ := strings.Cut(option, "=")
-		if name == "" {
-			return nil, errors.New("has an option without a name")
-		}
-
-		if _, twice := options[name]; twice {
-			return nil, fmt.Errorf("has --%s twice", name)
-		}
-
-		options[name] = value
+	fields, options, err := splitOptions(strings.Fields(arguments))
+	if err != nil {
+		return nil, err
 	}
 
-	if len(fields) < 2 {
+	switch {
+	case len(fields) < 2:
 		return nil, errors.New("needs a kind and a file name")
-	}
-
-	if len(fields) > 2 {
+	case len(fields) > 2:
 		return nil, errors.New("takes a kind, a file name and options")
 	}
 
-	kind, name := fields[0], fields[1]
-	return []Instruction{Output{Line: line, Kind: kind, Name: name, Options: options}}, nil
+	return []Instruction{Output{Line: line, Kind: fields[0], Name: fields[1], Options: options}}, nil
 }
