@@ -57,7 +57,7 @@ func (p *parser) read(line sourceLine) error {
 	case "OUTPUT":
 		read = readOutput
 	default:
-		return fmt.Errorf("unknown instruction %s", written)
+		return fmt.Errorf("%w %s", ErrUnknownInstruction, written)
 	}
 
 	if len(p.stages) == 0 {

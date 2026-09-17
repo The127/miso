@@ -44,6 +44,7 @@ func TestAnUnknownInstructionIsRejected(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "line 2: unknown instruction BOGUS")
+	assert.ErrorIs(t, err, imagefile.ErrUnknownInstruction)
 }
 
 func TestCommentLinesAreIgnored(t *testing.T) {

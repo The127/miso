@@ -1,6 +1,12 @@
 package imagefile
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrUnknownInstruction is a line that starts with no keyword we know.
+var ErrUnknownInstruction = errors.New("unknown instruction")
 
 // Error is a problem in a build file, at a line.
 type Error struct {
