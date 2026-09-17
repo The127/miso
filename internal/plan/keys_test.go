@@ -78,3 +78,18 @@ func TestADifferentBaseChangesTheKeys(t *testing.T) {
 	require.Len(t, trixieKeys, 1)
 	assert.NotEqual(t, sidKeys[0], trixieKeys[0])
 }
+
+func TestAChangedEnvChangesTheKeysAfterIt(t *testing.T) {
+	// arrange
+	vim := stage(t, "FROM scratch\nENV EDITOR=vim\nRUN true\n")
+	nano := stage(t, "FROM scratch\nENV EDITOR=nano\nRUN true\n")
+
+	// act
+	vimKeys := plan.Keys(vim)
+	nanoKeys := plan.Keys(nano)
+
+	// assert
+	require.Len(t, vimKeys, 2)
+	require.Len(t, nanoKeys, 2)
+	assert.NotEqual(t, vimKeys[1], nanoKeys[1])
+}
