@@ -7,7 +7,9 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
-func runKey(run imagefile.Run) string {
-	sum := sha256.Sum256([]byte(run.Command))
+// runKey chains a step to its parent, so a change early in a stage reaches
+// every key after it.
+func runKey(parent string, run imagefile.Run) string {
+	sum := sha256.Sum256([]byte(parent + "\n" + run.Command))
 	return hex.EncodeToString(sum[:])
 }
