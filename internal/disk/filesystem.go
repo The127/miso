@@ -22,7 +22,12 @@ func FileSystem(r io.ReaderAt) (string, error) {
 	}
 
 	btrfs := make([]byte, 8)
-	if _, err := r.ReadAt(btrfs, 65600); err != nil {
+	_, err := r.ReadAt(btrfs, 65600)
+	if errors.Is(err, io.EOF) {
+		return "", ErrUnknownFileSystem
+	}
+
+	if err != nil {
 		return "", err
 	}
 
