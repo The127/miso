@@ -4,9 +4,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/The127/miso/internal/disk"
+	"github.com/The127/miso/internal/fstab"
 )
 
 // mountRoot mounts the root partition of the disk with a serial read-only on
@@ -46,7 +48,7 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
-	subvolume, err := ownSubvolume(target)
+	subvolume, entries, err := ownSubvolume(target)
 	if err != nil {
 		return err
 	}
@@ -59,5 +61,24 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
-	return syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume)
+	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume); err != nil {
+		return err
+	}
+
+	for _, submount := range fstab.Submounts(entries) {
+		// the other options tune a running system and mean nothing to a copy
+		var data string
+
+		for _, option := range submount.Options {
+			if strings.HasPrefix(option, "subvol=") {
+				data = option
+			}
+		}
+
+		if err := syscall.Mount(device, filepath.Join(target, submount.Target), kind, syscall.MS_RDONLY, data); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
