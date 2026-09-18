@@ -13,6 +13,16 @@ type rootfs struct {
 	env    []string
 }
 
+// base is what the first step of a stage on an image runs on. Scratch has
+// nothing in it, not even an empty layer.
+func base(stage plan.Stage) rootfs {
+	if stage.Base == plan.Scratch {
+		return rootfs{}
+	}
+
+	return rootfs{layers: []string{stage.BaseKey}}
+}
+
 // after is the root file system a step leaves for the steps on top of it.
 func (r rootfs) after(step plan.Step) rootfs {
 	switch instruction := step.Instruction.(type) {

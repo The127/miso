@@ -23,13 +23,13 @@ func Requests(planned plan.Plan) ([]protocol.Run, error) {
 	var requests []protocol.Run
 	roots := map[string]rootfs{}
 	for _, stage := range planned.Stages {
-		for _, step := range stage.Steps {
-			// a key nobody left behind is a base, and scratch has nothing
-			under, seen := roots[step.BuiltOn[0]]
-			if !seen && stage.Base != plan.Scratch {
-				under = rootfs{layers: []string{step.BuiltOn[0]}}
-			}
+		// a stage on an earlier stage carries on where that one ended
+		if _, seen := roots[stage.BaseKey]; !seen {
+			roots[stage.BaseKey] = base(stage)
+		}
 
+		for _, step := range stage.Steps {
+			under := roots[step.BuiltOn[0]]
 			if run, isRun := step.Instruction.(imagefile.Run); isRun {
 				requests = append(requests, protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command})
 			}
