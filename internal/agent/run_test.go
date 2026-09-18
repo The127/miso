@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -214,4 +215,41 @@ func TestACancelledRunStopsItsCommand(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
+}
+
+// killWhenRunning kills the process with a command line with a signal once it
+// runs.
+func killWhenRunning(t *testing.T, commandLine string, signal syscall.Signal) {
+	t.Helper()
+
+	go func() {
+		for {
+			lines, _ := filepath.Glob("/proc/[0-9]*/cmdline")
+			for _, line := range lines {
+				found, _ := os.ReadFile(line)
+				if string(found) == commandLine {
+					pid, _ := strconv.Atoi(filepath.Base(filepath.Dir(line)))
+					_ = syscall.Kill(pid, signal)
+
+					return
+				}
+			}
+
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+}
+
+func TestARunKilledBySignalAnswersTheCodeAShellWould(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	killWhenRunning(t, "/bin/sh\x00-c\x00sleep 1000\x00", syscall.SIGKILL)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 137, code)
 }

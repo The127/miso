@@ -93,6 +93,11 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run) (int,
 	}
 
 	if exited, ok := errors.AsType[*exec.ExitError](err); ok {
+		// as a shell reports it, 137 for SIGKILL
+		if status, ok := exited.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+			return 128 + int(status.Signal()), nil
+		}
+
 		return exited.ExitCode(), nil
 	}
 
