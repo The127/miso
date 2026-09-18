@@ -11,7 +11,7 @@ func RootSubvolume(entries []Entry) (string, bool) {
 
 		for _, option := range entry.Options {
 			if subvolume, found := strings.CutPrefix(option, "subvol="); found {
-				return subvolume, true
+				return strings.TrimPrefix(subvolume, "/"), true
 			}
 		}
 	}
