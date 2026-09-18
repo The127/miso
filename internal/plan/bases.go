@@ -6,8 +6,8 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
-// Scratch is the base with nothing in it.
-const Scratch = "scratch"
+// scratch is the base with nothing in it.
+const scratch = "scratch"
 
 // Bases knows the images a FROM can start a stage on. An image that is
 // known but not fetched yet has an empty digest and no error.
@@ -17,7 +17,7 @@ type Bases interface {
 
 // baseDigest is empty for scratch, it has nothing to look up.
 func baseDigest(stage imagefile.Stage, bases Bases) (string, error) {
-	if stage.Base == Scratch {
+	if stage.Base == scratch {
 		return "", nil
 	}
 
