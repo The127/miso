@@ -17,5 +17,14 @@ func FileSystem(r io.ReaderAt) (string, error) {
 		return "ext4", nil
 	}
 
+	btrfs := make([]byte, 8)
+	if _, err := r.ReadAt(btrfs, 65600); err != nil {
+		return "", err
+	}
+
+	if string(btrfs) == "_BHRfS_M" {
+		return "btrfs", nil
+	}
+
 	return "", nil
 }

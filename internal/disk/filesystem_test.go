@@ -23,3 +23,16 @@ func TestAnExt4IsKnownByItsMagic(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ext4", kind)
 }
+
+func TestABtrfsIsKnownByItsMagic(t *testing.T) {
+	// arrange
+	partition := make([]byte, 128*1024)
+	copy(partition[65600:], "_BHRfS_M")
+
+	// act
+	kind, err := disk.FileSystem(bytes.NewReader(partition))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "btrfs", kind)
+}
