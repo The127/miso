@@ -24,8 +24,8 @@ func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"base"}, requests[0].Layers)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"base"}, runsOf(requests)[0].Layers)
 }
 
 func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
@@ -44,8 +44,8 @@ func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 2)
-	assert.Equal(t, []string{"base", "k1"}, requests[1].Layers)
+	require.Len(t, runsOf(requests), 2)
+	assert.Equal(t, []string{"base", "k1"}, runsOf(requests)[1].Layers)
 }
 
 func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
@@ -64,8 +64,8 @@ func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"base", "k1"}, requests[0].Layers)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"base", "k1"}, runsOf(requests)[0].Layers)
 }
 
 func TestAnEnvMakesNoLayer(t *testing.T) {
@@ -84,8 +84,8 @@ func TestAnEnvMakesNoLayer(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"base"}, requests[0].Layers)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"base"}, runsOf(requests)[0].Layers)
 }
 
 func TestAnOutputMakesNoLayer(t *testing.T) {
@@ -104,8 +104,8 @@ func TestAnOutputMakesNoLayer(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"base"}, requests[0].Layers)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"base"}, runsOf(requests)[0].Layers)
 }
 
 func TestARunOnScratchIsBuiltOnNoLayer(t *testing.T) {
@@ -121,6 +121,6 @@ func TestARunOnScratchIsBuiltOnNoLayer(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Empty(t, requests[0].Layers)
+	require.Len(t, runsOf(requests), 1)
+	assert.Empty(t, runsOf(requests)[0].Layers)
 }

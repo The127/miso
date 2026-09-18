@@ -41,6 +41,6 @@ func TestAStageOnAStageIsBuiltOnTheLayersOfThatStage(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 2)
-	assert.Equal(t, []string{source.Stages[0].BaseKey, requests[0].Key}, requests[1].Layers)
+	require.Len(t, runsOf(requests), 2)
+	assert.Equal(t, []string{source.Stages[0].BaseKey, runsOf(requests)[0].Key}, runsOf(requests)[1].Layers)
 }
