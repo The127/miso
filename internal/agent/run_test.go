@@ -60,3 +60,24 @@ func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, code)
 }
+
+func TestAFailedRunLeavesNoWork(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x; exit 3"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	entries, err := os.ReadDir(layers)
+	require.NoError(t, err)
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+
+	assert.Equal(t, []string{"base"}, names)
+}
