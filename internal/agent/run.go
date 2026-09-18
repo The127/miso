@@ -63,11 +63,13 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 	// removing scratch must never reach into the root, so it goes first
 	defer func() { _ = syscall.Unmount(root, syscall.MNT_DETACH) }()
 
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", run.Command) //nolint:gosec // running what the build file says is what a RUN is
+	// Go runs nothing between clone and exec, so the agent itself goes first
+	// to set up the namespaces, then becomes the shell
+	cmd := exec.CommandContext(ctx, "/proc/self/exe", root, run.Command) //nolint:gosec // running what the build file says is what a RUN is
+	cmd.Args[0] = helperName
 	// the shell is the init of its own PID namespace, and the kernel kills
 	// whatever it leaves behind before the wait for it returns
-	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Cloneflags: syscall.CLONE_NEWPID}
-	cmd.Dir = "/"
+	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWNS}
 	cmd.Stdout = out
 	cmd.Stderr = out
 	// Docker's defaults, and os/exec keeps the last of a key, so the build
