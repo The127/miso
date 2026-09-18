@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,7 +9,7 @@ import (
 
 // Runner does the work of a run on the agent's side.
 type Runner interface {
-	Run(run Run, out io.Writer) (code int, err error)
+	Run(ctx context.Context, run Run, out io.Writer) (code int, err error)
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -27,7 +28,18 @@ func (c *Conn) Serve(runner Runner) error {
 		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
 	}
 
-	code, err := runner.Run(run, outputs{c})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// the host sends nothing more in an exchange, so whatever ends this read
+	// is the host going away
+	go func() {
+		_, _ = c.Receive()
+
+		cancel()
+	}()
+
+	code, err := runner.Run(ctx, run, outputs{c})
 	if err != nil {
 		return c.Send(Failed{Reason: err.Error()})
 	}

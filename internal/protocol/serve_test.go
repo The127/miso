@@ -2,9 +2,11 @@ package protocol_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +20,7 @@ type runner struct {
 	err    error
 }
 
-func (r runner) Run(_ protocol.Run, out io.Writer) (int, error) {
+func (r runner) Run(_ context.Context, _ protocol.Run, out io.Writer) (int, error) {
 	if r.err != nil {
 		return 0, r.err
 	}
@@ -107,7 +109,7 @@ type watched struct {
 	ran bool
 }
 
-func (w *watched) Run(protocol.Run, io.Writer) (int, error) {
+func (w *watched) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	w.ran = true
 
 	return 0, nil
@@ -129,4 +131,38 @@ func TestARequestFromAnotherAgentIsRefusedBeforeItRuns(t *testing.T) {
 	_, err = host.Receive()
 	assert.ErrorIs(t, err, protocol.ErrAnotherAgent)
 	assert.False(t, runner.ran)
+}
+
+type waiting struct {
+	cancelled bool
+}
+
+func (w *waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, error) {
+	select {
+	case <-ctx.Done():
+		w.cancelled = true
+
+		return 0, ctx.Err()
+	case <-time.After(5 * time.Second):
+		return 0, errors.New("never cancelled")
+	}
+}
+
+func TestClosingTheConnectionCancelsTheRun(t *testing.T) {
+	// arrange
+	requests, hostEnd := io.Pipe()
+	var replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", bytes.NewReader(nil), hostEnd)
+	agent := protocol.New("miso 1.2.0", requests, &replies)
+	runner := &waiting{}
+	go func() {
+		_ = host.Send(protocol.Run{Command: "sleep infinity"})
+		_ = hostEnd.Close()
+	}()
+
+	// act
+	_ = agent.Serve(runner)
+
+	// assert
+	assert.True(t, runner.cancelled)
 }
