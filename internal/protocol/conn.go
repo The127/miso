@@ -25,6 +25,8 @@ func (c *Conn) Send(message Message) error {
 	switch m := message.(type) {
 	case Run:
 		e.Run = &m
+	case Output:
+		e.Output = &m
 	case Exited:
 		e.Exited = &m
 	}
@@ -41,6 +43,10 @@ func (c *Conn) Receive() (Message, error) {
 
 	if e.Agent != c.agent {
 		return nil, fmt.Errorf("%w: sent by %s, read by %s", ErrAnotherAgent, e.Agent, c.agent)
+	}
+
+	if e.Output != nil {
+		return *e.Output, nil
 	}
 
 	if e.Exited != nil {
