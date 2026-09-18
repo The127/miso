@@ -1,11 +1,9 @@
 package agent
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"github.com/The127/miso/internal/disk"
@@ -66,36 +64,5 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
-	image, err := os.OpenRoot(target)
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = image.Close() }()
-
-	for _, submount := range fstab.Submounts(entries) {
-		// the other options tune a running system and mean nothing to a copy
-		var data string
-
-		for _, option := range submount.Options {
-			if strings.HasPrefix(option, "subvol=") {
-				data = option
-			}
-		}
-
-		// opened within the image, so a link cannot lead the mount out of it
-		point, err := image.Open(strings.TrimPrefix(submount.Target, "/"))
-		if err != nil {
-			return err
-		}
-
-		err = syscall.Mount(device, fmt.Sprintf("/proc/self/fd/%d", point.Fd()), kind, syscall.MS_RDONLY, data)
-		_ = point.Close()
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return mountSubmounts(device, kind, target, fstab.Submounts(entries))
 }
