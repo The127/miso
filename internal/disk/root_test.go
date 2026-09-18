@@ -52,6 +52,17 @@ func TestADiskWithoutARootPartitionHasNoRoot(t *testing.T) {
 	assert.ErrorIs(t, err, disk.ErrNoRoot)
 }
 
+func TestADiskWithoutASignatureHasNoTable(t *testing.T) {
+	// arrange
+	image := make([]byte, 200*512)
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrNoTable)
+}
+
 type entry struct {
 	kind        string
 	first, last uint64
