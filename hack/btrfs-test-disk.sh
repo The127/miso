@@ -1,19 +1,46 @@
 #!/usr/bin/env bash
 # Writes a raw disk with a GPT and one x86-64 root partition that holds a
-# btrfs with an etc/os-release saying ID=miso-test. Needs no root.
+# btrfs. Needs no root. The shape is one of
+#   flat        etc/os-release saying ID=miso-test in the top level
+#   subvolumes  Fedora's layout: subvolumes root, var and boot, and an fstab
+#               in root that mounts them, os-release saying
+#               ID=miso-test-subvolumes
 set -euo pipefail
 
 out=$1
+shape=$2
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-mkdir -p "$work/root/etc"
-echo "ID=miso-test" > "$work/root/etc/os-release"
+tree=$work/tree
+subvolumes=()
+case $shape in
+flat)
+    mkdir -p "$tree/etc"
+    echo "ID=miso-test" > "$tree/etc/os-release"
+    ;;
+subvolumes)
+    mkdir -p "$tree/root/etc" "$tree/root/var" "$tree/root/boot" "$tree/var" "$tree/boot"
+    echo "ID=miso-test-subvolumes" > "$tree/root/etc/os-release"
+    cat > "$tree/root/etc/fstab" <<EOF
+LABEL=test / btrfs compress=zstd:1,subvol=root 0 0
+LABEL=test /var btrfs compress=zstd:1,subvol=var 0 0
+LABEL=test /boot btrfs compress=zstd:1,subvol=boot 0 0
+EOF
+    echo var > "$tree/var/marker"
+    echo boot > "$tree/boot/marker"
+    subvolumes=(--subvol rw:root --subvol rw:var --subvol rw:boot)
+    ;;
+*)
+    echo "unknown shape $shape" >&2
+    exit 1
+    ;;
+esac
 
 # mkfs.btrfs cannot write at an offset, so the file system is made on its
 # own and copied into the partition
 truncate -s 128M "$work/fs.img"
-mkfs.btrfs -q --rootdir "$work/root" "$work/fs.img"
+mkfs.btrfs -q --rootdir "$tree" "${subvolumes[@]}" "$work/fs.img"
 
 truncate -s 130M "$out"
 sfdisk --quiet "$out" <<EOF

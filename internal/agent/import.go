@@ -41,5 +41,23 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
-	return syscall.Mount(filepath.Join("/dev", partition), target, kind, syscall.MS_RDONLY, "")
+	device := filepath.Join("/dev", partition)
+	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, ""); err != nil {
+		return err
+	}
+
+	subvolume, err := ownSubvolume(target)
+	if err != nil {
+		return err
+	}
+
+	if subvolume == "" {
+		return nil
+	}
+
+	if err := syscall.Unmount(target, 0); err != nil {
+		return err
+	}
+
+	return syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume)
 }

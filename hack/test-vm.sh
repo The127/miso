@@ -2,8 +2,9 @@
 # Runs the tests built with the vmtest tag, one package per VM, each test
 # binary as the init of the host's kernel. Arguments go to the test binary.
 # MISO_VMTEST_BASE names a base image in qcow2 that is attached read-only
-# with the serial miso-test-base. A small btrfs disk is always attached with
-# the serial miso-test-btrfs.
+# with the serial miso-test-base. Small btrfs disks of each shape that
+# btrfs-test-disk.sh knows are always attached with the serial
+# miso-test-<shape>.
 set -euo pipefail
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
@@ -16,9 +17,13 @@ if [ -z "$packages" ]; then
     exit 0
 fi
 
-bash hack/btrfs-test-disk.sh "$work/btrfs.img"
-disks=(-drive "file=$work/btrfs.img,format=raw,if=none,readonly=on,id=btrfs"
-    -device virtio-blk-pci,drive=btrfs,serial=miso-test-btrfs)
+disks=()
+for shape in flat subvolumes; do
+    bash hack/btrfs-test-disk.sh "$work/$shape.img" "$shape"
+    disks+=(-drive "file=$work/$shape.img,format=raw,if=none,readonly=on,id=$shape"
+        -device "virtio-blk-pci,drive=$shape,serial=miso-test-$shape")
+done
+
 if [ -n "${MISO_VMTEST_BASE:-}" ]; then
     disks+=(-drive "file=$MISO_VMTEST_BASE,format=qcow2,if=none,readonly=on,id=base"
         -device virtio-blk-pci,drive=base,serial=miso-test-base)
