@@ -12,6 +12,7 @@ import (
 func Requests(planned plan.Plan) []protocol.Run {
 	var requests []protocol.Run
 	layers := map[string][]string{}
+	envs := map[string][]string{}
 	for _, stage := range planned.Stages {
 		for _, step := range stage.Steps {
 			below, seen := layers[step.BuiltOn[0]]
@@ -19,13 +20,16 @@ func Requests(planned plan.Plan) []protocol.Run {
 				below = []string{step.BuiltOn[0]}
 			}
 
+			env := envs[step.BuiltOn[0]]
 			if run, isRun := step.Instruction.(imagefile.Run); isRun {
-				requests = append(requests, protocol.Run{Key: step.Key, Layers: below, Command: run.Command})
+				requests = append(requests, protocol.Run{Key: step.Key, Layers: below, Env: env, Command: run.Command})
 			}
 
 			layers[step.Key] = slices.Concat(below, []string{step.Key})
-			if _, isEnv := step.Instruction.(imagefile.Env); isEnv {
+			envs[step.Key] = env
+			if variable, isEnv := step.Instruction.(imagefile.Env); isEnv {
 				layers[step.Key] = below
+				envs[step.Key] = slices.Concat(env, []string{variable.Key + "=" + variable.Value})
 			}
 		}
 	}

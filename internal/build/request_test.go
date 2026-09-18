@@ -56,6 +56,25 @@ func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 	assert.Equal(t, []string{"base"}, requests[0].Layers)
 }
 
+func TestARunKeepsTheVariablesSetBeforeItInOrder(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{
+			{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "1"}, Key: "k1", BuiltOn: []string{"base"}},
+			{Instruction: imagefile.Env{Line: 3, Key: "B", Value: "2"}, Key: "k2", BuiltOn: []string{"k1"}},
+			{Instruction: imagefile.Run{Line: 4, Command: "echo $A $B"}, Key: "k3", BuiltOn: []string{"k2"}},
+		},
+	}}}
+
+	// act
+	requests := build.Requests(planned)
+
+	// assert
+	require.Len(t, requests, 1)
+	assert.Equal(t, []string{"A=1", "B=2"}, requests[0].Env)
+}
+
 func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
