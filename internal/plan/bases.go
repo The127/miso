@@ -9,7 +9,8 @@ import (
 // scratch is the base with nothing in it.
 const scratch = "scratch"
 
-// Bases knows the images a FROM can start a stage on.
+// Bases knows the images a FROM can start a stage on. An image that is
+// known but not fetched yet has an empty digest and no error.
 type Bases interface {
 	Digest(base string) (string, error)
 }

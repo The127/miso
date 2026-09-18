@@ -64,8 +64,8 @@ func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
 	two := parse(t, "FROM scratch\nCOPY a b /c\n")
 
 	// act
-	oneKeys := keys(t, one, anyAgent, files{"a b": "", "a": "", "b": ""}, noImages)
-	twoKeys := keys(t, two, anyAgent, files{"a b": "", "a": "", "b": ""}, noImages)
+	oneKeys := keys(t, one, anyAgent, files{"a b": "one", "a": "one", "b": "one"}, noImages)
+	twoKeys := keys(t, two, anyAgent, files{"a b": "one", "a": "one", "b": "one"}, noImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, oneKeys), lastKey(t, twoKeys))

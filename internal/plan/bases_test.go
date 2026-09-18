@@ -36,7 +36,8 @@ func TestADifferentAgentChangesTheKeys(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
 }
 
-// images are base images in memory, by what a FROM calls them.
+// images are base images in memory, by what a FROM calls them. An empty
+// digest is an image that is known but not fetched yet.
 type images map[string]string
 
 var errNoSuchImage = errors.New("no such image")
@@ -92,4 +93,19 @@ func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	assert.Equal(t, 2, planErr.Line)
 	assert.ErrorIs(t, err, errNoSuchImage)
 	assert.ErrorContains(t, err, "nope")
+}
+
+func TestAStageOnABaseNotFetchedYetGetsNoKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nRUN debootstrap sid /rootfs\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 1)
+	require.Len(t, planned.Stages[0].Steps, 1)
+	assert.Empty(t, planned.Stages[0].BaseDigest)
+	assert.Empty(t, planned.Stages[0].Steps[0].Key)
 }

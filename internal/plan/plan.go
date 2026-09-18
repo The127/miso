@@ -16,7 +16,8 @@ type Stage struct {
 	Steps      []Step
 }
 
-// Step is an instruction with the key of the layer it makes.
+// Step is an instruction with the key of the layer it makes. The key is
+// empty while a base it builds on is not fetched yet.
 type Step struct {
 	Instruction imagefile.Instruction
 	Key         string
