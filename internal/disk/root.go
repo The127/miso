@@ -73,6 +73,10 @@ func Root(r io.ReaderAt) (Partition, error) {
 				return Partition{}, err
 			}
 
+			if last < first {
+				return Partition{}, ErrBrokenTable
+			}
+
 			return Partition{Offset: first * sector, Size: (last - first + 1) * sector}, nil
 		}
 	}
