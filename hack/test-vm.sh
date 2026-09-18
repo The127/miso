@@ -36,9 +36,10 @@ for pkg in $packages; do
     CGO_ENABLED=0 go test -c -tags vmtest -o "$work/root/init" "./$pkg"
     (cd "$work/root" && echo init | cpio --quiet -o -H newc) > "$work/initrd"
 
-    qemu-system-x86_64 -enable-kvm -cpu host -m 1G -nographic -no-reboot \
+    # the test binary stops a hanging test, the outer timeout a hanging VM
+    timeout 10m qemu-system-x86_64 -enable-kvm -cpu host -m 1G -nographic -no-reboot \
         -kernel "$kernel" -initrd "$work/initrd" "${disks[@]}" \
-        -append "console=ttyS0 panic=-1 quiet -- -test.v $*" \
+        -append "console=ttyS0 panic=-1 quiet -- -test.v -test.timeout=5m $*" \
         | tr -d '\r' | tee "$work/log"
 
     if ! grep -qx 'miso-vmtest: exit 0' "$work/log"; then
