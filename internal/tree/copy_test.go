@@ -110,6 +110,25 @@ func TestALinkKeepsItsOwnTime(t *testing.T) {
 	assert.True(t, then.Equal(link.ModTime()), link.ModTime())
 }
 
+func TestTheTopTakesTheModeAndTimeOfTheSourceTop(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	then := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, os.Chmod(source, 0o750))
+	require.NoError(t, os.Chtimes(source, then, then))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	top, err := os.Lstat(target)
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|0o750, top.Mode())
+	assert.True(t, then.Equal(top.ModTime()), top.ModTime())
+}
+
 func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
 	// arrange
 	source := t.TempDir()

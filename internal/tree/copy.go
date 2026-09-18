@@ -28,8 +28,16 @@ func Copy(source, target string) error {
 	defer func() { _ = to.Close() }()
 
 	c := copier{from: from, to: to, copied: map[inode]string{}}
+	if err := c.entries("."); err != nil {
+		return err
+	}
 
-	return c.entries(".")
+	top, err := from.Stat(".")
+	if err != nil {
+		return err
+	}
+
+	return c.keep(".", top)
 }
 
 // inode names a file apart from the names it has.
