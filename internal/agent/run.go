@@ -57,6 +57,18 @@ func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
 		lowers = append(lowers, a.layers.Path(key))
 	}
 
+	// overlay shows the top of the upper directory as /
+	if len(lowers) > 0 {
+		below, err := os.Stat(lowers[0])
+		if err != nil {
+			return 0, err
+		}
+
+		if err := os.Chmod(upper, below.Mode().Perm()); err != nil {
+			return 0, err
+		}
+	}
+
 	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(lowers, ":"), upper, overlayWork)
 	if err := syscall.Mount("overlay", root, "overlay", 0, options); err != nil {
 		return 0, fmt.Errorf("mount overlay on %s: %w", root, err)
