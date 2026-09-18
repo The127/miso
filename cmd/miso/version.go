@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 
@@ -18,12 +17,18 @@ var versionCommand = &cli.Command{
 }
 
 func printVersion(_ context.Context, command *cli.Command) error {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return errors.New("this binary carries no build information")
-	}
-
-	_, err := fmt.Fprintln(command.Root().Writer, version.Of(info))
+	_, err := fmt.Fprintln(command.Root().Writer, built())
 
 	return err
+}
+
+// built is the version of this binary. A binary can carry no build
+// information at all, and then that is all there is to say.
+func built() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	return version.Of(info)
 }
