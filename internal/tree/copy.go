@@ -70,6 +70,8 @@ func (c copier) entries(dir string) error {
 			err = c.directory(name, info)
 		case info.Mode()&fs.ModeSymlink != 0:
 			err = c.link(name, info)
+		case info.Mode()&(fs.ModeDevice|fs.ModeNamedPipe) != 0:
+			err = c.special(name, info)
 		default:
 			err = c.fileOnce(name, info)
 		}
@@ -111,8 +113,33 @@ func (c copier) link(name string, info fs.FileInfo) error {
 		return err
 	}
 
-	// a root sets times only through links, so the link's own time is set
-	// by name within its directory
+	then := unix.NsecToTimespec(info.ModTime().UnixNano())
+
+	// a root sets times only through links
+	return c.at(name, func(dir int, base string) error {
+		return unix.UtimesNanoAt(dir, base, []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
+	})
+}
+
+// special makes a device or fifo like the one copied, which has no content.
+func (c copier) special(name string, info fs.FileInfo) error {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return &fs.PathError{Op: "mknod", Path: name, Err: fs.ErrInvalid}
+	}
+
+	err := c.at(name, func(dir int, base string) error {
+		return unix.Mknodat(dir, base, stat.Mode&unix.S_IFMT|0o600, int(stat.Rdev)) //nolint:gosec // the kernel keeps device numbers in 32 bits
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.keep(name, info)
+}
+
+// at calls by name within its directory what a root cannot do itself.
+func (c copier) at(name string, call func(dir int, base string) error) error {
 	dir, err := c.to.Open(path.Dir(name))
 	if err != nil {
 		return err
@@ -120,9 +147,7 @@ func (c copier) link(name string, info fs.FileInfo) error {
 
 	defer func() { _ = dir.Close() }()
 
-	then := unix.NsecToTimespec(info.ModTime().UnixNano())
-
-	return unix.UtimesNanoAt(int(dir.Fd()), path.Base(name), []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
+	return call(int(dir.Fd()), path.Base(name))
 }
 
 // fileOnce copies a file with several names once and links its other names
