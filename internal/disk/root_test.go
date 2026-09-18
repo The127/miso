@@ -41,6 +41,29 @@ func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
 	assert.ErrorIs(t, err, disk.ErrBrokenTable)
 }
 
+func TestAPartitionEndingPastAnyDiskIsABrokenTable(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 1 << 62})
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrBrokenTable)
+}
+
+func TestEntriesPastAnyDiskAreABrokenTable(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 199})
+	binary.LittleEndian.PutUint64(image[512+72:], 1<<62)
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrBrokenTable)
+}
+
 func TestAnEntryTooSmallForAPartitionIsABrokenTable(t *testing.T) {
 	// arrange
 	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 199})
