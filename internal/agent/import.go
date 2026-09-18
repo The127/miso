@@ -60,31 +60,45 @@ func mountRoot(serial, target string) error {
 // assembleRoot turns the file system of a device mounted on a directory into
 // the root that its fstab describes.
 func assembleRoot(device, kind, target string) error {
-	entries, found, err := rootFstab(target)
+	subvolume, entries, err := describedRoot(target)
 	if err != nil {
 		return err
 	}
 
-	if found {
-		return mountSubmounts(device, kind, target, fstab.Submounts(entries))
-	}
+	if subvolume != "" {
+		if err := syscall.Unmount(target, 0); err != nil {
+			return err
+		}
 
-	subvolume, entries, err := ownSubvolume(target)
-	if err != nil {
-		return err
-	}
-
-	if subvolume == "" {
-		return nil
-	}
-
-	if err := syscall.Unmount(target, 0); err != nil {
-		return err
-	}
-
-	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume); err != nil {
-		return err
+		if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume); err != nil {
+			return err
+		}
 	}
 
 	return mountSubmounts(device, kind, target, fstab.Submounts(entries))
+}
+
+// describedRoot is the subvolume of the file system mounted on a directory
+// that is the root, empty for the mount itself, and the lines of the root's
+// fstab.
+func describedRoot(target string) (string, []fstab.Entry, error) {
+	// a base image's links must never lead into the agent's own root
+	top, err := os.OpenRoot(target)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// closed before any remount, which an open root would keep busy
+	defer func() { _ = top.Close() }()
+
+	entries, found, err := fstabIn(top, ".")
+	if err != nil {
+		return "", nil, err
+	}
+
+	if found {
+		return "", entries, nil
+	}
+
+	return ownSubvolume(top)
 }

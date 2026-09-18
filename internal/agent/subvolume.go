@@ -17,16 +17,8 @@ var ErrSeveralRoots = errors.New("several subvolumes claim the root")
 // ownSubvolume is the directory at the top of a file system whose own fstab
 // mounts it as the root, with the lines of that fstab, or empty when there
 // is none.
-func ownSubvolume(top string) (string, []fstab.Entry, error) {
-	// a base image's links must never lead into the agent's own root
-	root, err := os.OpenRoot(top)
-	if err != nil {
-		return "", nil, err
-	}
-
-	defer func() { _ = root.Close() }()
-
-	children, err := fs.ReadDir(root.FS(), ".")
+func ownSubvolume(top *os.Root) (string, []fstab.Entry, error) {
+	children, err := fs.ReadDir(top.FS(), ".")
 	if err != nil {
 		return "", nil, err
 	}
@@ -41,7 +33,7 @@ func ownSubvolume(top string) (string, []fstab.Entry, error) {
 			continue
 		}
 
-		entries, _, err := fstabIn(root, child.Name())
+		entries, _, err := fstabIn(top, child.Name())
 		if err != nil {
 			return "", nil, err
 		}
