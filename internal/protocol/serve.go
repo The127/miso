@@ -14,8 +14,13 @@ func (c *Conn) Serve(runner Runner) error {
 		return err
 	}
 
-	if _, err := runner.Run(message.(Run), outputs{c}); err != nil {
+	code, err := runner.Run(message.(Run), outputs{c})
+	if err != nil {
 		return err
+	}
+
+	if code != 0 {
+		return c.Send(Exited{Code: code})
 	}
 
 	return c.Send(Done{})
