@@ -1,5 +1,10 @@
 package protocol
 
+import "errors"
+
+// ErrUnknownMessage is a line that holds no message this side knows.
+var ErrUnknownMessage = errors.New("unknown message")
+
 // Message is anything miso and its agent send each other.
 type Message interface {
 	message()

@@ -40,5 +40,9 @@ func (c *Conn) Receive() (Message, error) {
 		return *e.Exited, nil
 	}
 
-	return *e.Run, nil
+	if e.Run != nil {
+		return *e.Run, nil
+	}
+
+	return nil, ErrUnknownMessage
 }
