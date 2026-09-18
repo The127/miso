@@ -47,6 +47,25 @@ func TestALinkStaysALinkToWhatItNames(t *testing.T) {
 	assert.Equal(t, "/nowhere/at/all", got)
 }
 
+func TestTwoNamesOfOneFileStayOneFile(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(source, "a"), []byte("same"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(source, "a"), filepath.Join(source, "b")))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	a, err := os.Lstat(filepath.Join(target, "a"))
+	require.NoError(t, err)
+	b, err := os.Lstat(filepath.Join(target, "b"))
+	require.NoError(t, err)
+	assert.True(t, os.SameFile(a, b))
+}
+
 func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
 	// arrange
 	source := t.TempDir()
