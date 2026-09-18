@@ -48,6 +48,12 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 		return "", "", err
 	}
 
+	// an image nobody has fetched yet has no digest, and a key must not
+	// stand for bytes nobody has seen
+	if stage.Base != scratch && digest == "" {
+		return "", "", nil
+	}
+
 	return baseKey(p.agent, stage.Base, digest), digest, nil
 }
 
@@ -90,8 +96,19 @@ func (p *planner) step(builtOn []string, instruction imagefile.Instruction) (Ste
 		return Step{}, err
 	}
 
-	key := hashed([]string{hashed(builtOn), hashed(words(instruction)), hashed(p.reads(instruction, files))})
+	reads := p.reads(instruction, files)
+
+	// a step built on something without a key has none either
+	key := ""
+	if known(builtOn) && known(reads) {
+		key = hashed([]string{hashed(builtOn), hashed(words(instruction)), hashed(reads)})
+	}
+
 	return Step{Instruction: instruction, Key: key, BuiltOn: builtOn, Files: files}, nil
+}
+
+func known(keys []string) bool {
+	return !slices.Contains(keys, "")
 }
 
 // files are what a step takes from the build context.
