@@ -46,3 +46,16 @@ func TestAStageOnScratchImportsNothing(t *testing.T) {
 	require.Len(t, requests, 1)
 	assert.IsType(t, protocol.Run{}, requests[0])
 }
+
+func TestAStageOnAnEmptyScratchStageImportsNothing(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM scratch AS empty\nFROM empty\nRUN x\n")
+
+	// act
+	requests, err := build.Requests(source)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 1)
+	assert.IsType(t, protocol.Run{}, requests[0])
+}

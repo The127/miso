@@ -47,7 +47,7 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 func (p *planner) download(stage imagefile.Stage, digest string) bool {
 	_, onStage := p.ends[stage.Base]
 
-	return !onStage && stage.Base != Scratch && digest == ""
+	return !onStage && stage.Base != scratch && digest == ""
 }
 
 func (p *planner) start(stage imagefile.Stage) (key string, digest string, err error) {
@@ -62,7 +62,7 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 
 	// an image nobody has fetched yet has no digest, and a key must not
 	// stand for bytes nobody has seen
-	if stage.Base != Scratch && digest == "" {
+	if stage.Base != scratch && digest == "" {
 		return "", "", nil
 	}
 
