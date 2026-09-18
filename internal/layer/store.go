@@ -1,6 +1,8 @@
 package layer
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -18,6 +20,16 @@ func Open(dir string) *Store {
 // Path is where the layer of a key lives.
 func (s *Store) Path(key string) string {
 	return filepath.Join(s.dir, key)
+}
+
+// Has tells whether the layer of a key is finished.
+func (s *Store) Has(key string) (bool, error) {
+	_, err := os.Stat(s.Path(key))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+
+	return err == nil, err
 }
 
 // Begin starts the layer of a key in a directory of its own.

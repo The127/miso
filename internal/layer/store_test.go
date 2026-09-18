@@ -27,3 +27,23 @@ func TestAFinishedLayerIsFoundUnderItsKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hi", string(got))
 }
+
+func TestOnlyAFinishedLayerIsThere(t *testing.T) {
+	// arrange
+	store := layer.Open(t.TempDir())
+	finished, err := store.Begin("abc")
+	require.NoError(t, err)
+	_, err = store.Begin("def")
+	require.NoError(t, err)
+	require.NoError(t, finished.Finish())
+
+	// act
+	hasFinished, errFinished := store.Has("abc")
+	hasBegun, errBegun := store.Has("def")
+
+	// assert
+	require.NoError(t, errFinished)
+	require.NoError(t, errBegun)
+	assert.True(t, hasFinished)
+	assert.False(t, hasBegun)
+}
