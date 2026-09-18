@@ -24,3 +24,18 @@ func TestARunSentIsTheRunReceived(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Run{Command: "apt-get update"}, received)
 }
+
+func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New(&wire, &wire)
+
+	// act
+	sent := conn.Send(protocol.Exited{Code: 100})
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Exited{Code: 100}, received)
+}
