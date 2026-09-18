@@ -14,32 +14,43 @@ import (
 // Write lists a plan, a stage as its FROM line and every step as its line
 // number, its key and the instruction as written.
 func Write(w io.Writer, planned plan.Plan) error {
+	out := &lines{w: w}
 	if planned.Agent != "" {
-		if _, err := fmt.Fprintf(w, "agent %s\n", planned.Agent); err != nil {
-			return err
-		}
+		out.print("agent %s", planned.Agent)
 	}
 
 	for _, stage := range planned.Stages {
-		if _, err := fmt.Fprintf(w, "%s\n", from(stage)); err != nil {
-			return err
-		}
-
+		out.print("%s", from(stage))
 		for _, step := range stage.Steps {
-			line, text := describe(step.Instruction)
-			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line, short(step.Key), text); err != nil {
-				return err
-			}
-
-			for _, file := range step.Files {
-				if _, err := fmt.Fprintf(w, "%20s%s  %s\n", "", file.Path, short(file.Digest)); err != nil {
-					return err
-				}
-			}
+			out.step(step)
 		}
 	}
 
-	return nil
+	return out.err
+}
+
+// lines keeps the first error a writer gives, so that the listing can be
+// written as its lines and the error is checked once at the end.
+type lines struct {
+	w   io.Writer
+	err error
+}
+
+func (l *lines) print(format string, args ...any) {
+	if l.err != nil {
+		return
+	}
+
+	_, l.err = fmt.Fprintf(l.w, format+"\n", args...)
+}
+
+func (l *lines) step(step plan.Step) {
+	line, text := describe(step.Instruction)
+	l.print("%4d  %s  %s", line, short(step.Key), text)
+
+	for _, file := range step.Files {
+		l.print("%20s%s  %s", "", file.Path, short(file.Digest))
+	}
 }
 
 func from(stage plan.Stage) string {
