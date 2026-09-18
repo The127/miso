@@ -16,7 +16,7 @@ func (c *Conn) Ask(request Message, out io.Writer) error {
 	for {
 		message, err := c.Receive()
 		if errors.Is(err, io.EOF) {
-			return fmt.Errorf("the agent stopped before the step ended: %w", io.ErrUnexpectedEOF)
+			return fmt.Errorf("the agent stopped before it answered: %w", io.ErrUnexpectedEOF)
 		}
 
 		if err != nil {

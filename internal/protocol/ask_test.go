@@ -85,5 +85,5 @@ func TestAnAnswerCutShortIsAnError(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
-	assert.ErrorContains(t, err, "the agent stopped before the step ended")
+	assert.ErrorContains(t, err, "the agent stopped before it answered")
 }
