@@ -19,8 +19,10 @@ func Requests(planned plan.Plan) []protocol.Run {
 				below = []string{step.BuiltOn[0]}
 			}
 
-			run := step.Instruction.(imagefile.Run)
-			requests = append(requests, protocol.Run{Key: step.Key, Layers: below, Command: run.Command})
+			if run, isRun := step.Instruction.(imagefile.Run); isRun {
+				requests = append(requests, protocol.Run{Key: step.Key, Layers: below, Command: run.Command})
+			}
+
 			layers[step.Key] = slices.Concat(below, []string{step.Key})
 		}
 	}

@@ -73,3 +73,21 @@ func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 	require.Len(t, requests, 2)
 	assert.Equal(t, []string{"base", "k1"}, requests[1].Layers)
 }
+
+func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{
+			{Instruction: imagefile.Copy{Line: 2, Sources: []string{"motd"}, Destination: "/etc/motd"}, Key: "k1", BuiltOn: []string{"base"}},
+			{Instruction: imagefile.Run{Line: 3, Command: "cat /etc/motd"}, Key: "k2", BuiltOn: []string{"k1"}},
+		},
+	}}}
+
+	// act
+	requests := build.Requests(planned)
+
+	// assert
+	require.Len(t, requests, 1)
+	assert.Equal(t, []string{"base", "k1"}, requests[0].Layers)
+}
