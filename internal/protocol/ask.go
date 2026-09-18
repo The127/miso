@@ -6,9 +6,9 @@ import (
 	"io"
 )
 
-// Run asks the agent to run a command and writes what the command writes
+// Ask has the agent run a command and writes what the command writes
 // to out until the agent tells how it ended.
-func (c *Conn) Run(run Run, out io.Writer) error {
+func (c *Conn) Ask(run Run, out io.Writer) error {
 	if err := c.Send(run); err != nil {
 		return err
 	}
