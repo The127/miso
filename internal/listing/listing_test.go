@@ -2,6 +2,7 @@ package listing_test
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -209,4 +210,21 @@ func TestAListingNamesTheAgentThatKeyedIt(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "agent miso v0.3.1\nFROM scratch\n", out.String())
+}
+
+type brokenWriter struct{}
+
+func (brokenWriter) Write([]byte) (int, error) {
+	return 0, errors.New("the pipe is gone")
+}
+
+func TestAListingStopsAtTheFirstWriteError(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Agent: "miso v0.3.1", Stages: []plan.Stage{{Base: "scratch"}}}
+
+	// act
+	err := listing.Write(brokenWriter{}, planned)
+
+	// assert
+	assert.EqualError(t, err, "the pipe is gone")
 }
