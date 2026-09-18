@@ -41,6 +41,22 @@ func TestARunKeepsItsLayers(t *testing.T) {
 	assert.Equal(t, run, received)
 }
 
+func TestARunKeepsItsEnvironment(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	run := protocol.Run{Env: []string{"DEBIAN_FRONTEND=noninteractive"}, Command: "apt-get update"}
+
+	// act
+	sent := conn.Send(run)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, run, received)
+}
+
 func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
 	// arrange
 	var wire bytes.Buffer

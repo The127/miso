@@ -6,7 +6,10 @@ type Run struct {
 	Key string
 
 	// the keys of the layers below, lowest first
-	Layers  []string
+	Layers []string
+
+	// KEY=VALUE, in the order the build file set them
+	Env     []string
 	Command string
 }
 
