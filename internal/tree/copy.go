@@ -71,7 +71,7 @@ func (c copier) entries(dir string) error {
 			err = c.directory(name, info)
 		case info.Mode()&fs.ModeSymlink != 0:
 			err = c.link(name, info)
-		case info.Mode()&(fs.ModeDevice|fs.ModeNamedPipe) != 0:
+		case info.Mode()&(fs.ModeDevice|fs.ModeNamedPipe|fs.ModeSocket) != 0:
 			err = c.special(name, info)
 		default:
 			err = c.fileOnce(name, info)
@@ -126,7 +126,8 @@ func (c copier) link(name string, info fs.FileInfo) error {
 	})
 }
 
-// special makes a device or fifo like the one copied, which has no content.
+// special makes a device, fifo or socket like the one copied, which has no
+// content.
 func (c copier) special(name string, info fs.FileInfo) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {

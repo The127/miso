@@ -36,6 +36,20 @@ func TestDevicesAndFifosStayWhatTheyAre(t *testing.T) {
 	}
 }
 
+func TestASocketStaysASocket(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, unix.Mknod(filepath.Join(source, "sock"), unix.S_IFSOCK|0o600, 0))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, special(t, filepath.Join(source, "sock")), special(t, filepath.Join(target, "sock")))
+}
+
 // special is the kind of file a path is, with its mode and device number.
 func special(t *testing.T, name string) [2]uint64 {
 	t.Helper()
