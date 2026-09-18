@@ -4,8 +4,11 @@ import "github.com/The127/miso/internal/imagefile"
 
 // Plan is a build file with everything looked up and keyed.
 type Plan struct {
-	Agent  string
-	Stages []Stage
+	Agent string
+
+	// the bases a build fetches before it plans again, in FROM order
+	Downloads []string
+	Stages    []Stage
 }
 
 // Stage is a stage of a plan.
