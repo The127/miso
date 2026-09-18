@@ -7,12 +7,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -34,4 +36,20 @@ func TestAnImportedBaseIsALayerHoldingItsRoot(t *testing.T) {
 	release, err := layer.ReadFile("etc/os-release")
 	require.NoError(t, err)
 	assert.Contains(t, string(release), "ID=debian")
+}
+
+func TestABaseWhoseLayerIsThereIsNotImportedAgain(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	work, err := layer.Open(layers).Begin("abc")
+	require.NoError(t, err)
+	require.NoError(t, work.Finish())
+	worker := agent.New(layers, t.TempDir())
+	nowhere := "sha256:" + strings.Repeat("0", 64)
+
+	// act
+	err = worker.Import(context.Background(), protocol.Import{Key: "abc", Digest: nowhere}, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
 }

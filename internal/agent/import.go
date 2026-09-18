@@ -26,6 +26,11 @@ func New(layers, scratch string) *Agent {
 
 // Import keeps the root file system of a base image as the layer of a key.
 func (a *Agent) Import(_ context.Context, request protocol.Import, _ io.Writer) error {
+	there, err := a.layers.Has(request.Key)
+	if err != nil || there {
+		return err
+	}
+
 	work, err := a.layers.Begin(request.Key)
 	if err != nil {
 		return err
