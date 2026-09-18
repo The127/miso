@@ -36,7 +36,8 @@ func (a *Agent) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, erro
 // runOn runs a command on top of layers with what it writes going into a
 // directory, which is no longer mounted once it returns.
 func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
-	scratch, err := os.MkdirTemp(a.scratch, "run-")
+	// overlay wants its work directory on the file system of the upper one
+	scratch, err := a.layers.Scratch()
 	if err != nil {
 		return 0, err
 	}
