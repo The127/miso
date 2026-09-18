@@ -12,7 +12,7 @@ import (
 // number, its key and the instruction as written.
 func Write(w io.Writer, planned plan.Plan) error {
 	for _, stage := range planned.Stages {
-		if _, err := fmt.Fprintf(w, "FROM %s\n", stage.Base); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\n", from(stage)); err != nil {
 			return err
 		}
 
@@ -24,6 +24,14 @@ func Write(w io.Writer, planned plan.Plan) error {
 	}
 
 	return nil
+}
+
+func from(stage plan.Stage) string {
+	if stage.Name != "" {
+		return "FROM " + stage.Base + " AS " + stage.Name
+	}
+
+	return "FROM " + stage.Base
 }
 
 // short cuts a key to twelve characters, as git does with a commit.
