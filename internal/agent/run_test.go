@@ -130,6 +130,20 @@ func TestARunHasTheUsualDevicesForEveryone(t *testing.T) {
 		"/dev/tty character special file 666 5:0\n", out.String())
 }
 
+func TestARunFindsItsOpenFilesUnderDev(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "readlink /dev/fd /dev/stdin /dev/stdout /dev/stderr"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "/proc/self/fd\n/proc/self/fd/0\n/proc/self/fd/1\n/proc/self/fd/2\n", out.String())
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())

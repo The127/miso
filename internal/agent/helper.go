@@ -67,5 +67,16 @@ func helper(root, command string) error {
 		}
 	}
 
+	for name, target := range map[string]string{
+		"fd":     "/proc/self/fd",
+		"stdin":  "/proc/self/fd/0",
+		"stdout": "/proc/self/fd/1",
+		"stderr": "/proc/self/fd/2",
+	} {
+		if err := os.Symlink(target, "/dev/"+name); err != nil {
+			return err
+		}
+	}
+
 	return syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
 }
