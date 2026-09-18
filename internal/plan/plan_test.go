@@ -150,3 +150,27 @@ func TestAPlanKeepsTheAgentItWasKeyedWith(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "miso v0.3.1", planned.Agent)
 }
+
+func TestAPlanNamesTheBasesABuildDownloadsFirst(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM scratch\nCOPY --from=bootstrap /rootfs/ /\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"debian:sid"}, planned.Downloads)
+}
+
+func TestAStageOnAnUnfetchedStageIsNoDownload(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM bootstrap\nRUN true\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"debian:sid"}, planned.Downloads)
+}

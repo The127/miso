@@ -28,6 +28,10 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 			return Plan{}, err
 		}
 
+		if p.download(stage, digest) {
+			planned.Downloads = append(planned.Downloads, stage.Base)
+		}
+
 		planned.Stages = append(planned.Stages, Stage{Name: stage.Name, Base: stage.Base, BaseDigest: digest, Steps: steps})
 		if stage.Name != "" {
 			p.ends[stage.Name] = end
@@ -36,6 +40,14 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 	}
 
 	return planned, nil
+}
+
+// download is an image base that nobody has fetched yet. A stage has no
+// digest either, and scratch never needs one.
+func (p *planner) download(stage imagefile.Stage, digest string) bool {
+	_, onStage := p.ends[stage.Base]
+
+	return !onStage && stage.Base != scratch && digest == ""
 }
 
 func (p *planner) start(stage imagefile.Stage) (key string, digest string, err error) {
