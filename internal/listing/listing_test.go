@@ -56,3 +56,16 @@ func TestANamedStageShowsItsName(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch AS rootfs\n", out.String())
 }
+
+func TestAStageOnAnImageShowsTheDigestOfItsBase(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{Base: "debian:sid", BaseDigest: "47348ce3c15ba0348ac0887f85dd16b27501e538ff66fc2756c2fa642dc4102c"}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM debian:sid  base 47348ce3c15b\n", out.String())
+}
