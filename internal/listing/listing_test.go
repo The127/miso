@@ -69,3 +69,19 @@ func TestAStageOnAnImageShowsTheDigestOfItsBase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM debian:sid  base 47348ce3c15b\n", out.String())
 }
+
+func TestAnEnvStepReadsAsWritten(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Env{Line: 3, Key: "LANG", Value: "C.UTF-8"}, Key: "a1b2c3d4e5f6"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   3  a1b2c3d4e5f6  ENV LANG=C.UTF-8\n", out.String())
+}
