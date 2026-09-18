@@ -32,7 +32,7 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 			planned.Downloads = append(planned.Downloads, stage.Base)
 		}
 
-		planned.Stages = append(planned.Stages, Stage{Name: stage.Name, Base: stage.Base, BaseDigest: digest, Steps: steps})
+		planned.Stages = append(planned.Stages, Stage{Name: stage.Name, Base: stage.Base, BaseDigest: digest, BaseKey: from, Steps: steps})
 		if stage.Name != "" {
 			p.ends[stage.Name] = end
 			p.outputs[stage.Name] = outputKeys(steps)

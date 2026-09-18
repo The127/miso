@@ -16,7 +16,11 @@ type Stage struct {
 	Name       string
 	Base       string
 	BaseDigest string
-	Steps      []Step
+
+	// the key the first step is built on, empty while the base is not
+	// fetched yet
+	BaseKey string
+	Steps   []Step
 }
 
 // Step is an instruction with the key of the layer it makes. The key is
