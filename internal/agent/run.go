@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -80,7 +81,32 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		"HOME=/root",
 	}, run.Env...)
-	err = cmd.Run()
+	setup, failed, err := os.Pipe()
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() { _ = setup.Close() }()
+
+	cmd.ExtraFiles = []*os.File{failed}
+	err = cmd.Start()
+	_ = failed.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	// the helper's end closes when the shell starts, so a run that starts
+	// reads nothing here
+	reason, err := io.ReadAll(setup)
+	if err != nil {
+		return 0, err
+	}
+
+	err = cmd.Wait()
+	if len(reason) > 0 {
+		return 0, fmt.Errorf("start run: %s", reason)
+	}
+
 	// the kill that stops a cancelled command looks like an exit of its own
 	if ctx.Err() != nil {
 		return 0, ctx.Err()

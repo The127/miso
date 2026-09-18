@@ -16,11 +16,15 @@ func Helper() {
 		return
 	}
 
+	// the agent reads why a run could not start from here, and the start of
+	// the shell closes it
+	failed := os.NewFile(3, "failed")
+	syscall.CloseOnExec(3)
 	root, command := os.Args[1], os.Args[2]
-	if err := helper(root, command); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	// returns only when the shell did not start
+	err := helper(root, command)
+	_, _ = fmt.Fprint(failed, err)
+	os.Exit(1)
 }
 
 func helper(root, command string) error {
@@ -44,5 +48,7 @@ func helper(root, command string) error {
 		return err
 	}
 
-	return syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
+	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
+
+	return fmt.Errorf("run /bin/sh: %w", err)
 }
