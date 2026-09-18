@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -121,4 +122,23 @@ func TestAFetchAgainReplacesWhatANamePointsAt(t *testing.T) {
 	digest, err := cache.Digest("debian:sid")
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:"+hex.EncodeToString(sum[:]), digest)
+}
+
+func TestACancelledFetchStops(t *testing.T) {
+	// arrange
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	t.Cleanup(server.Close)
+	cache := baseimage.Open(t.TempDir(), server.Client(), map[string]string{"debian:sid": server.URL + "/sid.qcow2"})
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(50*time.Millisecond, cancel)
+
+	// act
+	_, err := cache.Fetch(ctx, "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, context.Canceled)
 }
