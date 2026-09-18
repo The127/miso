@@ -161,3 +161,16 @@ func TestTheRootOfARunKeepsTheModeOfTheLayersBelow(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "755\n", string(seen))
 }
+
+func TestAProcessARunLeavesBehindDoesNotOutliveIt(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000 &"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
