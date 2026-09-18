@@ -101,3 +101,19 @@ func TestACopyStepReadsAsWritten(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch\n   2  9a8b7c6d5e4f  COPY etc/motd etc/issue /etc/\n", out.String())
 }
+
+func TestACopyFromAStageShowsTheStage(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Copy{Line: 5, From: "build", Sources: []string{"/out/app"}, Destination: "/usr/bin/"}, Key: "9a8b7c6d5e4f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   5  9a8b7c6d5e4f  COPY --from=build /out/app /usr/bin/\n", out.String())
+}
