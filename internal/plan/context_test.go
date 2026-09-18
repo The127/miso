@@ -51,3 +51,18 @@ func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 	assert.ErrorContains(t, err, "nope")
 }
+
+func TestACopyOnAnUnfetchedBaseStillListsItsFiles(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nCOPY motd /etc/\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, files{"motd": "hello"}, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 1)
+	require.Len(t, planned.Stages[0].Steps, 1)
+	assert.Equal(t, []plan.File{{Path: "motd", Digest: "hello"}}, planned.Stages[0].Steps[0].Files)
+	assert.Empty(t, planned.Stages[0].Steps[0].Key)
+}
