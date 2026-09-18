@@ -48,6 +48,15 @@ func mountDev() error {
 		return fmt.Errorf("mount /dev/pts: %w", err)
 	}
 
+	if err := os.Mkdir("/dev/shm", 0o700); err != nil {
+		return err
+	}
+
+	// like /tmp, open to everyone and each keeps their own
+	if err := os.Chmod("/dev/shm", os.ModeSticky|0o777); err != nil {
+		return err
+	}
+
 	for name, target := range map[string]string{
 		"ptmx":   "pts/ptmx",
 		"fd":     "/proc/self/fd",
