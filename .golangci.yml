@@ -1,5 +1,10 @@
 version: "2"
 
+run:
+  # the tests that only run inside a vm are linted like the rest
+  build-tags:
+    - vmtest
+
 linters:
   default: standard
   enable:

@@ -10,6 +10,10 @@ build:
 test:
     go test ./...
 
+# test what needs root and a real kernel, inside a vm (needs /dev/kvm)
+test-vm *args:
+    bash hack/test-vm.sh {{args}}
+
 # test with a coverage profile
 cover:
     go test -coverprofile=coverage.out -covermode=atomic ./...
