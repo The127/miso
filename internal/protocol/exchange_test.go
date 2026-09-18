@@ -58,3 +58,18 @@ func TestAnAgentFailureIsNotACommandFailure(t *testing.T) {
 	assert.NotErrorIs(t, err, protocol.ErrCommandFailed)
 	assert.ErrorContains(t, err, "mount overlay: no space left on device")
 }
+
+func TestAnAnswerCutShortIsAnError(t *testing.T) {
+	// arrange
+	var replies bytes.Buffer
+	agent := protocol.New("miso 1.2.0", bytes.NewReader(nil), &replies)
+	require.NoError(t, agent.Send(protocol.Output{Bytes: []byte("Reading package lists...")}))
+	host := protocol.New("miso 1.2.0", &replies, io.Discard)
+
+	// act
+	err := host.Run(protocol.Run{Command: "apt-get update"}, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	assert.ErrorContains(t, err, "the agent stopped before the step ended")
+}
