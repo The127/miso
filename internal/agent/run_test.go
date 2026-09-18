@@ -22,24 +22,26 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-// importedBase is an agent keeping its layers in a directory, with the base
-// image of the VM imported as the layer base.
-func importedBase(t *testing.T, layers string) *agent.Agent {
+// mountedBase is an agent keeping its layers in a directory, with the root of
+// the VM's base image mounted as the layer base. Mounted and not imported,
+// because an import takes seconds and a run needs only a root below it.
+func mountedBase(t *testing.T, layers string) *agent.Agent {
 	t.Helper()
 
-	digest := os.Getenv("MISO_VMTEST_BASE_DIGEST")
-	require.NotEmpty(t, digest, "MISO_VMTEST_BASE names no base image")
-	worker := agent.New(layers, t.TempDir())
-	err := worker.Import(context.Background(), protocol.Import{Key: "base", Digest: digest}, io.Discard)
-	require.NoError(t, err)
+	require.NotEmpty(t, os.Getenv("MISO_VMTEST_BASE_DIGEST"), "MISO_VMTEST_BASE names no base image")
+	base := filepath.Join(layers, "base")
+	require.NoError(t, os.Mkdir(base, 0o700))
+	require.NoError(t, agent.MountRoot("miso-test-base", base))
+	// before the layers are removed, which would fail on a read-only mount
+	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(base, syscall.MNT_DETACH)) })
 
-	return worker
+	return agent.New(layers, t.TempDir())
 }
 
 func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
 
 	// act
@@ -56,7 +58,7 @@ func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 
 func TestWhatARunPrintsGoesOut(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi"}
 	var out bytes.Buffer
 
@@ -70,7 +72,7 @@ func TestWhatARunPrintsGoesOut(t *testing.T) {
 
 func TestWhatARunPrintsAsAnErrorGoesOut(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi >&2"}
 	var out bytes.Buffer
 
@@ -84,7 +86,7 @@ func TestWhatARunPrintsAsAnErrorGoesOut(t *testing.T) {
 
 func TestARunSeesItsOwnProcesses(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "cat /proc/1/cmdline"}
 	var out bytes.Buffer
 
@@ -98,7 +100,7 @@ func TestARunSeesItsOwnProcesses(t *testing.T) {
 
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "exit 3"}
 
 	// act
@@ -112,7 +114,7 @@ func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 func TestAFailedRunLeavesNoWork(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x; exit 3"}
 
 	// act
@@ -137,7 +139,7 @@ func layerWithF(t *testing.T, layers, key, text string) {
 func TestAHigherLayerHidesALowerOne(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	layerWithF(t, layers, "a", "a")
 	layerWithF(t, layers, "b", "b")
 	run := protocol.Run{Key: "run", Layers: []string{"base", "a", "b"}, Command: "cat /f > /seen"}
@@ -155,7 +157,7 @@ func TestAHigherLayerHidesALowerOne(t *testing.T) {
 func TestARunSeesItsLowestLayerUnderManyOthers(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	layerWithF(t, layers, "lowest", "lowest")
 	keys := []string{"base", "lowest"}
 	// as long as real keys, so their paths fill more than the page overlay
@@ -182,7 +184,7 @@ func TestARunSeesItsLowestLayerUnderManyOthers(t *testing.T) {
 func TestARunSeesTheEnvironmentOfTheBuildFileAndNotTheAgents(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Env: []string{"GREETING=hi"}, Command: "env > /seen"}
 
 	// act
@@ -199,7 +201,7 @@ func TestARunSeesTheEnvironmentOfTheBuildFileAndNotTheAgents(t *testing.T) {
 func TestARunWithoutEnvironmentFindsCommandsOnTheUsualPath(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "env > /seen"}
 
 	// act
@@ -216,7 +218,7 @@ func TestARunWithoutEnvironmentFindsCommandsOnTheUsualPath(t *testing.T) {
 func TestARunIsAtHomeInRoot(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "env > /seen"}
 
 	// act
@@ -232,7 +234,7 @@ func TestARunIsAtHomeInRoot(t *testing.T) {
 func TestTheRootOfARunKeepsTheModeOfTheLayersBelow(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "stat -c %a / > /seen"}
 
 	// act
@@ -247,7 +249,7 @@ func TestTheRootOfARunKeepsTheModeOfTheLayersBelow(t *testing.T) {
 
 func TestAProcessARunLeavesBehindDoesNotOutliveIt(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	// not &, which needs a /dev/null, and the second sleep lets the first one
 	// start before the shell is gone
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "setsid -f sleep 1000; sleep 1"}
@@ -293,7 +295,7 @@ func ownFileSystem(t *testing.T) string {
 func TestARunWorksWithLayersOnAFileSystemOfTheirOwn(t *testing.T) {
 	// arrange
 	layers := ownFileSystem(t)
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
 
 	// act
@@ -309,7 +311,7 @@ func TestARunWorksWithLayersOnASharedFileSystem(t *testing.T) {
 	// as systemd leaves every mount, and unlike this VM's
 	layers := ownFileSystem(t)
 	require.NoError(t, syscall.Mount("", layers, "", syscall.MS_SHARED, ""))
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
 
 	// act
@@ -322,7 +324,7 @@ func TestARunWorksWithLayersOnASharedFileSystem(t *testing.T) {
 
 func TestACancelledRunStopsItsCommand(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(time.Second, cancel)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
@@ -359,7 +361,7 @@ func killWhenRunning(t *testing.T, commandLine string, signal syscall.Signal) {
 
 func TestARunKilledBySignalAnswersTheCodeAShellWould(t *testing.T) {
 	// arrange
-	worker := importedBase(t, t.TempDir())
+	worker := mountedBase(t, t.TempDir())
 	killWhenRunning(t, "/bin/sh\x00-c\x00sleep 1000\x00", syscall.SIGKILL)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
 
@@ -400,7 +402,7 @@ func TestADirectoryARunRenamesIsWholeInItsLayer(t *testing.T) {
 	// arrange
 	overlayDefault(t, "redirect_dir", "Y")
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "mv /etc/apt /etc/moved"}
 
 	// act
@@ -416,7 +418,7 @@ func TestAFileARunChangesTheModeOfIsWholeInItsLayer(t *testing.T) {
 	// arrange
 	overlayDefault(t, "metacopy", "Y")
 	layers := t.TempDir()
-	worker := importedBase(t, layers)
+	worker := mountedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "chmod 600 /etc/debian_version"}
 
 	// act
