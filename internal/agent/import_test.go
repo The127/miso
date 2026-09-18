@@ -38,6 +38,22 @@ func TestAnImportedBaseIsALayerHoldingItsRoot(t *testing.T) {
 	assert.Contains(t, string(release), "ID=debian")
 }
 
+func TestAFailedImportLeavesNoWork(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := agent.New(layers, t.TempDir())
+	nowhere := "sha256:" + strings.Repeat("0", 64)
+
+	// act
+	err := worker.Import(context.Background(), protocol.Import{Key: "abc", Digest: nowhere}, io.Discard)
+
+	// assert
+	require.Error(t, err)
+	entries, err := os.ReadDir(layers)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
 func TestABaseWhoseLayerIsThereIsNotImportedAgain(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
