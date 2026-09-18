@@ -13,4 +13,4 @@ type Run struct {
 	Command string
 }
 
-func (Run) message() {}
+func (r Run) into(e *envelope) { e.Run = &r }

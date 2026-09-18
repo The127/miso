@@ -12,4 +12,4 @@ type Failed struct {
 	Reason string
 }
 
-func (Failed) message() {}
+func (f Failed) into(e *envelope) { e.Failed = &f }
