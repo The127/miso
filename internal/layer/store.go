@@ -54,6 +54,11 @@ func (w *Work) Dir() string {
 	return w.dir
 }
 
+// Discard throws away a layer that will not be finished.
+func (w *Work) Discard() error {
+	return os.RemoveAll(w.dir)
+}
+
 // Finish puts the layer under its key.
 func (w *Work) Finish() error {
 	err := os.Rename(w.dir, w.final)
