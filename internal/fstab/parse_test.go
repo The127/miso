@@ -27,6 +27,18 @@ func TestALineIsAnEntry(t *testing.T) {
 	}}, entries)
 }
 
+func TestALineWithoutATypeIsABadLine(t *testing.T) {
+	// arrange
+	text := "# fstab\nUUID=15c2 /\n"
+
+	// act
+	_, err := fstab.Parse(strings.NewReader(text))
+
+	// assert
+	assert.ErrorIs(t, err, fstab.ErrBadLine)
+	assert.ErrorContains(t, err, "line 2")
+}
+
 func TestCommentsAndBlankLinesAreNoEntries(t *testing.T) {
 	// arrange
 	text := "# /etc/fstab\n\n   \n  # indented\nUUID=15c2 / btrfs defaults 0 1\n"
