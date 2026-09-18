@@ -18,7 +18,7 @@ if [ -z "$packages" ]; then
 fi
 
 disks=()
-for shape in flat subvolumes; do
+for shape in flat subvolumes escape; do
     bash hack/btrfs-test-disk.sh "$work/$shape.img" "$shape"
     disks+=(-drive "file=$work/$shape.img,format=raw,if=none,readonly=on,id=$shape"
         -device "virtio-blk-pci,drive=$shape,serial=miso-test-$shape")

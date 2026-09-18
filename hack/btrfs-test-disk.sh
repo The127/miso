@@ -5,6 +5,8 @@
 #   subvolumes  Fedora's layout: subvolumes root, var and boot, and an fstab
 #               in root that mounts them, os-release saying
 #               ID=miso-test-subvolumes
+#   escape      like subvolumes, but var in root is a link to /escaped, out
+#               of the image
 set -euo pipefail
 
 out=$1
@@ -30,6 +32,16 @@ EOF
     echo var > "$tree/var/marker"
     echo boot > "$tree/boot/marker"
     subvolumes=(--subvol rw:root --subvol rw:var --subvol rw:boot)
+    ;;
+escape)
+    mkdir -p "$tree/root/etc" "$tree/var"
+    ln -s /escaped "$tree/root/var"
+    cat > "$tree/root/etc/fstab" <<EOF
+LABEL=test / btrfs subvol=root 0 0
+LABEL=test /var btrfs subvol=var 0 0
+EOF
+    echo var > "$tree/var/marker"
+    subvolumes=(--subvol rw:root --subvol rw:var)
     ;;
 *)
     echo "unknown shape $shape" >&2

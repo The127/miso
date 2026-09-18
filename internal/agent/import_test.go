@@ -84,3 +84,21 @@ func TestTheSubmountsOfTheRootAreMountedInIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "boot\n", string(boot))
 }
+
+func TestASubmountThroughALinkOutOfTheImageIsRefused(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+	require.NoError(t, os.Mkdir("/escaped", 0o700))
+	t.Cleanup(func() {
+		_ = syscall.Unmount("/escaped", syscall.MNT_DETACH)
+		_ = os.Remove("/escaped")
+	})
+
+	// act
+	err := agent.MountRoot("miso-test-escape", target)
+
+	// assert
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
+	require.Error(t, err)
+	assert.NoFileExists(t, "/escaped/marker")
+}
