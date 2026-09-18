@@ -24,6 +24,9 @@ func Requests(planned plan.Plan) []protocol.Run {
 			}
 
 			layers[step.Key] = slices.Concat(below, []string{step.Key})
+			if _, isEnv := step.Instruction.(imagefile.Env); isEnv {
+				layers[step.Key] = below
+			}
 		}
 	}
 

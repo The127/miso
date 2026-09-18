@@ -91,3 +91,21 @@ func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base", "k1"}, requests[0].Layers)
 }
+
+func TestAnEnvMakesNoLayer(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{
+			{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "1"}, Key: "k1", BuiltOn: []string{"base"}},
+			{Instruction: imagefile.Run{Line: 3, Command: "echo $A"}, Key: "k2", BuiltOn: []string{"k1"}},
+		},
+	}}}
+
+	// act
+	requests := build.Requests(planned)
+
+	// assert
+	require.Len(t, requests, 1)
+	assert.Equal(t, []string{"base"}, requests[0].Layers)
+}
