@@ -45,3 +45,19 @@ func TestAFetchDownloadsAnImageAndAnswersTheDigestOfItsBytes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:"+hex.EncodeToString(sum[:]), digest)
 }
+
+func TestAFetchedImageIsKnownToACacheOpenedLaterOnTheSameDirectory(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
+	sources := map[string]string{"debian:sid": server.URL + "/sid.qcow2"}
+	dir := t.TempDir()
+	fetched, err := baseimage.Open(dir, server.Client(), sources).Fetch(context.Background(), "debian:sid")
+	require.NoError(t, err)
+
+	// act
+	digest, err := baseimage.Open(dir, server.Client(), sources).Digest("debian:sid")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, fetched, digest)
+}

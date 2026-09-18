@@ -3,7 +3,10 @@ package baseimage
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 // ErrUnknownBase is a name no source is known for.
@@ -29,5 +32,14 @@ func (c *Cache) Digest(name string) (string, error) {
 		return "", fmt.Errorf("%s: %w", name, ErrUnknownBase)
 	}
 
-	return "", nil
+	digest, err := os.ReadFile(filepath.Join(c.names(), name))
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(digest), nil
 }
