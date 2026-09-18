@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs the tests built with the vmtest tag, one package per VM, each test
-# binary as the init of the host's kernel. Arguments go to the test binary.
+# binary as the init of the host's kernel, which loads the modules put next
+# to it. MISO_VMTEST_MODULES names the modules of another MISO_VMTEST_KERNEL.
+# Arguments go to the test binary.
 # MISO_VMTEST_BASE names a base image in qcow2 that is attached read-only
 # with the serial miso-test-base, and once more with the serial of its
 # digest, which the test finds in MISO_VMTEST_BASE_DIGEST. Small btrfs disks
@@ -9,6 +11,7 @@
 set -euo pipefail
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
+modules=${MISO_VMTEST_MODULES:-/lib/modules/$(uname -r)}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -39,12 +42,15 @@ if [ -n "${MISO_VMTEST_BASE:-}" ]; then
     environment+=("MISO_VMTEST_BASE_DIGEST=$digest")
 fi
 
+# the modules the tests need that the host's kernel has not built in
+mkdir -p "$work/root/modules"
+cp "$modules/kernel/fs/overlayfs/overlay.ko.xz" "$work/root/modules/"
+
 failed=0
 for pkg in $packages; do
     echo "== $pkg"
-    mkdir -p "$work/root"
     CGO_ENABLED=0 go test -c -tags vmtest -o "$work/root/init" "./$pkg"
-    (cd "$work/root" && echo init | cpio --quiet -o -H newc) > "$work/initrd"
+    (cd "$work/root" && find init modules | cpio --quiet -o -H newc) > "$work/initrd"
 
     # the test binary stops a hanging test, the outer timeout a hanging VM
     timeout 10m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \

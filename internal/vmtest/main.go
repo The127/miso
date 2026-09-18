@@ -3,8 +3,11 @@ package vmtest
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 // Main runs the tests of a package as the init of a VM, then powers the VM
@@ -17,6 +20,8 @@ func Main(m *testing.M) {
 
 	code := 1
 	if err := mountAll(); err != nil {
+		fmt.Println(err)
+	} else if err := loadModules(); err != nil {
 		fmt.Println(err)
 	} else {
 		code = m.Run()
@@ -31,6 +36,32 @@ func Main(m *testing.M) {
 	}
 
 	select {}
+}
+
+func loadModules() error {
+	names, err := filepath.Glob("/modules/*.ko.xz")
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := loadModule(name); err != nil {
+			return fmt.Errorf("load %s: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+func loadModule(name string) error {
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = f.Close() }()
+
+	return unix.FinitModule(int(f.Fd()), "", unix.MODULE_INIT_COMPRESSED_FILE)
 }
 
 func mountAll() error {
