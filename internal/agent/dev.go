@@ -38,7 +38,18 @@ func mountDev() error {
 		}
 	}
 
+	// the mount shows its own mode on top
+	if err := os.Mkdir("/dev/pts", 0o700); err != nil {
+		return err
+	}
+
+	// a new instance, so the run sees only its own terminals
+	if err := syscall.Mount("devpts", "/dev/pts", "devpts", syscall.MS_NOSUID|syscall.MS_NOEXEC, "newinstance,ptmxmode=0666,mode=0620"); err != nil {
+		return fmt.Errorf("mount /dev/pts: %w", err)
+	}
+
 	for name, target := range map[string]string{
+		"ptmx":   "pts/ptmx",
 		"fd":     "/proc/self/fd",
 		"stdin":  "/proc/self/fd/0",
 		"stdout": "/proc/self/fd/1",
