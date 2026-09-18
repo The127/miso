@@ -78,7 +78,9 @@ func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
 	defer func() { _ = syscall.Unmount(root, syscall.MNT_DETACH) }()
 
 	cmd := exec.Command("/bin/sh", "-c", run.Command) //nolint:gosec // running what the build file says is what a RUN is
-	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root}
+	// the shell is the init of its own PID namespace, and the kernel kills
+	// whatever it leaves behind before the wait for it returns
+	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Cloneflags: syscall.CLONE_NEWPID}
 	cmd.Dir = "/"
 	// Docker's default, and os/exec keeps the last of a key, so the build
 	// file's own PATH wins
