@@ -287,3 +287,23 @@ func TestADirectoryARunRenamesIsWholeInItsLayer(t *testing.T) {
 	require.Equal(t, 0, code)
 	assert.Equal(t, names(t, filepath.Join(layers, "base", "etc", "apt")), names(t, filepath.Join(layers, "run", "etc", "moved")))
 }
+
+func TestAFileARunChangesTheModeOfIsWholeInItsLayer(t *testing.T) {
+	// arrange
+	overlayDefault(t, "metacopy", "Y")
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "chmod 600 /etc/debian_version"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	was, err := os.ReadFile(filepath.Join(layers, "base", "etc", "debian_version"))
+	require.NoError(t, err)
+	is, err := os.ReadFile(filepath.Join(layers, "run", "etc", "debian_version"))
+	require.NoError(t, err)
+	assert.Equal(t, string(was), string(is))
+}
