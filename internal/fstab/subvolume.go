@@ -9,10 +9,19 @@ func RootSubvolume(entries []Entry) (string, bool) {
 			continue
 		}
 
-		for _, option := range entry.Options {
-			if subvolume, found := strings.CutPrefix(option, "subvol="); found {
-				return strings.TrimPrefix(subvolume, "/"), true
-			}
+		if subvolume, found := entry.Subvolume(); found {
+			return subvolume, true
+		}
+	}
+
+	return "", false
+}
+
+// Subvolume is the subvolume a line mounts, named from the top level, if any.
+func (e Entry) Subvolume() (string, bool) {
+	for _, option := range e.Options {
+		if subvolume, found := strings.CutPrefix(option, "subvol="); found {
+			return strings.TrimPrefix(subvolume, "/"), true
 		}
 	}
 

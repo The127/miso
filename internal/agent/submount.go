@@ -22,11 +22,8 @@ func mountSubmounts(device, kind, target string, submounts []fstab.Entry) error 
 	for _, submount := range submounts {
 		// the other options tune a running system and mean nothing to a copy
 		var data string
-
-		for _, option := range submount.Options {
-			if strings.HasPrefix(option, "subvol=") {
-				data = option
-			}
+		if subvolume, found := submount.Subvolume(); found {
+			data = "subvol=" + subvolume
 		}
 
 		// opened within the image, so a link cannot lead the mount out of it
