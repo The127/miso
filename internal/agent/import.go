@@ -47,6 +47,19 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
+	if err := assembleRoot(device, kind, target); err != nil {
+		// one lazy unmount takes the submounts with it
+		_ = syscall.Unmount(target, syscall.MNT_DETACH)
+
+		return err
+	}
+
+	return nil
+}
+
+// assembleRoot turns the file system of a device mounted on a directory into
+// the root that its fstab describes.
+func assembleRoot(device, kind, target string) error {
 	entries, found, err := rootFstab(target)
 	if err != nil {
 		return err
