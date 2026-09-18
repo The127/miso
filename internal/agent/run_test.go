@@ -217,6 +217,22 @@ func TestARunSeesTheSystem(t *testing.T) {
 	assert.Contains(t, out.String(), "lo\n")
 }
 
+func TestARunLeavesTheSystemAsItFoundIt(t *testing.T) {
+	// arrange
+	overlayDefault(t, "redirect_dir", "N")
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo Y > /sys/module/overlay/parameters/redirect_dir"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	setting, err := os.ReadFile("/sys/module/overlay/parameters/redirect_dir")
+	require.NoError(t, err)
+	assert.Equal(t, "N\n", string(setting))
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
