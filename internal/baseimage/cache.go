@@ -2,14 +2,14 @@ package baseimage
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
 )
 
-// ErrUnknownBase is a name no source is known for.
+// ErrUnknownBase is a name no source is known for. It does not say which,
+// the FROM line a plan wraps it in already does.
 var ErrUnknownBase = errors.New("unknown base image")
 
 // Cache holds fetched images under one directory on the host.
@@ -29,7 +29,7 @@ func Open(dir string, client *http.Client, sources map[string]string) *Cache {
 // known but not fetched yet.
 func (c *Cache) Digest(name string) (string, error) {
 	if _, known := c.sources[name]; !known {
-		return "", fmt.Errorf("%s: %w", name, ErrUnknownBase)
+		return "", ErrUnknownBase
 	}
 
 	digest, err := os.ReadFile(filepath.Join(c.names(), name))

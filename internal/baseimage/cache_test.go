@@ -23,7 +23,6 @@ func TestANameNobodyKnowsCannotBeFetched(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrUnknownBase)
-	assert.ErrorContains(t, err, "nope")
 }
 
 func TestAKnownImageNotFetchedYetHasNoDigest(t *testing.T) {
