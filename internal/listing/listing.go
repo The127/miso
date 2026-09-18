@@ -24,6 +24,12 @@ func Write(w io.Writer, planned plan.Plan) error {
 			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line, short(step.Key), text); err != nil {
 				return err
 			}
+
+			for _, file := range step.Files {
+				if _, err := fmt.Fprintf(w, "%20s%s  %s\n", "", file.Path, short(file.Digest)); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

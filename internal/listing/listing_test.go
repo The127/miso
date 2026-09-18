@@ -149,3 +149,29 @@ func TestACheckStepReadsAsWritten(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch\n   8  9a8b7c6d5e4f  CHECK systemctl is-system-running\n", out.String())
 }
+
+func TestAContextCopyListsItsFilesWithTheirDigests(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{{
+			Instruction: imagefile.Copy{Line: 2, Sources: []string{"etc/motd", "etc/issue"}, Destination: "/etc/"},
+			Key:         "9a8b7c6d5e4f",
+			Files: []plan.File{
+				{Path: "etc/motd", Digest: "47348ce3c15ba0348ac0887f85dd16b27501e538ff66fc2756c2fa642dc4102c"},
+				{Path: "etc/issue", Digest: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"},
+			},
+		}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n"+
+		"   2  9a8b7c6d5e4f  COPY etc/motd etc/issue /etc/\n"+
+		"                    etc/motd  47348ce3c15b\n"+
+		"                    etc/issue  2cf24dba5fb0\n", out.String())
+}
