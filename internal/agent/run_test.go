@@ -138,6 +138,33 @@ func TestAHigherLayerHidesALowerOne(t *testing.T) {
 	assert.Equal(t, "b", string(seen))
 }
 
+func TestARunSeesItsLowestLayerUnderManyOthers(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	layerWithF(t, layers, "lowest", "lowest")
+	keys := []string{"base", "lowest"}
+	// as long as real keys, so their paths fill more than the page overlay
+	// options fit in
+	for i := range 60 {
+		key := fmt.Sprintf("%064d", i)
+		work, err := layer.Open(layers).Begin(key)
+		require.NoError(t, err)
+		require.NoError(t, work.Finish())
+		keys = append(keys, key)
+	}
+
+	run := protocol.Run{Key: "run", Layers: keys, Command: "cat /f"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "lowest", out.String())
+}
+
 func TestARunSeesTheEnvironmentOfTheBuildFileAndNotTheAgents(t *testing.T) {
 	// arrange
 	layers := t.TempDir()

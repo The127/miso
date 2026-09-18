@@ -9,8 +9,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -70,10 +71,48 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 		}
 	}
 
+	// one option per layer, because all layers in one text outgrow the page
+	// mount copies its options into
+	options := make([][2]string, 0, len(lowers)+4)
+	for _, lower := range lowers {
+		options = append(options, [2]string{"lowerdir+", lower})
+	}
+
 	// a layer holds real files whatever the kernel's defaults, so it stays
 	// whole once it leaves overlay
-	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s,redirect_dir=off,metacopy=off", strings.Join(lowers, ":"), upper, overlayWork)
-	if err := syscall.Mount("overlay", root, "overlay", 0, options); err != nil {
+	options = append(options,
+		[2]string{"upperdir", upper},
+		[2]string{"workdir", overlayWork},
+		[2]string{"redirect_dir", "off"},
+		[2]string{"metacopy", "off"},
+	)
+
+	overlay, err := unix.Fsopen("overlay", unix.FSOPEN_CLOEXEC)
+	if err != nil {
+		return 0, fmt.Errorf("open overlay: %w", err)
+	}
+
+	defer func() { _ = unix.Close(overlay) }()
+
+	for _, option := range options {
+		if err := unix.FsconfigSetString(overlay, option[0], option[1]); err != nil {
+			return 0, fmt.Errorf("overlay option %s=%s: %w", option[0], option[1], err)
+		}
+	}
+
+	if err := unix.FsconfigCreate(overlay); err != nil {
+		return 0, fmt.Errorf("create overlay: %w", err)
+	}
+
+	mount, err := unix.Fsmount(overlay, unix.FSMOUNT_CLOEXEC, 0)
+	if err != nil {
+		return 0, fmt.Errorf("mount overlay: %w", err)
+	}
+
+	err = unix.MoveMount(mount, "", unix.AT_FDCWD, root, unix.MOVE_MOUNT_F_EMPTY_PATH)
+	// an open mount keeps the root busy for the strict unmount at the end
+	_ = unix.Close(mount)
+	if err != nil {
 		return 0, fmt.Errorf("mount overlay on %s: %w", root, err)
 	}
 
