@@ -133,3 +133,19 @@ func TestAnOutputStepShowsItsOptionsInOneOrder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch\n   7  9a8b7c6d5e4f  OUTPUT disk os.img --size=4G --verity\n", out.String())
 }
+
+func TestACheckStepReadsAsWritten(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Check{Line: 8, Command: "systemctl is-system-running"}, Key: "9a8b7c6d5e4f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   8  9a8b7c6d5e4f  CHECK systemctl is-system-running\n", out.String())
+}
