@@ -1,6 +1,9 @@
 package fstab
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // Submounts are the lines that mount more of the root's own file system
 // below it.
@@ -20,6 +23,11 @@ func Submounts(entries []Entry) []Entry {
 			submounts = append(submounts, entry)
 		}
 	}
+
+	// a path sorts before every path that extends it
+	slices.SortStableFunc(submounts, func(a, b Entry) int {
+		return strings.Compare(a.Target, b.Target)
+	})
 
 	return submounts
 }
