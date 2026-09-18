@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -113,11 +114,15 @@ func (c copier) link(name string, info fs.FileInfo) error {
 		return err
 	}
 
+	if err := c.xattrs(name); err != nil {
+		return err
+	}
+
 	then := unix.NsecToTimespec(info.ModTime().UnixNano())
 
 	// a root sets times only through links
-	return c.at(name, func(dir int, base string) error {
-		return unix.UtimesNanoAt(dir, base, []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
+	return at(c.to, name, func(path string) error {
+		return unix.UtimesNanoAt(unix.AT_FDCWD, path, []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
 	})
 }
 
@@ -128,8 +133,8 @@ func (c copier) special(name string, info fs.FileInfo) error {
 		return &fs.PathError{Op: "mknod", Path: name, Err: fs.ErrInvalid}
 	}
 
-	err := c.at(name, func(dir int, base string) error {
-		return unix.Mknodat(dir, base, stat.Mode&unix.S_IFMT|0o600, int(stat.Rdev)) //nolint:gosec // the kernel keeps device numbers in 32 bits
+	err := at(c.to, name, func(path string) error {
+		return unix.Mknod(path, stat.Mode&unix.S_IFMT|0o600, int(stat.Rdev)) //nolint:gosec // the kernel keeps device numbers in 32 bits
 	})
 	if err != nil {
 		return err
@@ -138,16 +143,18 @@ func (c copier) special(name string, info fs.FileInfo) error {
 	return c.keep(name, info)
 }
 
-// at calls by name within its directory what a root cannot do itself.
-func (c copier) at(name string, call func(dir int, base string) error) error {
-	dir, err := c.to.Open(path.Dir(name))
+// at hands what a root cannot do itself a path to a name in the root. The
+// path goes through its directory opened in the root, so only the name
+// itself is looked up again, and calls that do not follow links stay in.
+func at(root *os.Root, name string, call func(path string) error) error {
+	dir, err := root.Open(path.Dir(name))
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = dir.Close() }()
 
-	return call(int(dir.Fd()), path.Base(name))
+	return call(fmt.Sprintf("/proc/self/fd/%d/%s", dir.Fd(), path.Base(name)))
 }
 
 // fileOnce copies a file with several names once and links its other names
@@ -204,6 +211,11 @@ func (c copier) keep(name string, info fs.FileInfo) error {
 	}
 
 	if err := c.to.Chmod(name, info.Mode()&(fs.ModePerm|fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky)); err != nil {
+		return err
+	}
+
+	// after the owner too, which clears a file capability
+	if err := c.xattrs(name); err != nil {
 		return err
 	}
 
