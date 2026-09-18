@@ -25,6 +25,22 @@ func TestARunSentIsTheRunReceived(t *testing.T) {
 	assert.Equal(t, protocol.Run{Command: "apt-get update"}, received)
 }
 
+func TestARunKeepsItsLayers(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	run := protocol.Run{Key: "abc", Layers: []string{"base", "def"}, Command: "apt-get update"}
+
+	// act
+	sent := conn.Send(run)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, run, received)
+}
+
 func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
 	// arrange
 	var wire bytes.Buffer
