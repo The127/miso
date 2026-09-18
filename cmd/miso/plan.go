@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 
 	"github.com/urfave/cli/v3"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/listing"
 	"github.com/The127/miso/internal/plan"
-	"github.com/The127/miso/internal/version"
 )
 
 var planCommand = &cli.Command{
@@ -27,24 +25,11 @@ var planCommand = &cli.Command{
 }
 
 func listPlan(_ context.Context, command *cli.Command) error {
-	dir := command.Args().First()
-	if dir == "" {
-		dir = "."
-	}
+	dir, file := located(command)
 
-	file := command.String("file")
-	if file == "" {
-		file = filepath.Join(dir, "Imagefile")
-	}
-
-	source, err := os.ReadFile(file)
+	stages, err := parsed(file)
 	if err != nil {
 		return err
-	}
-
-	stages, err := imagefile.Parse(string(source))
-	if err != nil {
-		return fmt.Errorf("%s: %w", file, err)
 	}
 
 	files, err := buildcontext.Open(dir)
@@ -54,7 +39,7 @@ func listPlan(_ context.Context, command *cli.Command) error {
 
 	defer func() { _ = files.Close() }()
 
-	planned, err := plan.New(stages, agent(), files, noBases{})
+	planned, err := plan.New(stages, "miso "+built(), files, noBases{})
 	if err != nil {
 		return fmt.Errorf("%s: %w", file, err)
 	}
@@ -62,12 +47,34 @@ func listPlan(_ context.Context, command *cli.Command) error {
 	return listing.Write(command.Root().Writer, planned)
 }
 
-// agent is what a key says about the miso that made it.
-func agent() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "miso unknown"
+// located is the build context and the build file. The context is the
+// directory given, or the current one. The file is Imagefile in it, unless
+// -f names another.
+func located(command *cli.Command) (dir string, file string) {
+	dir = command.Args().First()
+	if dir == "" {
+		dir = "."
 	}
 
-	return "miso " + version.Of(info)
+	file = command.String("file")
+	if file == "" {
+		file = filepath.Join(dir, "Imagefile")
+	}
+
+	return dir, file
+}
+
+// parsed names the file in an error, a line number alone says nothing.
+func parsed(file string) ([]imagefile.Stage, error) {
+	source, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	stages, err := imagefile.Parse(string(source))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", file, err)
+	}
+
+	return stages, nil
 }
