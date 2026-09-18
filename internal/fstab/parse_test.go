@@ -26,3 +26,16 @@ func TestALineIsAnEntry(t *testing.T) {
 		Options: []string{"compress=zstd:1", "defaults", "subvol=root"},
 	}}, entries)
 }
+
+func TestCommentsAndBlankLinesAreNoEntries(t *testing.T) {
+	// arrange
+	text := "# /etc/fstab\n\n   \n  # indented\nUUID=15c2 / btrfs defaults 0 1\n"
+
+	// act
+	entries, err := fstab.Parse(strings.NewReader(text))
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "/", entries[0].Target)
+}

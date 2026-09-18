@@ -21,6 +21,10 @@ func Parse(r io.Reader) ([]Entry, error) {
 	lines := bufio.NewScanner(r)
 	for lines.Scan() {
 		fields := strings.Fields(lines.Text())
+		if len(fields) == 0 || strings.HasPrefix(fields[0], "#") {
+			continue
+		}
+
 		entries = append(entries, Entry{
 			Source:  fields[0],
 			Target:  fields[1],
