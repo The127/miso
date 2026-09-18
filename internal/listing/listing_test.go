@@ -43,3 +43,16 @@ func TestAKeyIsShortenedToTwelveCharacters(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch\n   2  9a8b7c6d5e4f  RUN true\n", out.String())
 }
+
+func TestANamedStageShowsItsName(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{Name: "rootfs", Base: "scratch"}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch AS rootfs\n", out.String())
+}
