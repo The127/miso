@@ -15,5 +15,6 @@ type Message interface {
 type envelope struct {
 	Agent  string
 	Run    *Run    `json:",omitempty"`
+	Output *Output `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
 }

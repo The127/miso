@@ -40,6 +40,21 @@ func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
 	assert.Equal(t, protocol.Exited{Code: 100}, received)
 }
 
+func TestAnOutputSentIsTheOutputReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	sent := conn.Send(protocol.Output{Bytes: []byte("50%\r100%\n")})
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Output{Bytes: []byte("50%\r100%\n")}, received)
+}
+
 func TestAnUnknownMessageIsAnError(t *testing.T) {
 	// arrange
 	wire := bytes.NewBufferString(`{"Agent":"miso 1.2.0","Nope":{}}` + "\n")
