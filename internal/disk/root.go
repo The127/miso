@@ -13,6 +13,9 @@ const sector = 512
 // ErrBrokenTable is a partition table no real disk can have.
 var ErrBrokenTable = errors.New("broken partition table")
 
+// ErrNoTable is a disk without a GPT.
+var ErrNoTable = errors.New("no GPT")
+
 // ErrNoRoot is a disk without a root partition.
 var ErrNoRoot = errors.New("no root partition")
 
@@ -36,6 +39,10 @@ func Root(r io.ReaderAt) (Partition, error) {
 	header := make([]byte, 92)
 	if _, err := r.ReadAt(header, sector); err != nil {
 		return Partition{}, err
+	}
+
+	if string(header[:8]) != "EFI PART" {
+		return Partition{}, ErrNoTable
 	}
 
 	entries, err := lba(header[72:])
