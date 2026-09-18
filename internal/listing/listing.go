@@ -17,13 +17,18 @@ func Write(w io.Writer, planned plan.Plan) error {
 		}
 
 		for _, step := range stage.Steps {
-			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line(step.Instruction), step.Key, text(step.Instruction)); err != nil {
+			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line(step.Instruction), short(step.Key), text(step.Instruction)); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+// short cuts a key to twelve characters, as git does with a commit.
+func short(key string) string {
+	return key[:12]
 }
 
 func line(instruction imagefile.Instruction) int {
