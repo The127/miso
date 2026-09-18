@@ -52,6 +52,9 @@ func Root(r io.ReaderAt) (Partition, error) {
 
 	count := binary.LittleEndian.Uint32(header[80:])
 	size := binary.LittleEndian.Uint32(header[84:])
+	if size < 128 {
+		return Partition{}, ErrBrokenTable
+	}
 
 	entry := make([]byte, size)
 	for i := range int64(count) {
