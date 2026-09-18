@@ -174,3 +174,15 @@ func TestAStageOnAnUnfetchedStageIsNoDownload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"debian:sid"}, planned.Downloads)
 }
+
+func TestABaseIsDownloadedOnceHoweverManyStagesStartOnIt(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS one\nFROM debian:sid AS two\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"debian:sid"}, planned.Downloads)
+}

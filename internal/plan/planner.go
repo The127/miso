@@ -28,7 +28,7 @@ func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 			return Plan{}, err
 		}
 
-		if p.download(stage, digest) {
+		if p.download(stage, digest) && !slices.Contains(planned.Downloads, stage.Base) {
 			planned.Downloads = append(planned.Downloads, stage.Base)
 		}
 
