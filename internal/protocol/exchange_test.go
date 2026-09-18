@@ -27,3 +27,18 @@ func TestTheOutputOfARunReachesTheWriter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello\n", out.String())
 }
+
+func TestARunThatExitsNonZeroIsACommandFailure(t *testing.T) {
+	// arrange
+	var replies bytes.Buffer
+	agent := protocol.New("miso 1.2.0", bytes.NewReader(nil), &replies)
+	require.NoError(t, agent.Send(protocol.Exited{Code: 100}))
+	host := protocol.New("miso 1.2.0", &replies, io.Discard)
+
+	// act
+	err := host.Run(protocol.Run{Command: "apt-get install nope"}, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrCommandFailed)
+	assert.ErrorContains(t, err, "exit code 100")
+}
