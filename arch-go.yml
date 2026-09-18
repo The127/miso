@@ -141,6 +141,19 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the agent is the builder VM's side of a build. It does what the host asks
+  # through the protocol, finds base disks through disk and keeps layers
+  # through layer. It touches the kernel and never the network
+  - package: '**.internal.agent$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.protocol$'
+        - '**.internal.disk$'
+        - '**.internal.layer$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
