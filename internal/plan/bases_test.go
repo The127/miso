@@ -123,3 +123,17 @@ func TestAStageOnAnImageStartsOnTheKeyItsFirstStepIsBuiltOn(t *testing.T) {
 	assert.NotEmpty(t, stage.BaseKey)
 	assert.Equal(t, stage.Steps[0].BuiltOn[0], stage.BaseKey)
 }
+
+func TestTwoNamesForTheSameImageShareTheirKeys(t *testing.T) {
+	// arrange
+	aliases := images{"debian:13": "sha256:trixie", "debian:trixie": "sha256:trixie"}
+	numbered := parse(t, "FROM debian:13\nRUN true\n")
+	named := parse(t, "FROM debian:trixie\nRUN true\n")
+
+	// act
+	numberedKeys := keys(t, numbered, anyAgent, noFiles, aliases)
+	namedKeys := keys(t, named, anyAgent, noFiles, aliases)
+
+	// assert
+	assert.Equal(t, lastKey(t, numberedKeys), lastKey(t, namedKeys))
+}
