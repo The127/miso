@@ -253,6 +253,26 @@ func TestARunLeavesTheKernelSettingsAsItFoundThem(t *testing.T) {
 	assert.Equal(t, "60\n", string(setting))
 }
 
+func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	work, err := layer.Open(layers).Begin("bare")
+	require.NoError(t, err)
+	for _, dir := range []string{"proc", "sys", "dev"} {
+		require.NoError(t, os.Mkdir(filepath.Join(work.Dir(), dir), 0o700))
+	}
+
+	require.NoError(t, work.Finish())
+	worker := agent.New(layers, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"bare"}, Command: "true"}
+
+	// act
+	_, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "/bin/sh")
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
