@@ -1,6 +1,8 @@
 package build
 
 import (
+	"slices"
+
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
 	"github.com/The127/miso/internal/protocol"
@@ -9,10 +11,17 @@ import (
 // Requests are what the agent is asked, one per step it carries out.
 func Requests(planned plan.Plan) []protocol.Run {
 	var requests []protocol.Run
+	layers := map[string][]string{}
 	for _, stage := range planned.Stages {
 		for _, step := range stage.Steps {
+			below, seen := layers[step.BuiltOn[0]]
+			if !seen {
+				below = []string{step.BuiltOn[0]}
+			}
+
 			run := step.Instruction.(imagefile.Run)
-			requests = append(requests, protocol.Run{Key: step.Key, Layers: step.BuiltOn, Command: run.Command})
+			requests = append(requests, protocol.Run{Key: step.Key, Layers: below, Command: run.Command})
+			layers[step.Key] = slices.Concat(below, []string{step.Key})
 		}
 	}
 
