@@ -85,3 +85,20 @@ func TestARunnerErrorIsFailed(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Failed{Reason: "mount overlay: no space left on device"}, failed)
 }
+
+func TestAMessageThatIsNoRequestIsRefused(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Done{}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{})
+
+	// assert
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Failed{Reason: "protocol.Done is not a request"}, failed)
+}
