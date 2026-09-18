@@ -27,7 +27,7 @@ func TestTheRootPartitionIsFoundByItsType(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, disk.Partition{Offset: 100 * 512, Size: 100 * 512}, root)
+	assert.Equal(t, disk.Partition{Number: 2, Offset: 100 * 512, Size: 100 * 512}, root)
 }
 
 func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
