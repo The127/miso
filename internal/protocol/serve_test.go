@@ -2,6 +2,7 @@ package protocol_test
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 
@@ -14,9 +15,14 @@ import (
 type runner struct {
 	writes string
 	code   int
+	err    error
 }
 
 func (r runner) Run(_ protocol.Run, out io.Writer) (int, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
 	if r.writes == "" {
 		return r.code, nil
 	}
@@ -61,4 +67,21 @@ func TestARunThatExitsNonZeroIsExited(t *testing.T) {
 	exited, err := host.Receive()
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Exited{Code: 100}, exited)
+}
+
+func TestARunnerErrorIsFailed(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Run{Command: "apt-get update"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{err: errors.New("mount overlay: no space left on device")})
+
+	// assert
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Failed{Reason: "mount overlay: no space left on device"}, failed)
 }
