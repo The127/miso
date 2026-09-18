@@ -16,7 +16,7 @@ func (c *Conn) Serve(runner Runner) error {
 
 	code, err := runner.Run(message.(Run), outputs{c})
 	if err != nil {
-		return err
+		return c.Send(Failed{Reason: err.Error()})
 	}
 
 	if code != 0 {
