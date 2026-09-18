@@ -23,7 +23,7 @@ func TestTheRootOfABaseDiskIsMountedReadOnly(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = syscall.Unmount(target, 0) })
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
 	info, err := os.Lstat(filepath.Join(target, "etc/os-release"))
 	require.NoError(t, err)
 	assert.Equal(t, os.ModeSymlink, info.Mode().Type())
@@ -46,7 +46,7 @@ func TestABtrfsRootIsMounted(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = syscall.Unmount(target, 0) })
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
 	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
 	require.NoError(t, err)
 	assert.Contains(t, string(release), "ID=miso-test")
@@ -61,8 +61,26 @@ func TestTheRootSubvolumeIsFoundByItsOwnFstab(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = syscall.Unmount(target, 0) })
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
 	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
 	require.NoError(t, err)
 	assert.Contains(t, string(release), "ID=miso-test-subvolumes")
+}
+
+func TestTheSubmountsOfTheRootAreMountedInIt(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-subvolumes", target)
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
+	variable, err := os.ReadFile(filepath.Join(target, "var/marker"))
+	require.NoError(t, err)
+	assert.Equal(t, "var\n", string(variable))
+	boot, err := os.ReadFile(filepath.Join(target, "boot/marker"))
+	require.NoError(t, err)
+	assert.Equal(t, "boot\n", string(boot))
 }
