@@ -52,11 +52,12 @@ for pkg in $packages; do
     CGO_ENABLED=0 go test -c -tags vmtest -o "$work/root/init" "./$pkg"
     (cd "$work/root" && find init modules | cpio --quiet -o -H newc) > "$work/initrd"
 
-    # the test binary stops a hanging test, the outer timeout a hanging VM
+    # the test binary stops a hanging test, the outer timeout a hanging VM.
+    # Unbuffered, so the log of a killed run shows how far it got
     timeout 10m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \
         -kernel "$kernel" -initrd "$work/initrd" "${disks[@]}" \
         -append "console=ttyS0 panic=-1 quiet ${environment[*]} -- -test.v -test.timeout=5m $*" \
-        | tr -d '\r' | tee "$work/log"
+        | sed -u 's/\r$//' | tee "$work/log"
 
     if ! grep -qx 'miso-vmtest: exit 0' "$work/log"; then
         failed=1
