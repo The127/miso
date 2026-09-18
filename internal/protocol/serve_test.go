@@ -102,3 +102,31 @@ func TestAMessageThatIsNoRequestIsRefused(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Failed{Reason: "protocol.Done is not a request"}, failed)
 }
+
+type watched struct {
+	ran bool
+}
+
+func (w *watched) Run(protocol.Run, io.Writer) (int, error) {
+	w.ran = true
+
+	return 0, nil
+}
+
+func TestARequestFromAnotherAgentIsRefusedBeforeItRuns(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Run{Command: "apt-get update"}))
+	agent := protocol.New("miso 1.3.0", &requests, &replies)
+	runner := &watched{}
+
+	// act
+	err := agent.Serve(runner)
+
+	// assert
+	require.NoError(t, err)
+	_, err = host.Receive()
+	assert.ErrorIs(t, err, protocol.ErrAnotherAgent)
+	assert.False(t, runner.ran)
+}
