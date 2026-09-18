@@ -131,6 +131,16 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the vmtest runs tests as the init of a VM, which takes the kernel. It
+  # knows nothing of ours and never starts a process or touches the network
+  - package: '**.internal.vmtest$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
