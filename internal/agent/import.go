@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -30,10 +31,15 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
+	kind, err := disk.FileSystem(io.NewSectionReader(f, root.Offset, root.Size))
+	if err != nil {
+		return err
+	}
+
 	partition, err := disk.PartitionName(block, name, root.Number)
 	if err != nil {
 		return err
 	}
 
-	return syscall.Mount(filepath.Join("/dev", partition), target, "ext4", syscall.MS_RDONLY, "")
+	return syscall.Mount(filepath.Join("/dev", partition), target, kind, syscall.MS_RDONLY, "")
 }
