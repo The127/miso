@@ -21,7 +21,7 @@ func TestTheOutputOfARunReachesTheWriter(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := host.Run(protocol.Run{Command: "echo hello"}, &out)
+	err := host.Ask(protocol.Run{Command: "echo hello"}, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestARunThatExitsNonZeroIsACommandFailure(t *testing.T) {
 	host := protocol.New("miso 1.2.0", &replies, io.Discard)
 
 	// act
-	err := host.Run(protocol.Run{Command: "apt-get install nope"}, io.Discard)
+	err := host.Ask(protocol.Run{Command: "apt-get install nope"}, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, protocol.ErrCommandFailed)
@@ -51,7 +51,7 @@ func TestAnAgentFailureIsNotACommandFailure(t *testing.T) {
 	host := protocol.New("miso 1.2.0", &replies, io.Discard)
 
 	// act
-	err := host.Run(protocol.Run{Command: "apt-get update"}, io.Discard)
+	err := host.Ask(protocol.Run{Command: "apt-get update"}, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, protocol.ErrAgentFailed)
@@ -67,7 +67,7 @@ func TestAnAnswerCutShortIsAnError(t *testing.T) {
 	host := protocol.New("miso 1.2.0", &replies, io.Discard)
 
 	// act
-	err := host.Run(protocol.Run{Command: "apt-get update"}, io.Discard)
+	err := host.Ask(protocol.Run{Command: "apt-get update"}, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
