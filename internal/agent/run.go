@@ -85,9 +85,12 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run) (int,
 	// whatever it leaves behind before the wait for it returns
 	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Cloneflags: syscall.CLONE_NEWPID}
 	cmd.Dir = "/"
-	// Docker's default, and os/exec keeps the last of a key, so the build
-	// file's own PATH wins
-	cmd.Env = append([]string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}, run.Env...)
+	// Docker's defaults, and os/exec keeps the last of a key, so the build
+	// file's own values win
+	cmd.Env = append([]string{
+		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"HOME=/root",
+	}, run.Env...)
 	err = cmd.Run()
 	// the kill that stops a cancelled command looks like an exit of its own
 	if ctx.Err() != nil {
