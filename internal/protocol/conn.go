@@ -29,6 +29,8 @@ func (c *Conn) Send(message Message) error {
 		e.Output = &m
 	case Exited:
 		e.Exited = &m
+	case Failed:
+		e.Failed = &m
 	}
 
 	return c.encoder.Encode(e)
@@ -51,6 +53,10 @@ func (c *Conn) Receive() (Message, error) {
 
 	if e.Exited != nil {
 		return *e.Exited, nil
+	}
+
+	if e.Failed != nil {
+		return *e.Failed, nil
 	}
 
 	if e.Run != nil {
