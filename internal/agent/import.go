@@ -36,6 +36,18 @@ func (a *Agent) Import(_ context.Context, request protocol.Import, _ io.Writer) 
 		return err
 	}
 
+	if err := a.fill(work.Dir(), request.Digest); err != nil {
+		_ = work.Discard()
+
+		return err
+	}
+
+	return work.Finish()
+}
+
+// fill copies the root file system of the base image with a digest into a
+// directory.
+func (a *Agent) fill(dir, digest string) error {
 	base, err := os.MkdirTemp(a.scratch, "base-")
 	if err != nil {
 		return err
@@ -43,15 +55,11 @@ func (a *Agent) Import(_ context.Context, request protocol.Import, _ io.Writer) 
 
 	defer func() { _ = os.Remove(base) }()
 
-	if err := mountRoot(protocol.Serial(request.Digest), base); err != nil {
+	if err := mountRoot(protocol.Serial(digest), base); err != nil {
 		return err
 	}
 
 	defer func() { _ = syscall.Unmount(base, syscall.MNT_DETACH) }()
 
-	if err := tree.Copy(base, work.Dir()); err != nil {
-		return err
-	}
-
-	return work.Finish()
+	return tree.Copy(base, dir)
 }
