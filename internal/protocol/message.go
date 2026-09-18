@@ -17,4 +17,5 @@ type envelope struct {
 	Run    *Run    `json:",omitempty"`
 	Output *Output `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
+	Failed *Failed `json:",omitempty"`
 }
