@@ -1,10 +1,8 @@
 package agent
 
 import (
-	"errors"
 	"io/fs"
 	"os"
-	"path"
 
 	"github.com/The127/miso/internal/fstab"
 )
@@ -31,18 +29,7 @@ func ownSubvolume(top string) (string, []fstab.Entry, error) {
 			continue
 		}
 
-		f, err := root.Open(path.Join(child.Name(), "etc/fstab"))
-		if errors.Is(err, fs.ErrNotExist) {
-			continue
-		}
-
-		if err != nil {
-			return "", nil, err
-		}
-
-		entries, err := fstab.Parse(f)
-		_ = f.Close()
-
+		entries, _, err := fstabIn(root, child.Name())
 		if err != nil {
 			return "", nil, err
 		}
