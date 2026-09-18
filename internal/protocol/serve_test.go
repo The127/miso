@@ -34,6 +34,10 @@ func (r runner) Run(_ context.Context, _ protocol.Run, out io.Writer) (int, erro
 	return r.code, err
 }
 
+func (r runner) Import(protocol.Import) error {
+	return r.err
+}
+
 func TestARunThatWorksIsDone(t *testing.T) {
 	// arrange
 	var requests, replies bytes.Buffer
@@ -69,6 +73,23 @@ func TestAnImportThatWorksIsDone(t *testing.T) {
 	done, err := host.Receive()
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestAnImportErrorIsFailed(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Import{Key: "abc", Digest: "sha256:def"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{err: errors.New("no root partition")})
+
+	// assert
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Failed{Reason: "no root partition"}, failed)
 }
 
 func TestARunThatExitsNonZeroIsExited(t *testing.T) {
@@ -132,6 +153,10 @@ func (w *watched) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	return 0, nil
 }
 
+func (w *watched) Import(protocol.Import) error {
+	return nil
+}
+
 func TestARequestFromAnotherAgentIsRefusedBeforeItRuns(t *testing.T) {
 	// arrange
 	var requests, replies bytes.Buffer
@@ -163,6 +188,10 @@ func (w *waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, er
 	case <-time.After(5 * time.Second):
 		return 0, errors.New("never cancelled")
 	}
+}
+
+func (w *waiting) Import(protocol.Import) error {
+	return nil
 }
 
 func TestClosingTheConnectionCancelsTheRun(t *testing.T) {
