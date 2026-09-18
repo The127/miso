@@ -304,6 +304,22 @@ func TestARunWorksWithLayersOnAFileSystemOfTheirOwn(t *testing.T) {
 	assert.FileExists(t, filepath.Join(layers, "run", "x"))
 }
 
+func TestARunWorksWithLayersOnASharedFileSystem(t *testing.T) {
+	// arrange
+	// as systemd leaves every mount, and unlike this VM's
+	layers := ownFileSystem(t)
+	require.NoError(t, syscall.Mount("", layers, "", syscall.MS_SHARED, ""))
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(layers, "run", "x"))
+}
+
 func TestACancelledRunStopsItsCommand(t *testing.T) {
 	// arrange
 	worker := importedBase(t, t.TempDir())
