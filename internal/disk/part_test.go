@@ -25,3 +25,17 @@ func TestAPartitionIsFoundByItsNumber(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "vda2", name)
 }
+
+func TestANumberNoPartitionHasIsNoPartition(t *testing.T) {
+	// arrange
+	block := fstest.MapFS{
+		"vda/vda1/partition": {Data: []byte("1\n")},
+	}
+
+	// act
+	_, err := disk.PartitionName(block, "vda", 2)
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrNoPartition)
+	assert.ErrorContains(t, err, "vda 2")
+}
