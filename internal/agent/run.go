@@ -72,7 +72,7 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run) (int,
 
 	// a layer holds real files whatever the kernel's defaults, so it stays
 	// whole once it leaves overlay
-	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s,redirect_dir=off", strings.Join(lowers, ":"), upper, overlayWork)
+	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s,redirect_dir=off,metacopy=off", strings.Join(lowers, ":"), upper, overlayWork)
 	if err := syscall.Mount("overlay", root, "overlay", 0, options); err != nil {
 		return 0, fmt.Errorf("mount overlay on %s: %w", root, err)
 	}
