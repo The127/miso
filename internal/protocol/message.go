@@ -16,6 +16,7 @@ type envelope struct {
 	Agent  string
 	Run    *Run    `json:",omitempty"`
 	Output *Output `json:",omitempty"`
+	Done   *Done   `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
 	Failed *Failed `json:",omitempty"`
 }
