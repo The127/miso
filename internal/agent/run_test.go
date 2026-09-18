@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -173,4 +174,29 @@ func TestAProcessARunLeavesBehindDoesNotOutliveIt(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
+}
+
+// ownFileSystem is an empty directory that is a file system of its own.
+func ownFileSystem(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	require.NoError(t, syscall.Mount("tmpfs", dir, "tmpfs", 0, ""))
+	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, syscall.MNT_DETACH)) })
+
+	return dir
+}
+
+func TestARunWorksWithLayersOnAFileSystemOfTheirOwn(t *testing.T) {
+	// arrange
+	layers := ownFileSystem(t)
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(layers, "run", "x"))
 }

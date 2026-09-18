@@ -43,6 +43,13 @@ func (s *Store) Begin(key string) (*Work, error) {
 	return &Work{dir: dir, final: s.Path(key)}, nil
 }
 
+// Scratch is a new directory on the file system of the layers, for the
+// caller to remove.
+func (s *Store) Scratch() (string, error) {
+	// a key is hex, so no key is ever named like scratch
+	return os.MkdirTemp(s.dir, "scratch-")
+}
+
 // Work is a layer being built.
 type Work struct {
 	dir   string
