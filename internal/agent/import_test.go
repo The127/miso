@@ -36,3 +36,18 @@ func TestTheRootOfABaseDiskIsMountedReadOnly(t *testing.T) {
 	err = os.WriteFile(filepath.Join(target, "written"), nil, 0o600)
 	assert.ErrorIs(t, err, syscall.EROFS)
 }
+
+func TestABtrfsRootIsMounted(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-btrfs", target)
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = syscall.Unmount(target, 0) })
+	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
+	require.NoError(t, err)
+	assert.Contains(t, string(release), "ID=miso-test")
+}
