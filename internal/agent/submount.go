@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/The127/miso/internal/fstab"
 )
@@ -32,7 +31,7 @@ func mountSubmounts(device, kind, target string, submounts []fstab.Entry) error 
 			return err
 		}
 
-		err = syscall.Mount(device, fmt.Sprintf("/proc/self/fd/%d", point.Fd()), kind, syscall.MS_RDONLY, data)
+		err = mount(device, fmt.Sprintf("/proc/self/fd/%d", point.Fd()), kind, data, submount.Target)
 		_ = point.Close()
 
 		if err != nil {
