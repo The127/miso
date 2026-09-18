@@ -1,0 +1,48 @@
+package layer
+
+import (
+	"os"
+	"path/filepath"
+)
+
+// Store keeps the layers of one cache directory, each under its key.
+type Store struct {
+	dir string
+}
+
+// Open takes the directory the layers live in. It touches nothing yet.
+func Open(dir string) *Store {
+	return &Store{dir: dir}
+}
+
+// Path is where the layer of a key lives.
+func (s *Store) Path(key string) string {
+	return filepath.Join(s.dir, key)
+}
+
+// Begin starts the layer of a key in a directory of its own.
+func (s *Store) Begin(key string) (*Work, error) {
+	// a key is hex, so no key is ever named like work in progress
+	dir, err := os.MkdirTemp(s.dir, "work-")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Work{dir: dir, final: s.Path(key)}, nil
+}
+
+// Work is a layer being built.
+type Work struct {
+	dir   string
+	final string
+}
+
+// Dir is where the files of the layer go while it is built.
+func (w *Work) Dir() string {
+	return w.dir
+}
+
+// Finish puts the layer under its key.
+func (w *Work) Finish() error {
+	return os.Rename(w.dir, w.final)
+}

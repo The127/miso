@@ -120,6 +120,17 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the layer keeps the layers on the agent's cache disk. It knows nothing
+  # of ours and never touches a process, the network or the kernel
+  - package: '**.internal.layer$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
+        - syscall
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
