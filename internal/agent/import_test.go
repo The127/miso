@@ -103,6 +103,20 @@ func TestTheSubmountsOfADefaultRootAreMountedInIt(t *testing.T) {
 	assert.Equal(t, "var\n", string(variable))
 }
 
+func TestSubvolumesThatEachClaimTheRootAreSeveralRoots(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-twins", target)
+
+	// assert
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
+	require.ErrorIs(t, err, agent.ErrSeveralRoots)
+	assert.ErrorContains(t, err, "one")
+	assert.ErrorContains(t, err, "two")
+}
+
 func TestASubmountThroughALinkOutOfTheImageIsRefused(t *testing.T) {
 	// arrange
 	target := t.TempDir()

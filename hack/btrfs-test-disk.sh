@@ -7,6 +7,8 @@
 #               ID=miso-test-subvolumes
 #   default     openSUSE's layout: the default subvolume snapshot is the root
 #               and its fstab mounts the subvolume var
+#   twins       subvolumes one and two, each with an fstab that makes it the
+#               root
 #   escape      like subvolumes, but var in root is a link to /escaped, out
 #               of the image
 set -euo pipefail
@@ -44,6 +46,13 @@ LABEL=test /var btrfs subvol=/var 0 0
 EOF
     echo var > "$tree/var/marker"
     subvolumes=(--subvol default:snapshot --subvol rw:var)
+    ;;
+twins)
+    for name in one two; do
+        mkdir -p "$tree/$name/etc"
+        echo "LABEL=test / btrfs subvol=$name 0 0" > "$tree/$name/etc/fstab"
+    done
+    subvolumes=(--subvol rw:one --subvol rw:two)
     ;;
 escape)
     mkdir -p "$tree/root/etc" "$tree/var"

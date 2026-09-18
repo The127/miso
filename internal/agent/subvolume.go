@@ -1,11 +1,18 @@
 package agent
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/The127/miso/internal/fstab"
 )
+
+// ErrSeveralRoots is a file system with more than one subvolume whose fstab
+// mounts it as the root.
+var ErrSeveralRoots = errors.New("several subvolumes claim the root")
 
 // ownSubvolume is the directory at the top of a file system whose own fstab
 // mounts it as the root, with the lines of that fstab, or empty when there
@@ -24,6 +31,11 @@ func ownSubvolume(top string) (string, []fstab.Entry, error) {
 		return "", nil, err
 	}
 
+	var (
+		claims  []string
+		claimed []fstab.Entry
+	)
+
 	for _, child := range children {
 		if !child.IsDir() {
 			continue
@@ -35,9 +47,17 @@ func ownSubvolume(top string) (string, []fstab.Entry, error) {
 		}
 
 		if subvolume, found := fstab.RootSubvolume(entries); found && subvolume == child.Name() {
-			return subvolume, entries, nil
+			claims = append(claims, subvolume)
+			claimed = entries
 		}
 	}
 
-	return "", nil, nil
+	switch len(claims) {
+	case 0:
+		return "", nil, nil
+	case 1:
+		return claims[0], claimed, nil
+	default:
+		return "", nil, fmt.Errorf("%s: %w", strings.Join(claims, ", "), ErrSeveralRoots)
+	}
 }
