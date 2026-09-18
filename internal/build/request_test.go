@@ -9,7 +9,20 @@ import (
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
+	"github.com/The127/miso/internal/protocol"
 )
+
+// runsOf are the runs among the requests, in their order.
+func runsOf(requests []protocol.Message) []protocol.Run {
+	var runs []protocol.Run
+	for _, request := range requests {
+		if run, isRun := request.(protocol.Run); isRun {
+			runs = append(runs, run)
+		}
+	}
+
+	return runs
+}
 
 func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 	// arrange
@@ -24,8 +37,8 @@ func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, "echo hi", requests[0].Command)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, "echo hi", runsOf(requests)[0].Command)
 }
 
 func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
@@ -41,8 +54,8 @@ func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, "k1", requests[0].Key)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, "k1", runsOf(requests)[0].Key)
 }
 
 func TestAPlanWithABaseToFetchHasNoRequests(t *testing.T) {

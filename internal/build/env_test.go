@@ -28,8 +28,8 @@ func TestARunKeepsTheVariablesSetBeforeItInOrder(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"A=1", "B=2"}, requests[0].Env)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"A=1", "B=2"}, runsOf(requests)[0].Env)
 }
 
 func TestAVariableSetTwiceIsSentOnceWithItsLastValue(t *testing.T) {
@@ -50,6 +50,6 @@ func TestAVariableSetTwiceIsSentOnceWithItsLastValue(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, requests, 1)
-	assert.Equal(t, []string{"A=3", "B=2"}, requests[0].Env)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, []string{"A=3", "B=2"}, runsOf(requests)[0].Env)
 }

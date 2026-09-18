@@ -14,18 +14,21 @@ import (
 // have no keys, so nothing can be asked for them.
 var ErrNotFetched = errors.New("not fetched yet")
 
-// Requests are what the agent is asked, one per step it carries out.
-func Requests(planned plan.Plan) ([]protocol.Run, error) {
+// Requests are what the agent is asked, in the order it is asked.
+func Requests(planned plan.Plan) ([]protocol.Message, error) {
 	if len(planned.Downloads) > 0 {
 		return nil, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
 	}
 
-	var requests []protocol.Run
+	var requests []protocol.Message
 	roots := map[string]rootfs{}
 	for _, stage := range planned.Stages {
 		// a stage on an earlier stage carries on where that one ended
 		if _, seen := roots[stage.BaseKey]; !seen {
 			roots[stage.BaseKey] = base(stage)
+			if stage.Base != plan.Scratch {
+				requests = append(requests, protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest})
+			}
 		}
 
 		for _, step := range stage.Steps {
