@@ -57,6 +57,22 @@ func TestARunKeepsItsEnvironment(t *testing.T) {
 	assert.Equal(t, run, received)
 }
 
+func TestAnImportSentIsTheImportReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	request := protocol.Import{Key: "abc", Digest: "sha256:def"}
+
+	// act
+	sent := conn.Send(request)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, request, received)
+}
+
 func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
 	// arrange
 	var wire bytes.Buffer
