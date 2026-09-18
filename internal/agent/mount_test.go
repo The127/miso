@@ -132,6 +132,20 @@ func TestAFailedMountLeavesNothingMounted(t *testing.T) {
 	assert.NotContains(t, string(mounts), " "+target+" ")
 }
 
+func TestAFailedSubmountNamesWhatWentWhere(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-missing", target)
+
+	// assert
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "/var")
+	assert.ErrorContains(t, err, "subvol=nosuch")
+}
+
 func TestASubmountThroughALinkOutOfTheImageIsRefused(t *testing.T) {
 	// arrange
 	target := t.TempDir()

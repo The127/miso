@@ -9,6 +9,8 @@
 #               and its fstab mounts the subvolume var
 #   twins       subvolumes one and two, each with an fstab that makes it the
 #               root
+#   missing     a root whose fstab mounts /var from a subvolume that is not
+#               there
 #   escape      like subvolumes, but var in root is a link to /escaped, out
 #               of the image
 set -euo pipefail
@@ -53,6 +55,14 @@ twins)
         echo "LABEL=test / btrfs subvol=$name 0 0" > "$tree/$name/etc/fstab"
     done
     subvolumes=(--subvol rw:one --subvol rw:two)
+    ;;
+missing)
+    mkdir -p "$tree/root/etc" "$tree/root/var"
+    cat > "$tree/root/etc/fstab" <<EOF
+LABEL=test / btrfs subvol=root 0 0
+LABEL=test /var btrfs subvol=nosuch 0 0
+EOF
+    subvolumes=(--subvol rw:root)
     ;;
 escape)
     mkdir -p "$tree/root/etc" "$tree/var"

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -43,7 +44,7 @@ func mountRoot(serial, target string) error {
 	}
 
 	device := filepath.Join("/dev", partition)
-	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, ""); err != nil {
+	if err := mount(device, target, kind, "", target); err != nil {
 		return err
 	}
 
@@ -70,7 +71,7 @@ func assembleRoot(device, kind, target string) error {
 			return err
 		}
 
-		if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, "subvol="+subvolume); err != nil {
+		if err := mount(device, target, kind, "subvol="+subvolume, target); err != nil {
 			return err
 		}
 	}
@@ -101,4 +102,13 @@ func describedRoot(target string) (string, []fstab.Entry, error) {
 	}
 
 	return ownSubvolume(top)
+}
+
+// mount mounts a device read-only and names in a failure what went where.
+func mount(device, target, kind, data, where string) error {
+	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, data); err != nil {
+		return fmt.Errorf("mount %s %s on %s: %w", device, data, where, err)
+	}
+
+	return nil
 }
