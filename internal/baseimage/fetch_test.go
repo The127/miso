@@ -102,3 +102,23 @@ func TestADownloadThatStopsShortIsNotKept(t *testing.T) {
 	leftovers, _ := filepath.Glob(filepath.Join(dir, "sha256", "*"))
 	assert.Empty(t, leftovers)
 }
+
+func TestAFetchAgainReplacesWhatANamePointsAt(t *testing.T) {
+	// arrange
+	images := map[string]string{"/sid.qcow2": "yesterday's image"}
+	server := serving(t, images)
+	cache := baseimage.Open(t.TempDir(), server.Client(), map[string]string{"debian:sid": server.URL + "/sid.qcow2"})
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+	require.NoError(t, err)
+	images["/sid.qcow2"] = "today's image"
+	sum := sha256.Sum256([]byte("today's image"))
+
+	// act
+	_, err = cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	require.NoError(t, err)
+	digest, err := cache.Digest("debian:sid")
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:"+hex.EncodeToString(sum[:]), digest)
+}
