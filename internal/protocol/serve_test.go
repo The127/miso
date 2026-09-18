@@ -54,6 +54,23 @@ func TestARunThatWorksIsDone(t *testing.T) {
 	assert.Equal(t, protocol.Done{}, done)
 }
 
+func TestAnImportThatWorksIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Import{Key: "abc", Digest: "sha256:def"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{})
+
+	// assert
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
 func TestARunThatExitsNonZeroIsExited(t *testing.T) {
 	// arrange
 	var requests, replies bytes.Buffer

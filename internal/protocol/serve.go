@@ -23,6 +23,10 @@ func (c *Conn) Serve(runner Runner) error {
 		return err
 	}
 
+	if _, isImport := message.(Import); isImport {
+		return c.Send(Done{})
+	}
+
 	run, ok := message.(Run)
 	if !ok {
 		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
