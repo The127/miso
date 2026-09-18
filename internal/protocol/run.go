@@ -4,3 +4,5 @@ package protocol
 type Run struct {
 	Command string
 }
+
+func (Run) message() {}
