@@ -76,14 +76,7 @@ func TestAFailedRunLeavesNoWork(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	entries, err := os.ReadDir(layers)
-	require.NoError(t, err)
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		names = append(names, entry.Name())
-	}
-
-	assert.Equal(t, []string{"base"}, names)
+	assert.Equal(t, []string{"base"}, names(t, layers))
 }
 
 // layerWithF is the layer of a key in a directory, holding only /f with a
@@ -252,4 +245,45 @@ func TestARunKilledBySignalAnswersTheCodeAShellWould(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 137, code)
+}
+
+// overlayDefault sets a default of the overlay module for one test.
+func overlayDefault(t *testing.T, parameter, value string) {
+	t.Helper()
+
+	path := filepath.Join("/sys/module/overlay/parameters", parameter)
+	was, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, []byte(value), 0o600))
+	t.Cleanup(func() { assert.NoError(t, os.WriteFile(path, was, 0o600)) }) //nolint:gosec // the test names the parameter
+}
+
+// names are the names in a directory.
+func names(t *testing.T, dir string) []string {
+	t.Helper()
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	found := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		found = append(found, entry.Name())
+	}
+
+	return found
+}
+
+func TestADirectoryARunRenamesIsWholeInItsLayer(t *testing.T) {
+	// arrange
+	overlayDefault(t, "redirect_dir", "Y")
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "mv /etc/apt /etc/moved"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	assert.Equal(t, names(t, filepath.Join(layers, "base", "etc", "apt")), names(t, filepath.Join(layers, "run", "etc", "moved")))
 }
