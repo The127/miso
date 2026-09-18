@@ -34,7 +34,7 @@ func (r runner) Run(_ context.Context, _ protocol.Run, out io.Writer) (int, erro
 	return r.code, err
 }
 
-func (r runner) Import(protocol.Import) error {
+func (r runner) Import(context.Context, protocol.Import) error {
 	return r.err
 }
 
@@ -153,7 +153,7 @@ func (w *watched) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (w *watched) Import(protocol.Import) error {
+func (w *watched) Import(context.Context, protocol.Import) error {
 	return nil
 }
 
@@ -190,8 +190,10 @@ func (w *waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, er
 	}
 }
 
-func (w *waiting) Import(protocol.Import) error {
-	return nil
+func (w *waiting) Import(ctx context.Context, _ protocol.Import) error {
+	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
+
+	return err
 }
 
 func TestClosingTheConnectionCancelsTheRun(t *testing.T) {
@@ -203,6 +205,25 @@ func TestClosingTheConnectionCancelsTheRun(t *testing.T) {
 	runner := &waiting{}
 	go func() {
 		_ = host.Send(protocol.Run{Command: "sleep infinity"})
+		_ = hostEnd.Close()
+	}()
+
+	// act
+	_ = agent.Serve(runner)
+
+	// assert
+	assert.True(t, runner.cancelled)
+}
+
+func TestClosingTheConnectionCancelsTheImport(t *testing.T) {
+	// arrange
+	requests, hostEnd := io.Pipe()
+	var replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", bytes.NewReader(nil), hostEnd)
+	agent := protocol.New("miso 1.2.0", requests, &replies)
+	runner := &waiting{}
+	go func() {
+		_ = host.Send(protocol.Import{Key: "abc", Digest: "sha256:def"})
 		_ = hostEnd.Close()
 	}()
 
