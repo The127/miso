@@ -98,6 +98,19 @@ func TestARunSeesItsOwnProcesses(t *testing.T) {
 	assert.Equal(t, "/bin/sh\x00-c\x00cat /proc/1/cmdline\x00", out.String())
 }
 
+func TestARunHasANullDevice(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "test -c /dev/null"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
