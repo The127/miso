@@ -30,6 +30,17 @@ func TestTheRootPartitionIsFoundByItsType(t *testing.T) {
 	assert.Equal(t, disk.Partition{Offset: 100 * 512, Size: 100 * 512}, root)
 }
 
+func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: rootX86_64, first: 1 << 62, last: 1<<62 + 99})
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrBrokenTable)
+}
+
 type entry struct {
 	kind        string
 	first, last uint64

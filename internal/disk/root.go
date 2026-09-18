@@ -3,10 +3,15 @@ package disk
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
+	"math"
 )
 
 const sector = 512
+
+// ErrBrokenTable is a partition table no real disk can have.
+var ErrBrokenTable = errors.New("broken partition table")
 
 // rootX86_64 is the partition type of an x86-64 root file system in the
 // order its bytes are on disk.
@@ -30,7 +35,11 @@ func Root(r io.ReaderAt) (Partition, error) {
 		return Partition{}, err
 	}
 
-	entries := int64(binary.LittleEndian.Uint64(header[72:])) //nolint:gosec // a broken table is refused in the next step
+	entries, err := lba(header[72:])
+	if err != nil {
+		return Partition{}, err
+	}
+
 	count := binary.LittleEndian.Uint32(header[80:])
 	size := binary.LittleEndian.Uint32(header[84:])
 
@@ -41,12 +50,29 @@ func Root(r io.ReaderAt) (Partition, error) {
 		}
 
 		if bytes.Equal(entry[:16], rootX86_64) {
-			first := int64(binary.LittleEndian.Uint64(entry[32:])) //nolint:gosec // a broken table is refused in the next step
-			last := int64(binary.LittleEndian.Uint64(entry[40:]))  //nolint:gosec // a broken table is refused in the next step
+			first, err := lba(entry[32:])
+			if err != nil {
+				return Partition{}, err
+			}
+
+			last, err := lba(entry[40:])
+			if err != nil {
+				return Partition{}, err
+			}
 
 			return Partition{Offset: first * sector, Size: (last - first + 1) * sector}, nil
 		}
 	}
 
 	return Partition{}, nil
+}
+
+// lba is a sector number that still fits a byte offset.
+func lba(b []byte) (int64, error) {
+	n := binary.LittleEndian.Uint64(b)
+	if n > math.MaxInt64/sector {
+		return 0, ErrBrokenTable
+	}
+
+	return int64(n), nil
 }
