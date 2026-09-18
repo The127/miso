@@ -148,3 +148,19 @@ func TestAListingStopsAtTheFirstWriteError(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "the pipe is gone")
 }
+
+func TestAStepWithoutAKeyShowsDashes(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "debian:sid",
+		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "debootstrap sid /rootfs"}}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM debian:sid\n   2  ------------  RUN debootstrap sid /rootfs\n", out.String())
+}

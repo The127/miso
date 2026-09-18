@@ -64,8 +64,13 @@ func from(stage plan.Stage) string {
 }
 
 // short cuts a key to twelve characters, as git does with a commit. A
-// digest names its format in front, and that stays.
+// digest names its format in front, and that stays. A step without a key
+// keeps its column.
 func short(key string) string {
+	if key == "" {
+		return strings.Repeat("-", 12)
+	}
+
 	name, hex, named := strings.Cut(key, ":")
 	if !named {
 		return key[:12]
