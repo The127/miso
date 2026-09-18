@@ -111,6 +111,25 @@ func TestARunHasANullDevice(t *testing.T) {
 	assert.Equal(t, 0, code)
 }
 
+func TestARunHasTheUsualDevicesForEveryone(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "stat -c '%n %F %a %t:%T' /dev/null /dev/zero /dev/full /dev/random /dev/urandom /dev/tty"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "/dev/null character special file 666 1:3\n"+
+		"/dev/zero character special file 666 1:5\n"+
+		"/dev/full character special file 666 1:7\n"+
+		"/dev/random character special file 666 1:8\n"+
+		"/dev/urandom character special file 666 1:9\n"+
+		"/dev/tty character special file 666 5:0\n", out.String())
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())

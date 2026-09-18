@@ -45,8 +45,26 @@ func helper(root, command string) error {
 		return fmt.Errorf("mount /dev: %w", err)
 	}
 
-	if err := unix.Mknod("/dev/null", unix.S_IFCHR|0o666, int(unix.Mkdev(1, 3))); err != nil { //nolint:gosec // the kernel keeps device numbers in 32 bits
-		return fmt.Errorf("make /dev/null: %w", err)
+	for _, device := range []struct {
+		name         string
+		major, minor uint32
+	}{
+		{"null", 1, 3},
+		{"zero", 1, 5},
+		{"full", 1, 7},
+		{"random", 1, 8},
+		{"urandom", 1, 9},
+		{"tty", 5, 0},
+	} {
+		path := "/dev/" + device.name
+		if err := unix.Mknod(path, unix.S_IFCHR, int(unix.Mkdev(device.major, device.minor))); err != nil { //nolint:gosec // the kernel keeps device numbers in 32 bits
+			return fmt.Errorf("make %s: %w", path, err)
+		}
+
+		// after mknod, which the umask takes bits from
+		if err := os.Chmod(path, 0o666); err != nil { //nolint:gosec // every user may use these devices, as on any Linux
+			return err
+		}
 	}
 
 	return syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
