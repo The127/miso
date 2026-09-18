@@ -120,6 +120,19 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the fstab reads the fstab of a base image from the reader it is handed.
+  # It knows nothing of ours, opens nothing and never touches a process, the
+  # network or the kernel
+  - package: '**.internal.fstab$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the layer keeps the layers on the agent's cache disk. It knows nothing
   # of ours and never touches a process, the network or the kernel
   - package: '**.internal.layer$'
