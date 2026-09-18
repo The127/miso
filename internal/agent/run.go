@@ -86,6 +86,7 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Cloneflags: syscall.CLONE_NEWPID}
 	cmd.Dir = "/"
 	cmd.Stdout = out
+	cmd.Stderr = out
 	// Docker's defaults, and os/exec keeps the last of a key, so the build
 	// file's own values win
 	cmd.Env = append([]string{

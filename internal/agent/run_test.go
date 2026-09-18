@@ -68,6 +68,20 @@ func TestWhatARunPrintsGoesOut(t *testing.T) {
 	assert.Equal(t, "hi\n", out.String())
 }
 
+func TestWhatARunPrintsAsAnErrorGoesOut(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi >&2"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "hi\n", out.String())
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := importedBase(t, t.TempDir())
