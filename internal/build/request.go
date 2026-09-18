@@ -23,12 +23,12 @@ func Requests(planned plan.Plan) ([]protocol.Message, error) {
 	var requests []protocol.Message
 	roots := map[string]rootfs{}
 	for _, stage := range planned.Stages {
-		// a stage on an earlier stage carries on where that one ended
-		if _, seen := roots[stage.BaseKey]; !seen {
-			roots[stage.BaseKey] = base(stage)
-			if stage.Base != plan.Scratch {
-				requests = append(requests, protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest})
-			}
+		// a stage on an earlier stage carries on where that one ended, and
+		// scratch needs no entry, a missing key is already nothing
+		_, seen := roots[stage.BaseKey]
+		if !seen && stage.Base != plan.Scratch {
+			roots[stage.BaseKey] = rootfs{layers: []string{stage.BaseKey}}
+			requests = append(requests, protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest})
 		}
 
 		for _, step := range stage.Steps {
