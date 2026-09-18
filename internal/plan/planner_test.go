@@ -262,3 +262,18 @@ func TestAStageOnAnUnfetchedStageGetsNoKeys(t *testing.T) {
 	require.Len(t, planned.Stages[1].Steps, 1)
 	assert.Empty(t, planned.Stages[1].Steps[0].Key)
 }
+
+func TestACopyFromAnUnfetchedStageGetsNoKeyWhileTheStepsBeforeItKeepTheirs(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM scratch\nRUN true\nCOPY --from=bootstrap /rootfs/ /\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	require.Len(t, planned.Stages[1].Steps, 2)
+	assert.NotEmpty(t, planned.Stages[1].Steps[0].Key)
+	assert.Empty(t, planned.Stages[1].Steps[1].Key)
+}
