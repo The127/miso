@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 
+	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/buildcontext"
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/listing"
@@ -39,7 +41,14 @@ func listPlan(_ context.Context, command *cli.Command) error {
 
 	defer func() { _ = files.Close() }()
 
-	planned, err := plan.New(stages, "miso "+built(), files, noBases{})
+	cache, err := cacheDir()
+	if err != nil {
+		return err
+	}
+
+	bases := baseimage.Open(filepath.Join(cache, "bases"), http.DefaultClient, baseimage.Known)
+
+	planned, err := plan.New(stages, "miso "+built(), files, bases)
 	if err != nil {
 		return fmt.Errorf("%s: %w", file, err)
 	}
