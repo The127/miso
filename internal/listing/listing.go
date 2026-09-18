@@ -49,9 +49,15 @@ func from(stage plan.Stage) string {
 	return line
 }
 
-// short cuts a key to twelve characters, as git does with a commit.
+// short cuts a key to twelve characters, as git does with a commit. A
+// digest names its format in front, and that stays.
 func short(key string) string {
-	return key[:12]
+	name, hex, named := strings.Cut(key, ":")
+	if !named {
+		return key[:12]
+	}
+
+	return name + ":" + hex[:12]
 }
 
 // describe is an instruction as its author wrote it, and where.

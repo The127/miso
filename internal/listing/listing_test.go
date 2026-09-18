@@ -175,3 +175,25 @@ func TestAContextCopyListsItsFilesWithTheirDigests(t *testing.T) {
 		"                    etc/motd  47348ce3c15b\n"+
 		"                    etc/issue  2cf24dba5fb0\n", out.String())
 }
+
+func TestADigestIsShortenedAfterItsFormatName(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{{
+			Instruction: imagefile.Copy{Line: 2, Sources: []string{"etc/motd"}, Destination: "/etc/"},
+			Key:         "9a8b7c6d5e4f",
+			Files:       []plan.File{{Path: "etc/motd", Digest: "miso-context-1:47348ce3c15ba0348ac0887f85dd16b27501e538ff66fc2756c2fa642dc4102c"}},
+		}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n"+
+		"   2  9a8b7c6d5e4f  COPY etc/motd /etc/\n"+
+		"                    etc/motd  miso-context-1:47348ce3c15b\n", out.String())
+}
