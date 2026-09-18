@@ -17,7 +17,8 @@ func Write(w io.Writer, planned plan.Plan) error {
 		}
 
 		for _, step := range stage.Steps {
-			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line(step.Instruction), short(step.Key), text(step.Instruction)); err != nil {
+			line, text := describe(step.Instruction)
+			if _, err := fmt.Fprintf(w, "%4d  %s  %s\n", line, short(step.Key), text); err != nil {
 				return err
 			}
 		}
@@ -44,18 +45,14 @@ func short(key string) string {
 	return key[:12]
 }
 
-func line(instruction imagefile.Instruction) int {
-	if run, isRun := instruction.(imagefile.Run); isRun {
-		return run.Line
+// describe is an instruction as its author wrote it, and where.
+func describe(instruction imagefile.Instruction) (int, string) {
+	switch step := instruction.(type) {
+	case imagefile.Run:
+		return step.Line, "RUN " + step.Command
+	case imagefile.Env:
+		return step.Line, "ENV " + step.Key + "=" + step.Value
 	}
 
-	return 0
-}
-
-func text(instruction imagefile.Instruction) string {
-	if run, isRun := instruction.(imagefile.Run); isRun {
-		return "RUN " + run.Command
-	}
-
-	return ""
+	return 0, ""
 }
