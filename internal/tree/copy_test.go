@@ -31,6 +31,22 @@ func TestAFileKeepsItsContentAndMode(t *testing.T) {
 	assert.Equal(t, os.FileMode(0o400), info.Mode())
 }
 
+func TestALinkStaysALinkToWhatItNames(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, os.Symlink("/nowhere/at/all", filepath.Join(source, "link")))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	got, err := os.Readlink(filepath.Join(target, "link"))
+	require.NoError(t, err)
+	assert.Equal(t, "/nowhere/at/all", got)
+}
+
 func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
 	// arrange
 	source := t.TempDir()

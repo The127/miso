@@ -24,10 +24,10 @@ func Copy(source, target string) error {
 
 	defer func() { _ = to.Close() }()
 
-	return copyDir(from, to, ".")
+	return copyEntries(from, to, ".")
 }
 
-func copyDir(from, to *os.Root, dir string) error {
+func copyEntries(from, to *os.Root, dir string) error {
 	entries, err := fs.ReadDir(from.FS(), dir)
 	if err != nil {
 		return err
@@ -41,29 +41,44 @@ func copyDir(from, to *os.Root, dir string) error {
 			return err
 		}
 
-		if !entry.IsDir() {
-			if err := copyFile(from, to, name, info.Mode()); err != nil {
-				return err
-			}
-
-			continue
+		switch {
+		case entry.IsDir():
+			err = copyDirectory(from, to, name, info.Mode())
+		case info.Mode()&fs.ModeSymlink != 0:
+			err = copyLink(from, to, name)
+		default:
+			err = copyFile(from, to, name, info.Mode())
 		}
 
-		if err := to.Mkdir(name, 0o700); err != nil {
-			return err
-		}
-
-		if err := copyDir(from, to, name); err != nil {
-			return err
-		}
-
-		// set once it is filled, which the mode may forbid
-		if err := to.Chmod(name, info.Mode().Perm()); err != nil {
+		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func copyDirectory(from, to *os.Root, name string, mode fs.FileMode) error {
+	if err := to.Mkdir(name, 0o700); err != nil {
+		return err
+	}
+
+	if err := copyEntries(from, to, name); err != nil {
+		return err
+	}
+
+	// set once it is filled, which the mode may forbid
+	return to.Chmod(name, mode.Perm())
+}
+
+// copyLink copies a link as the text it holds and never follows it.
+func copyLink(from, to *os.Root, name string) error {
+	text, err := from.Readlink(name)
+	if err != nil {
+		return err
+	}
+
+	return to.Symlink(text, name)
 }
 
 func copyFile(from, to *os.Root, name string, mode fs.FileMode) error {
