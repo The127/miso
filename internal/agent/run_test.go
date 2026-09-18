@@ -128,3 +128,20 @@ func TestARunSeesTheEnvironmentOfTheBuildFileAndNotTheAgents(t *testing.T) {
 	assert.Contains(t, string(seen), "GREETING=hi\n")
 	assert.NotContains(t, string(seen), "MISO_VMTEST_BASE_DIGEST")
 }
+
+func TestARunWithoutEnvironmentFindsCommandsOnTheUsualPath(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "env > /seen"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
+	require.NoError(t, err)
+	assert.Contains(t, string(seen), "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n")
+	assert.NotContains(t, string(seen), "MISO_VMTEST_BASE_DIGEST")
+}

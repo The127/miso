@@ -68,7 +68,9 @@ func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
 	cmd := exec.Command("/bin/sh", "-c", run.Command) //nolint:gosec // running what the build file says is what a RUN is
 	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root}
 	cmd.Dir = "/"
-	cmd.Env = run.Env
+	// Docker's default, and os/exec keeps the last of a key, so the build
+	// file's own PATH wins
+	cmd.Env = append([]string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}, run.Env...)
 	err = cmd.Run()
 	if exited, ok := errors.AsType[*exec.ExitError](err); ok {
 		return exited.ExitCode(), nil
