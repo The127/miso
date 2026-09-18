@@ -19,9 +19,10 @@ func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 	}}}
 
 	// act
-	requests := build.Requests(planned)
+	requests, err := build.Requests(planned)
 
 	// assert
+	require.NoError(t, err)
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base"}, requests[0].Layers)
 }
@@ -37,9 +38,10 @@ func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 	}}}
 
 	// act
-	requests := build.Requests(planned)
+	requests, err := build.Requests(planned)
 
 	// assert
+	require.NoError(t, err)
 	require.Len(t, requests, 2)
 	assert.Equal(t, []string{"base", "k1"}, requests[1].Layers)
 }
@@ -55,9 +57,10 @@ func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 	}}}
 
 	// act
-	requests := build.Requests(planned)
+	requests, err := build.Requests(planned)
 
 	// assert
+	require.NoError(t, err)
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base", "k1"}, requests[0].Layers)
 }
@@ -73,9 +76,10 @@ func TestAnEnvMakesNoLayer(t *testing.T) {
 	}}}
 
 	// act
-	requests := build.Requests(planned)
+	requests, err := build.Requests(planned)
 
 	// assert
+	require.NoError(t, err)
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base"}, requests[0].Layers)
 }
