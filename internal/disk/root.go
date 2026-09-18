@@ -28,8 +28,10 @@ var rootX86_64 = []byte{
 	0x96, 0xe7, 0xfb, 0xca, 0xf9, 0x84, 0xb7, 0x09,
 }
 
-// Partition is where a partition lies on its disk, in bytes.
+// Partition is where a partition lies on its disk, in bytes, and the number
+// the kernel gives it.
 type Partition struct {
+	Number int64
 	Offset int64
 	Size   int64
 }
@@ -77,7 +79,7 @@ func Root(r io.ReaderAt) (Partition, error) {
 				return Partition{}, ErrBrokenTable
 			}
 
-			return Partition{Offset: first * sector, Size: (last - first + 1) * sector}, nil
+			return Partition{Number: i + 1, Offset: first * sector, Size: (last - first + 1) * sector}, nil
 		}
 	}
 
