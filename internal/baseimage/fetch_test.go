@@ -80,3 +80,25 @@ func TestAFetchThatIsRefusedIsAnErrorAndLeavesNothingBehind(t *testing.T) {
 	assert.Empty(t, digest)
 	assert.NoDirExists(t, filepath.Join(dir, "sha256"))
 }
+
+func TestADownloadThatStopsShortIsNotKept(t *testing.T) {
+	// arrange
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", "1000")
+		_, _ = w.Write([]byte("short"))
+	}))
+	t.Cleanup(server.Close)
+	dir := t.TempDir()
+	cache := baseimage.Open(dir, server.Client(), map[string]string{"debian:sid": server.URL + "/sid.qcow2"})
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.Error(t, err)
+	digest, digestErr := cache.Digest("debian:sid")
+	require.NoError(t, digestErr)
+	assert.Empty(t, digest)
+	leftovers, _ := filepath.Glob(filepath.Join(dir, "sha256", "*"))
+	assert.Empty(t, leftovers)
+}
