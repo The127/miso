@@ -169,7 +169,7 @@ func (c copier) file(name string, info fs.FileInfo) error {
 
 // keep gives a copy the mode and time of what it was copied from.
 func (c copier) keep(name string, info fs.FileInfo) error {
-	if err := c.to.Chmod(name, info.Mode().Perm()); err != nil {
+	if err := c.to.Chmod(name, info.Mode()&(fs.ModePerm|fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky)); err != nil {
 		return err
 	}
 
