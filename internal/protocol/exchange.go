@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
@@ -14,6 +15,10 @@ func (c *Conn) Run(run Run, out io.Writer) error {
 
 	for {
 		message, err := c.Receive()
+		if errors.Is(err, io.EOF) {
+			return fmt.Errorf("the agent stopped before the step ended: %w", io.ErrUnexpectedEOF)
+		}
+
 		if err != nil {
 			return err
 		}
