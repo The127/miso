@@ -30,3 +30,28 @@ func TestAFileKeepsItsContentAndMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o400), info.Mode())
 }
+
+func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(source, "a/b"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(source, "a/b/deep"), []byte("down"), 0o600))
+	require.NoError(t, os.Chmod(filepath.Join(source, "a"), 0o500))
+	t.Cleanup(func() {
+		_ = os.Chmod(filepath.Join(source, "a"), 0o700)
+		_ = os.Chmod(filepath.Join(target, "a"), 0o700)
+	})
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	got, err := os.ReadFile(filepath.Join(target, "a/b/deep"))
+	require.NoError(t, err)
+	assert.Equal(t, "down", string(got))
+	info, err := os.Lstat(filepath.Join(target, "a"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|0o500, info.Mode())
+}
