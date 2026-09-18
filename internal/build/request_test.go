@@ -14,8 +14,9 @@ import (
 func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base:  "debian:13",
-		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
+		Base:    "debian:13",
+		BaseKey: "base",
+		Steps:   []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
 	}}}
 
 	// act
@@ -30,8 +31,9 @@ func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base:  "debian:13",
-		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
+		Base:    "debian:13",
+		BaseKey: "base",
+		Steps:   []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
 	}}}
 
 	// act
