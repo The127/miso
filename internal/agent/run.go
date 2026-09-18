@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -46,10 +47,18 @@ func (a *Agent) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, erro
 		return 0, fmt.Errorf("mount overlay on %s: %w", root, err)
 	}
 
+	// removing scratch must never reach into the root, so it goes first
+	defer func() { _ = syscall.Unmount(root, syscall.MNT_DETACH) }()
+
 	cmd := exec.Command("/bin/sh", "-c", run.Command) //nolint:gosec // running what the build file says is what a RUN is
 	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root}
 	cmd.Dir = "/"
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+	if exited, ok := errors.AsType[*exec.ExitError](err); ok {
+		return exited.ExitCode(), nil
+	}
+
+	if err != nil {
 		return 0, err
 	}
 
