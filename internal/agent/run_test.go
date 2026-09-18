@@ -82,6 +82,20 @@ func TestWhatARunPrintsAsAnErrorGoesOut(t *testing.T) {
 	assert.Equal(t, "hi\n", out.String())
 }
 
+func TestARunSeesItsOwnProcesses(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "cat /proc/1/cmdline"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "/bin/sh\x00-c\x00cat /proc/1/cmdline\x00", out.String())
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := importedBase(t, t.TempDir())
