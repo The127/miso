@@ -28,8 +28,8 @@ func Open(dir string, client *http.Client, sources map[string]string) *Cache {
 // Digest is that of the image a name stands for, or empty for one that is
 // known but not fetched yet.
 func (c *Cache) Digest(name string) (string, error) {
-	if _, known := c.sources[name]; !known {
-		return "", ErrUnknownBase
+	if _, err := c.source(name); err != nil {
+		return "", err
 	}
 
 	digest, err := os.ReadFile(filepath.Join(c.names(), name))
@@ -48,4 +48,14 @@ func (c *Cache) Digest(name string) (string, error) {
 	}
 
 	return string(digest), nil
+}
+
+// source is where a name comes from.
+func (c *Cache) source(name string) (string, error) {
+	url, known := c.sources[name]
+	if !known {
+		return "", ErrUnknownBase
+	}
+
+	return url, nil
 }
