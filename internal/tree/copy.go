@@ -121,7 +121,7 @@ func (c copier) link(name string, info fs.FileInfo) error {
 	then := unix.NsecToTimespec(info.ModTime().UnixNano())
 
 	// a root sets times only through links
-	return at(c.to, name, func(path string) error {
+	return at(c.to, "utimensat", name, func(path string) error {
 		return unix.UtimesNanoAt(unix.AT_FDCWD, path, []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
 	})
 }
@@ -134,7 +134,7 @@ func (c copier) special(name string, info fs.FileInfo) error {
 		return &fs.PathError{Op: "mknod", Path: name, Err: fs.ErrInvalid}
 	}
 
-	err := at(c.to, name, func(path string) error {
+	err := at(c.to, "mknod", name, func(path string) error {
 		return unix.Mknod(path, stat.Mode&unix.S_IFMT|0o600, int(stat.Rdev)) //nolint:gosec // the kernel keeps device numbers in 32 bits
 	})
 	if err != nil {
@@ -147,7 +147,8 @@ func (c copier) special(name string, info fs.FileInfo) error {
 // at hands what a root cannot do itself a path to a name in the root. The
 // path goes through its directory opened in the root, so only the name
 // itself is looked up again, and calls that do not follow links stay in.
-func at(root *os.Root, name string, call func(path string) error) error {
+// A failure names the operation and the name.
+func at(root *os.Root, op, name string, call func(path string) error) error {
 	dir, err := root.Open(path.Dir(name))
 	if err != nil {
 		return err
@@ -155,7 +156,11 @@ func at(root *os.Root, name string, call func(path string) error) error {
 
 	defer func() { _ = dir.Close() }()
 
-	return call(fmt.Sprintf("/proc/self/fd/%d/%s", dir.Fd(), path.Base(name)))
+	if err := call(fmt.Sprintf("/proc/self/fd/%d/%s", dir.Fd(), path.Base(name))); err != nil {
+		return &fs.PathError{Op: op, Path: name, Err: err}
+	}
+
+	return nil
 }
 
 // fileOnce copies a file with several names once and links its other names
