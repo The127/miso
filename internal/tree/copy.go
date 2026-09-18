@@ -57,7 +57,7 @@ func (c copier) entries(dir string) error {
 
 		switch {
 		case entry.IsDir():
-			err = c.directory(name, info.Mode())
+			err = c.directory(name, info)
 		case info.Mode()&fs.ModeSymlink != 0:
 			err = c.link(name)
 		default:
@@ -72,7 +72,7 @@ func (c copier) entries(dir string) error {
 	return nil
 }
 
-func (c copier) directory(name string, mode fs.FileMode) error {
+func (c copier) directory(name string, info fs.FileInfo) error {
 	if err := c.to.Mkdir(name, 0o700); err != nil {
 		return err
 	}
@@ -81,8 +81,9 @@ func (c copier) directory(name string, mode fs.FileMode) error {
 		return err
 	}
 
-	// set once it is filled, which the mode may forbid
-	return c.to.Chmod(name, mode.Perm())
+	// set once it is filled, which the mode may forbid and which moves the
+	// time
+	return c.keep(name, info)
 }
 
 // link copies a link as the text it holds and never follows it.
@@ -100,7 +101,7 @@ func (c copier) link(name string) error {
 func (c copier) fileOnce(name string, info fs.FileInfo) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || stat.Nlink < 2 {
-		return c.file(name, info.Mode())
+		return c.file(name, info)
 	}
 
 	file := inode{device: stat.Dev, number: stat.Ino}
@@ -110,10 +111,10 @@ func (c copier) fileOnce(name string, info fs.FileInfo) error {
 
 	c.copied[file] = name
 
-	return c.file(name, info.Mode())
+	return c.file(name, info)
 }
 
-func (c copier) file(name string, mode fs.FileMode) error {
+func (c copier) file(name string, info fs.FileInfo) error {
 	in, err := c.from.Open(name)
 	if err != nil {
 		return err
@@ -136,7 +137,16 @@ func (c copier) file(name string, mode fs.FileMode) error {
 		return err
 	}
 
-	// set after the writing, which the mode may forbid, and apart from the
-	// create, whose mode the umask changes
-	return c.to.Chmod(name, mode.Perm())
+	// set after the writing, which the mode may forbid and which moves the
+	// time, and apart from the create, whose mode the umask changes
+	return c.keep(name, info)
+}
+
+// keep gives a copy the mode and time of what it was copied from.
+func (c copier) keep(name string, info fs.FileInfo) error {
+	if err := c.to.Chmod(name, info.Mode().Perm()); err != nil {
+		return err
+	}
+
+	return c.to.Chtimes(name, info.ModTime(), info.ModTime())
 }
