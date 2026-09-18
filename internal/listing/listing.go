@@ -3,6 +3,7 @@ package listing
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
@@ -52,6 +53,8 @@ func describe(instruction imagefile.Instruction) (int, string) {
 		return step.Line, "RUN " + step.Command
 	case imagefile.Env:
 		return step.Line, "ENV " + step.Key + "=" + step.Value
+	case imagefile.Copy:
+		return step.Line, "COPY " + strings.Join(append(step.Sources, step.Destination), " ")
 	}
 
 	return 0, ""
