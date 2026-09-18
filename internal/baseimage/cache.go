@@ -41,5 +41,11 @@ func (c *Cache) Digest(name string) (string, error) {
 		return "", err
 	}
 
+	// a name is only worth what it points at, and a build fetches again
+	// what somebody cleaned away
+	if _, err := os.Stat(c.blob(string(digest))); errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+
 	return string(digest), nil
 }
