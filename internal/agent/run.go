@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -50,8 +51,9 @@ func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
 		}
 	}
 
+	// overlay takes the top layer first
 	lowers := make([]string, 0, len(run.Layers))
-	for _, key := range run.Layers {
+	for _, key := range slices.Backward(run.Layers) {
 		lowers = append(lowers, a.layers.Path(key))
 	}
 
