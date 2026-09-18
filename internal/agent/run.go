@@ -22,6 +22,19 @@ func (a *Agent) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, erro
 		return 0, err
 	}
 
+	code, err := a.runOn(work.Dir(), run)
+	if err != nil || code != 0 {
+		_ = work.Discard()
+
+		return code, err
+	}
+
+	return 0, work.Finish()
+}
+
+// runOn runs a command on top of layers with what it writes going into a
+// directory, which is no longer mounted once it returns.
+func (a *Agent) runOn(upper string, run protocol.Run) (int, error) {
 	scratch, err := os.MkdirTemp(a.scratch, "run-")
 	if err != nil {
 		return 0, err
@@ -42,7 +55,7 @@ func (a *Agent) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, erro
 		lowers = append(lowers, a.layers.Path(key))
 	}
 
-	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(lowers, ":"), work.Dir(), overlayWork)
+	options := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(lowers, ":"), upper, overlayWork)
 	if err := syscall.Mount("overlay", root, "overlay", 0, options); err != nil {
 		return 0, fmt.Errorf("mount overlay on %s: %w", root, err)
 	}
@@ -62,9 +75,10 @@ func (a *Agent) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, erro
 		return 0, err
 	}
 
+	// not detached, a busy root means something still writes into the layer
 	if err := syscall.Unmount(root, 0); err != nil {
 		return 0, err
 	}
 
-	return 0, work.Finish()
+	return 0, nil
 }
