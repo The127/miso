@@ -109,3 +109,17 @@ func TestAStageOnABaseNotFetchedYetGetsNoKeys(t *testing.T) {
 	assert.Empty(t, planned.Stages[0].BaseDigest)
 	assert.Empty(t, planned.Stages[0].Steps[0].Key)
 }
+
+func TestAStageOnAnImageStartsOnTheKeyItsFirstStepIsBuiltOn(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nRUN true\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+
+	// assert
+	require.NoError(t, err)
+	stage := planned.Stages[0]
+	assert.NotEmpty(t, stage.BaseKey)
+	assert.Equal(t, stage.Steps[0].BuiltOn[0], stage.BaseKey)
+}
