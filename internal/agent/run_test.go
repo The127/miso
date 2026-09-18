@@ -144,6 +144,20 @@ func TestARunFindsItsOpenFilesUnderDev(t *testing.T) {
 	assert.Equal(t, "/proc/self/fd\n/proc/self/fd/0\n/proc/self/fd/1\n/proc/self/fd/2\n", out.String())
 }
 
+func TestARunOpensAPseudoTerminalOfItsOwn(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "exec 3<>/dev/ptmx; ls /dev/pts"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "0\nptmx\n", out.String())
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
