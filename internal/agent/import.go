@@ -47,6 +47,15 @@ func mountRoot(serial, target string) error {
 		return err
 	}
 
+	entries, found, err := rootFstab(target)
+	if err != nil {
+		return err
+	}
+
+	if found {
+		return mountSubmounts(device, kind, target, fstab.Submounts(entries))
+	}
+
 	subvolume, entries, err := ownSubvolume(target)
 	if err != nil {
 		return err

@@ -85,6 +85,24 @@ func TestTheSubmountsOfTheRootAreMountedInIt(t *testing.T) {
 	assert.Equal(t, "boot\n", string(boot))
 }
 
+func TestTheSubmountsOfADefaultRootAreMountedInIt(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-default", target)
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
+	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
+	require.NoError(t, err)
+	assert.Contains(t, string(release), "ID=miso-test-default")
+	variable, err := os.ReadFile(filepath.Join(target, "var/marker"))
+	require.NoError(t, err)
+	assert.Equal(t, "var\n", string(variable))
+}
+
 func TestASubmountThroughALinkOutOfTheImageIsRefused(t *testing.T) {
 	// arrange
 	target := t.TempDir()
