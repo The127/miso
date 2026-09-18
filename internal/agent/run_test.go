@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -199,4 +200,18 @@ func TestARunWorksWithLayersOnAFileSystemOfTheirOwn(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(layers, "run", "x"))
+}
+
+func TestACancelledRunStopsItsCommand(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(time.Second, cancel)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
+
+	// act
+	_, err := worker.Run(ctx, run, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, context.Canceled)
 }
