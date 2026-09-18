@@ -233,6 +233,26 @@ func TestARunLeavesTheSystemAsItFoundIt(t *testing.T) {
 	assert.Equal(t, "N\n", string(setting))
 }
 
+func TestARunLeavesTheKernelSettingsAsItFoundThem(t *testing.T) {
+	// arrange
+	path := "/proc/sys/vm/swappiness"
+	was, err := os.ReadFile(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, os.WriteFile(path, was, 0o600)) }) //nolint:gosec // the test names the setting
+	require.NoError(t, os.WriteFile(path, []byte("60"), 0o600))
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo 10 > /proc/sys/vm/swappiness"}
+
+	// act
+	_, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	setting, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "60\n", string(setting))
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
