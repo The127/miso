@@ -21,3 +21,15 @@ func TestTheOtherLinesOfTheRootFileSystemAreSubmounts(t *testing.T) {
 	// assert
 	assert.Equal(t, []fstab.Entry{home, variable}, submounts)
 }
+
+func TestALineNotMountedAtBootIsNoSubmount(t *testing.T) {
+	// arrange
+	root := fstab.Entry{Source: "UUID=15c2", Target: "/", Type: "btrfs", Options: []string{"subvol=root"}}
+	snapshots := fstab.Entry{Source: "UUID=15c2", Target: "/.snapshots", Type: "btrfs", Options: []string{"noauto", "subvol=snapshots"}}
+
+	// act
+	submounts := fstab.Submounts([]fstab.Entry{root, snapshots})
+
+	// assert
+	assert.Empty(t, submounts)
+}
