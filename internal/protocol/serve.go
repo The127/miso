@@ -1,6 +1,9 @@
 package protocol
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // Runner does the work of a run on the agent's side.
 type Runner interface {
@@ -14,7 +17,12 @@ func (c *Conn) Serve(runner Runner) error {
 		return err
 	}
 
-	code, err := runner.Run(message.(Run), outputs{c})
+	run, ok := message.(Run)
+	if !ok {
+		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
+	}
+
+	code, err := runner.Run(run, outputs{c})
 	if err != nil {
 		return c.Send(Failed{Reason: err.Error()})
 	}
