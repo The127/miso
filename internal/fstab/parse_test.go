@@ -27,6 +27,18 @@ func TestALineIsAnEntry(t *testing.T) {
 	}}, entries)
 }
 
+func TestALineWithoutOptionsIsAnEntry(t *testing.T) {
+	// arrange
+	text := "UUID=15c2 / ext4\n"
+
+	// act
+	entries, err := fstab.Parse(strings.NewReader(text))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []fstab.Entry{{Source: "UUID=15c2", Target: "/", Type: "ext4"}}, entries)
+}
+
 func TestALineWithoutATypeIsABadLine(t *testing.T) {
 	// arrange
 	text := "# fstab\nUUID=15c2 /\n"

@@ -34,12 +34,12 @@ func Parse(r io.Reader) ([]Entry, error) {
 			return nil, fmt.Errorf("line %d: %w", number, ErrBadLine)
 		}
 
-		entries = append(entries, Entry{
-			Source:  fields[0],
-			Target:  fields[1],
-			Type:    fields[2],
-			Options: strings.Split(fields[3], ","),
-		})
+		entry := Entry{Source: fields[0], Target: fields[1], Type: fields[2]}
+		if len(fields) > 3 {
+			entry.Options = strings.Split(fields[3], ",")
+		}
+
+		entries = append(entries, entry)
 	}
 
 	return entries, lines.Err()
