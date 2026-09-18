@@ -197,3 +197,16 @@ func TestADigestIsShortenedAfterItsFormatName(t *testing.T) {
 		"   2  9a8b7c6d5e4f  COPY etc/motd /etc/\n"+
 		"                    etc/motd  miso-context-1:47348ce3c15b\n", out.String())
 }
+
+func TestAListingNamesTheAgentThatKeyedIt(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Agent: "miso v0.3.1", Stages: []plan.Stage{{Base: "scratch"}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "agent miso v0.3.1\nFROM scratch\n", out.String())
+}

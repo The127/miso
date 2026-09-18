@@ -14,6 +14,12 @@ import (
 // Write lists a plan, a stage as its FROM line and every step as its line
 // number, its key and the instruction as written.
 func Write(w io.Writer, planned plan.Plan) error {
+	if planned.Agent != "" {
+		if _, err := fmt.Fprintf(w, "agent %s\n", planned.Agent); err != nil {
+			return err
+		}
+	}
+
 	for _, stage := range planned.Stages {
 		if _, err := fmt.Fprintf(w, "%s\n", from(stage)); err != nil {
 			return err
