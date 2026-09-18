@@ -41,6 +41,18 @@ func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
 	assert.ErrorIs(t, err, disk.ErrBrokenTable)
 }
 
+func TestAnEntryTooSmallForAPartitionIsABrokenTable(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 199})
+	binary.LittleEndian.PutUint32(image[512+84:], 0)
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrBrokenTable)
+}
+
 func TestADiskWithoutARootPartitionHasNoRoot(t *testing.T) {
 	// arrange
 	image := gpt(t, entry{kind: esp, first: 34, last: 99})
