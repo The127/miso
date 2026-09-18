@@ -107,6 +107,10 @@ func (c copier) link(name string, info fs.FileInfo) error {
 		return err
 	}
 
+	if err := c.own(name, info); err != nil {
+		return err
+	}
+
 	// a root sets times only through links, so the link's own time is set
 	// by name within its directory
 	dir, err := c.to.Open(path.Dir(name))
@@ -167,11 +171,27 @@ func (c copier) file(name string, info fs.FileInfo) error {
 	return c.keep(name, info)
 }
 
-// keep gives a copy the mode and time of what it was copied from.
+// keep gives a copy the owner, mode and time of what it was copied from.
 func (c copier) keep(name string, info fs.FileInfo) error {
+	// first, because a new owner clears setuid and setgid
+	if err := c.own(name, info); err != nil {
+		return err
+	}
+
 	if err := c.to.Chmod(name, info.Mode()&(fs.ModePerm|fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky)); err != nil {
 		return err
 	}
 
 	return c.to.Chtimes(name, info.ModTime(), info.ModTime())
+}
+
+// own gives a copy the owner of what it was copied from, never following a
+// link.
+func (c copier) own(name string, info fs.FileInfo) error {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil
+	}
+
+	return c.to.Lchown(name, int(stat.Uid), int(stat.Gid))
 }
