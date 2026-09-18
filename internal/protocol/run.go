@@ -8,7 +8,9 @@ type Run struct {
 	// the keys of the layers below, lowest first
 	Layers []string
 
-	// KEY=VALUE, in the order the build file set them
+	// KEY=VALUE as the build file set them, each key once where it was
+	// first set. Defaults such as PATH are the agent's, so nothing of the
+	// host's environment reaches a build
 	Env     []string
 	Command string
 }
