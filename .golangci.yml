@@ -37,6 +37,13 @@ linters:
       default: none
       enable:
         - after-block
+  exclusions:
+    rules:
+      # tests give files odd modes on purpose, to see them kept
+      - path: _test\.go
+        linters:
+          - gosec
+        text: G302
 
 formatters:
   enable:
