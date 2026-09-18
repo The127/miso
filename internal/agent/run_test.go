@@ -16,14 +16,24 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
-	// arrange
+// importedBase is an agent keeping its layers in a directory, with the base
+// image of the VM imported as the layer base.
+func importedBase(t *testing.T, layers string) *agent.Agent {
+	t.Helper()
+
 	digest := os.Getenv("MISO_VMTEST_BASE_DIGEST")
 	require.NotEmpty(t, digest, "MISO_VMTEST_BASE names no base image")
-	layers := t.TempDir()
 	worker := agent.New(layers, t.TempDir())
 	err := worker.Import(context.Background(), protocol.Import{Key: "base", Digest: digest}, io.Discard)
 	require.NoError(t, err)
+
+	return worker
+}
+
+func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi > /x"}
 
 	// act
@@ -36,4 +46,17 @@ func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hi\n", string(written))
 	assert.NoFileExists(t, filepath.Join(layers, "base", "x"))
+}
+
+func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
+	// arrange
+	worker := importedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "exit 3"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 3, code)
 }
