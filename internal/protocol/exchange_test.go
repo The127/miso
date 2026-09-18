@@ -42,3 +42,19 @@ func TestARunThatExitsNonZeroIsACommandFailure(t *testing.T) {
 	assert.ErrorIs(t, err, protocol.ErrCommandFailed)
 	assert.ErrorContains(t, err, "exit code 100")
 }
+
+func TestAnAgentFailureIsNotACommandFailure(t *testing.T) {
+	// arrange
+	var replies bytes.Buffer
+	agent := protocol.New("miso 1.2.0", bytes.NewReader(nil), &replies)
+	require.NoError(t, agent.Send(protocol.Failed{Reason: "mount overlay: no space left on device"}))
+	host := protocol.New("miso 1.2.0", &replies, io.Discard)
+
+	// act
+	err := host.Run(protocol.Run{Command: "apt-get update"}, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrAgentFailed)
+	assert.NotErrorIs(t, err, protocol.ErrCommandFailed)
+	assert.ErrorContains(t, err, "mount overlay: no space left on device")
+}

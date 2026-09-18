@@ -27,6 +27,8 @@ func (c *Conn) Run(run Run, out io.Writer) error {
 			return nil
 		case Exited:
 			return fmt.Errorf("%w: exit code %d", ErrCommandFailed, m.Code)
+		case Failed:
+			return fmt.Errorf("%w: %s", ErrAgentFailed, m.Reason)
 		}
 	}
 }
