@@ -39,3 +39,15 @@ func TestAnExitedSentIsTheExitedReceived(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Exited{Code: 100}, received)
 }
+
+func TestAnUnknownMessageIsAnError(t *testing.T) {
+	// arrange
+	wire := bytes.NewBufferString(`{"Nope":{}}` + "\n")
+	conn := protocol.New(wire, wire)
+
+	// act
+	_, err := conn.Receive()
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrUnknownMessage)
+}
