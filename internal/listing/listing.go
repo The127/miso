@@ -59,6 +59,8 @@ func describe(instruction imagefile.Instruction) (int, string) {
 		return step.Line, copyText(step)
 	case imagefile.Output:
 		return step.Line, outputText(step)
+	case imagefile.Check:
+		return step.Line, "CHECK " + step.Command
 	}
 
 	return 0, ""
