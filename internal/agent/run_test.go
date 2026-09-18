@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -80,4 +81,33 @@ func TestAFailedRunLeavesNoWork(t *testing.T) {
 	}
 
 	assert.Equal(t, []string{"base"}, names)
+}
+
+// layerWithF is the layer of a key in a directory, holding only /f with a
+// text.
+func layerWithF(t *testing.T, layers, key, text string) {
+	t.Helper()
+
+	work, err := layer.Open(layers).Begin(key)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "f"), []byte(text), 0o600))
+	require.NoError(t, work.Finish())
+}
+
+func TestAHigherLayerHidesALowerOne(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := importedBase(t, layers)
+	layerWithF(t, layers, "a", "a")
+	layerWithF(t, layers, "b", "b")
+	run := protocol.Run{Key: "run", Layers: []string{"base", "a", "b"}, Command: "cat /f > /seen"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
+	require.NoError(t, err)
+	assert.Equal(t, "b", string(seen))
 }
