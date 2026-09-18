@@ -14,7 +14,7 @@ var ErrDuplicateStage = errors.New("stage name taken")
 var ErrReservedStage = errors.New("stage name reserved")
 
 func checkName(stage imagefile.Stage, known map[string]map[string]bool) error {
-	if stage.Name == scratch {
+	if stage.Name == Scratch {
 		return at(stage.Line, fmt.Errorf("stage %s: %w", stage.Name, ErrReservedStage))
 	}
 

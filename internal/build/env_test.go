@@ -14,7 +14,7 @@ import (
 func TestARunKeepsTheVariablesSetBeforeItInOrder(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "1"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Env{Line: 3, Key: "B", Value: "2"}, Key: "k2", BuiltOn: []string{"k1"}},
@@ -34,7 +34,7 @@ func TestARunKeepsTheVariablesSetBeforeItInOrder(t *testing.T) {
 func TestAVariableSetTwiceIsSentOnceWithItsLastValue(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "1"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Env{Line: 3, Key: "B", Value: "2"}, Key: "k2", BuiltOn: []string{"k1"}},

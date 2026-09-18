@@ -24,9 +24,9 @@ func Requests(planned plan.Plan) ([]protocol.Run, error) {
 	roots := map[string]rootfs{}
 	for _, stage := range planned.Stages {
 		for _, step := range stage.Steps {
-			// a key nobody left behind is a base
+			// a key nobody left behind is a base, and scratch has nothing
 			under, seen := roots[step.BuiltOn[0]]
-			if !seen {
+			if !seen && stage.Base != plan.Scratch {
 				under = rootfs{layers: []string{step.BuiltOn[0]}}
 			}
 

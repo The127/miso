@@ -14,7 +14,7 @@ import (
 func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base:  "scratch",
+		Base:  "debian:13",
 		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
 	}}}
 
@@ -30,7 +30,7 @@ func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Run{Line: 3, Command: "echo bye"}, Key: "k2", BuiltOn: []string{"k1"}},
@@ -49,7 +49,7 @@ func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Copy{Line: 2, Sources: []string{"motd"}, Destination: "/etc/motd"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Run{Line: 3, Command: "cat /etc/motd"}, Key: "k2", BuiltOn: []string{"k1"}},
@@ -68,7 +68,7 @@ func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 func TestAnEnvMakesNoLayer(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "1"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Run{Line: 3, Command: "echo $A"}, Key: "k2", BuiltOn: []string{"k1"}},
@@ -87,7 +87,7 @@ func TestAnEnvMakesNoLayer(t *testing.T) {
 func TestAnOutputMakesNoLayer(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
-		Base: "scratch",
+		Base: "debian:13",
 		Steps: []plan.Step{
 			{Instruction: imagefile.Output{Line: 2, Kind: "disk", Name: "x.raw"}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Run{Line: 3, Command: "echo hi"}, Key: "k2", BuiltOn: []string{"k1"}},
@@ -101,4 +101,21 @@ func TestAnOutputMakesNoLayer(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base"}, requests[0].Layers)
+}
+
+func TestARunOnScratchIsBuiltOnNoLayer(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:    "scratch",
+		BaseKey: "s",
+		Steps:   []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"s"}}},
+	}}}
+
+	// act
+	requests, err := build.Requests(planned)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 1)
+	assert.Empty(t, requests[0].Layers)
 }
