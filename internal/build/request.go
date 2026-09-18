@@ -12,7 +12,7 @@ func Requests(planned plan.Plan) []protocol.Run {
 	for _, stage := range planned.Stages {
 		for _, step := range stage.Steps {
 			run := step.Instruction.(imagefile.Run)
-			requests = append(requests, protocol.Run{Key: step.Key, Command: run.Command})
+			requests = append(requests, protocol.Run{Key: step.Key, Layers: step.BuiltOn, Command: run.Command})
 		}
 	}
 

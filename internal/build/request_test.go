@@ -40,3 +40,18 @@ func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
 	require.Len(t, requests, 1)
 	assert.Equal(t, "k1", requests[0].Key)
 }
+
+func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "echo hi"}, Key: "k1", BuiltOn: []string{"base"}}},
+	}}}
+
+	// act
+	requests := build.Requests(planned)
+
+	// assert
+	require.Len(t, requests, 1)
+	assert.Equal(t, []string{"base"}, requests[0].Layers)
+}
