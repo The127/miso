@@ -133,6 +133,16 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the tree copies a directory tree as it is. It knows nothing of ours and
+  # never starts a process or touches the network
+  - package: '**.internal.tree$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
   # the layer keeps the layers on the agent's cache disk. It knows nothing
   # of ours and never touches a process, the network or the kernel
   - package: '**.internal.layer$'
