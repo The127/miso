@@ -2,6 +2,7 @@ package build
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
@@ -29,7 +30,16 @@ func Requests(planned plan.Plan) []protocol.Run {
 			envs[step.Key] = env
 			if variable, isEnv := step.Instruction.(imagefile.Env); isEnv {
 				layers[step.Key] = below
-				envs[step.Key] = slices.Concat(env, []string{variable.Key + "=" + variable.Value})
+				set := slices.Clone(env)
+				assignment := variable.Key + "=" + variable.Value
+				at := slices.IndexFunc(set, func(earlier string) bool { return strings.HasPrefix(earlier, variable.Key+"=") })
+				if at < 0 {
+					set = append(set, assignment)
+				} else {
+					set[at] = assignment
+				}
+
+				envs[step.Key] = set
 			}
 		}
 	}
