@@ -69,6 +69,21 @@ func TestALayerFinishedTwiceKeepsTheFirst(t *testing.T) {
 	assert.Len(t, entries, 1)
 }
 
+func TestADiscardedLayerLeavesNothing(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	work := begun(t, layer.Open(dir), "abc", "never")
+
+	// act
+	err := work.Discard()
+
+	// assert
+	require.NoError(t, err)
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
 // begun is the layer of a key with a file hello that says what is given.
 func begun(t *testing.T, store *layer.Store, key, says string) *layer.Work {
 	t.Helper()
