@@ -9,7 +9,12 @@ func Of(info *debug.BuildInfo) string {
 		return info.Main.Version
 	}
 
-	return setting(info, "vcs.revision")[:12]
+	revision := setting(info, "vcs.revision")
+	if revision == "" {
+		return "unknown"
+	}
+
+	return revision[:12]
 }
 
 func setting(info *debug.BuildInfo, key string) string {

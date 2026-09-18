@@ -33,3 +33,14 @@ func TestADevelopmentBuildShowsItsCommit(t *testing.T) {
 	// assert
 	assert.Equal(t, "a436a5d37ff8", shown)
 }
+
+func TestABuildWithoutACommitSaysSo(t *testing.T) {
+	// arrange
+	info := &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}
+
+	// act
+	shown := version.Of(info)
+
+	// assert
+	assert.Equal(t, "unknown", shown)
+}
