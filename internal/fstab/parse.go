@@ -2,9 +2,14 @@ package fstab
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
 )
+
+// ErrBadLine is a line of an fstab that names no file system to mount.
+var ErrBadLine = errors.New("bad fstab line")
 
 // Entry is one line of an fstab.
 type Entry struct {
@@ -19,10 +24,14 @@ func Parse(r io.Reader) ([]Entry, error) {
 	var entries []Entry
 
 	lines := bufio.NewScanner(r)
-	for lines.Scan() {
+	for number := 1; lines.Scan(); number++ {
 		fields := strings.Fields(lines.Text())
 		if len(fields) == 0 || strings.HasPrefix(fields[0], "#") {
 			continue
+		}
+
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("line %d: %w", number, ErrBadLine)
 		}
 
 		entries = append(entries, Entry{
