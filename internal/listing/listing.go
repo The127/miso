@@ -54,8 +54,19 @@ func describe(instruction imagefile.Instruction) (int, string) {
 	case imagefile.Env:
 		return step.Line, "ENV " + step.Key + "=" + step.Value
 	case imagefile.Copy:
-		return step.Line, "COPY " + strings.Join(append(step.Sources, step.Destination), " ")
+		return step.Line, copyText(step)
 	}
 
 	return 0, ""
+}
+
+func copyText(step imagefile.Copy) string {
+	words := []string{"COPY"}
+	if step.From != "" {
+		words = append(words, "--from="+step.From)
+	}
+
+	words = append(words, step.Sources...)
+
+	return strings.Join(append(words, step.Destination), " ")
 }
