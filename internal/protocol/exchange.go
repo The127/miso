@@ -1,6 +1,9 @@
 package protocol
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // Run asks the agent to run a command and writes what the command writes
 // to out until the agent tells how it ended.
@@ -22,6 +25,8 @@ func (c *Conn) Run(run Run, out io.Writer) error {
 			}
 		case Done:
 			return nil
+		case Exited:
+			return fmt.Errorf("%w: exit code %d", ErrCommandFailed, m.Code)
 		}
 	}
 }
