@@ -21,6 +21,10 @@ linters:
   settings:
     exhaustive:
       default-signifies-exhaustive: true
+    gosec:
+      excludes:
+        # a build tool reads the files the user names, that is its job
+        - G304
     nolintlint:
       require-explanation: true
     wsl_v5:
