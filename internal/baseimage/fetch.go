@@ -17,7 +17,7 @@ import (
 func (c *Cache) Fetch(ctx context.Context, name string) (string, error) {
 	url, known := c.sources[name]
 	if !known {
-		return "", fmt.Errorf("%s: %w", name, ErrUnknownBase)
+		return "", ErrUnknownBase
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
