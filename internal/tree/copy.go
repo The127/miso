@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // Copy copies what is in one directory into another.
@@ -59,7 +61,7 @@ func (c copier) entries(dir string) error {
 		case entry.IsDir():
 			err = c.directory(name, info)
 		case info.Mode()&fs.ModeSymlink != 0:
-			err = c.link(name)
+			err = c.link(name, info)
 		default:
 			err = c.fileOnce(name, info)
 		}
@@ -87,13 +89,28 @@ func (c copier) directory(name string, info fs.FileInfo) error {
 }
 
 // link copies a link as the text it holds and never follows it.
-func (c copier) link(name string) error {
+func (c copier) link(name string, info fs.FileInfo) error {
 	text, err := c.from.Readlink(name)
 	if err != nil {
 		return err
 	}
 
-	return c.to.Symlink(text, name)
+	if err := c.to.Symlink(text, name); err != nil {
+		return err
+	}
+
+	// a root sets times only through links, so the link's own time is set
+	// by name within its directory
+	dir, err := c.to.Open(path.Dir(name))
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = dir.Close() }()
+
+	then := unix.NsecToTimespec(info.ModTime().UnixNano())
+
+	return unix.UtimesNanoAt(int(dir.Fd()), path.Base(name), []unix.Timespec{then, then}, unix.AT_SYMLINK_NOFOLLOW)
 }
 
 // fileOnce copies a file with several names once and links its other names

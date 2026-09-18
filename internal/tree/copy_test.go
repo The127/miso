@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/tree"
 )
@@ -88,6 +89,25 @@ func TestFilesAndDirectoriesKeepTheirTime(t *testing.T) {
 	dir, err := os.Lstat(filepath.Join(target, "a"))
 	require.NoError(t, err)
 	assert.True(t, then.Equal(dir.ModTime()), dir.ModTime())
+}
+
+func TestALinkKeepsItsOwnTime(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	then := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, os.Symlink("/nowhere/at/all", filepath.Join(source, "link")))
+	times := []unix.Timespec{unix.NsecToTimespec(then.UnixNano()), unix.NsecToTimespec(then.UnixNano())}
+	require.NoError(t, unix.UtimesNanoAt(unix.AT_FDCWD, filepath.Join(source, "link"), times, unix.AT_SYMLINK_NOFOLLOW))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	link, err := os.Lstat(filepath.Join(target, "link"))
+	require.NoError(t, err)
+	assert.True(t, then.Equal(link.ModTime()), link.ModTime())
 }
 
 func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
