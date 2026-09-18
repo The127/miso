@@ -2,8 +2,12 @@ package disk
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 )
+
+// ErrUnknownFileSystem is a partition with no file system miso can mount.
+var ErrUnknownFileSystem = errors.New("unknown file system")
 
 // FileSystem names the file system on a partition the way mount(2) takes it.
 func FileSystem(r io.ReaderAt) (string, error) {
@@ -26,5 +30,5 @@ func FileSystem(r io.ReaderAt) (string, error) {
 		return "btrfs", nil
 	}
 
-	return "", nil
+	return "", ErrUnknownFileSystem
 }

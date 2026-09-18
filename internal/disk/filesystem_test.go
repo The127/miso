@@ -36,3 +36,14 @@ func TestABtrfsIsKnownByItsMagic(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "btrfs", kind)
 }
+
+func TestAPartitionWithoutAMagicIsAnUnknownFileSystem(t *testing.T) {
+	// arrange
+	partition := make([]byte, 128*1024)
+
+	// act
+	_, err := disk.FileSystem(bytes.NewReader(partition))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrUnknownFileSystem)
+}
