@@ -107,6 +107,19 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the disk reads the partition table of a disk from the reader it is
+  # handed. It knows nothing of ours, opens nothing and never touches a
+  # process, the network or the kernel
+  - package: '**.internal.disk$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
