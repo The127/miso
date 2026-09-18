@@ -37,7 +37,8 @@ func helper(root, command string) error {
 		return fmt.Errorf("mount proc: %w", err)
 	}
 
-	if err := syscall.Mount("sysfs", "/sys", "sysfs", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, ""); err != nil {
+	// read-only, because the kernel behind it is the same for every later run
+	if err := syscall.Mount("sysfs", "/sys", "sysfs", syscall.MS_RDONLY|syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, ""); err != nil {
 		return fmt.Errorf("mount sys: %w", err)
 	}
 
