@@ -172,6 +172,37 @@ func TestARunSharesMemoryInDevShm(t *testing.T) {
 	assert.Equal(t, "1777\n", out.String())
 }
 
+func TestARunSeesNoneOfTheBuildersDisks(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "ls /dev"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.NotContains(t, out.String(), "vda")
+}
+
+func TestADeviceOneRunRemovesIsThereForTheNext(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	removing := protocol.Run{Key: "removing", Layers: []string{"base"}, Command: "rm /dev/null"}
+	code, err := worker.Run(context.Background(), removing, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "test -c /dev/null"}
+
+	// act
+	code, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
