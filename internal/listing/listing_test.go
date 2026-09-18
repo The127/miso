@@ -164,3 +164,16 @@ func TestAStepWithoutAKeyShowsDashes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM debian:sid\n   2  ------------  RUN debootstrap sid /rootfs\n", out.String())
 }
+
+func TestAListingNamesWhatABuildDownloadsFirst(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Agent: "miso v0.3.1", Downloads: []string{"debian:sid"}, Stages: []plan.Stage{{Base: "debian:sid"}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "agent miso v0.3.1\ndownload debian:sid\nFROM debian:sid\n", out.String())
+}

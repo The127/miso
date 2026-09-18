@@ -16,6 +16,10 @@ func Write(w io.Writer, planned plan.Plan) error {
 		out.print("agent %s", planned.Agent)
 	}
 
+	for _, base := range planned.Downloads {
+		out.print("download %s", base)
+	}
+
 	for _, stage := range planned.Stages {
 		out.print("%s", from(stage))
 		for _, step := range stage.Steps {
