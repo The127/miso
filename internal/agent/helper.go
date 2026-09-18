@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // helperName is the name the agent starts itself under to run a command.
@@ -35,6 +37,16 @@ func helper(root, command string) error {
 	// mounted from inside the run's PID namespace, so it shows the run's own
 	if err := syscall.Mount("proc", "/proc", "proc", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, ""); err != nil {
 		return fmt.Errorf("mount proc: %w", err)
+	}
+
+	// its own, never the VM's, which shows the builder's disks and which a
+	// run could break for every later run
+	if err := syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID, "mode=755"); err != nil {
+		return fmt.Errorf("mount /dev: %w", err)
+	}
+
+	if err := unix.Mknod("/dev/null", unix.S_IFCHR|0o666, int(unix.Mkdev(1, 3))); err != nil { //nolint:gosec // the kernel keeps device numbers in 32 bits
+		return fmt.Errorf("make /dev/null: %w", err)
 	}
 
 	return syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
