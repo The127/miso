@@ -83,3 +83,22 @@ func TestAnEnvMakesNoLayer(t *testing.T) {
 	require.Len(t, requests, 1)
 	assert.Equal(t, []string{"base"}, requests[0].Layers)
 }
+
+func TestAnOutputMakesNoLayer(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{
+			{Instruction: imagefile.Output{Line: 2, Kind: "disk", Name: "x.raw"}, Key: "k1", BuiltOn: []string{"base"}},
+			{Instruction: imagefile.Run{Line: 3, Command: "echo hi"}, Key: "k2", BuiltOn: []string{"k1"}},
+		},
+	}}}
+
+	// act
+	requests, err := build.Requests(planned)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 1)
+	assert.Equal(t, []string{"base"}, requests[0].Layers)
+}

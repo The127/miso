@@ -15,9 +15,12 @@ type rootfs struct {
 
 // after is the root file system a step leaves for the steps on top of it.
 func (r rootfs) after(step plan.Step) rootfs {
-	if variable, isEnv := step.Instruction.(imagefile.Env); isEnv {
-		return rootfs{layers: r.layers, env: withVariable(r.env, variable)}
+	switch instruction := step.Instruction.(type) {
+	case imagefile.Env:
+		return rootfs{layers: r.layers, env: withVariable(r.env, instruction)}
+	case imagefile.Run, imagefile.Copy:
+		return rootfs{layers: slices.Concat(r.layers, []string{step.Key}), env: r.env}
 	}
 
-	return rootfs{layers: slices.Concat(r.layers, []string{step.Key}), env: r.env}
+	return r
 }
