@@ -42,7 +42,7 @@ func TestABtrfsRootIsMounted(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-btrfs", target)
+	err := agent.MountRoot("miso-test-flat", target)
 
 	// assert
 	require.NoError(t, err)
@@ -50,4 +50,19 @@ func TestABtrfsRootIsMounted(t *testing.T) {
 	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
 	require.NoError(t, err)
 	assert.Contains(t, string(release), "ID=miso-test")
+}
+
+func TestTheRootSubvolumeIsFoundByItsOwnFstab(t *testing.T) {
+	// arrange
+	target := t.TempDir()
+
+	// act
+	err := agent.MountRoot("miso-test-subvolumes", target)
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = syscall.Unmount(target, 0) })
+	release, err := os.ReadFile(filepath.Join(target, "etc/os-release"))
+	require.NoError(t, err)
+	assert.Contains(t, string(release), "ID=miso-test-subvolumes")
 }
