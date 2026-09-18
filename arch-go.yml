@@ -68,6 +68,17 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the base image fetches what a FROM names from the network into miso's
+  # cache and hashes it. It knows nothing of ours, never starts a process
+  # and never touches the kernel. It is the one package that may use net
+  - package: '**.internal.baseimage$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - syscall
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:
