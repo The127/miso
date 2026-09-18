@@ -47,3 +47,14 @@ func TestAPartitionWithoutAMagicIsAnUnknownFileSystem(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, disk.ErrUnknownFileSystem)
 }
+
+func TestAPartitionTooSmallForAMagicIsAnUnknownFileSystem(t *testing.T) {
+	// arrange
+	partition := make([]byte, 4096)
+
+	// act
+	_, err := disk.FileSystem(bytes.NewReader(partition))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrUnknownFileSystem)
+}
