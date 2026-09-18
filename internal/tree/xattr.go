@@ -9,27 +9,54 @@ import (
 // xattrs gives a copy the extended attributes of what it was copied from,
 // never following a link.
 func (c copier) xattrs(name string) error {
-	return at(c.from, name, func(source string) error {
-		return at(c.to, name, func(target string) error {
-			attributes, err := list(source)
-			if err != nil {
+	var attributes []attribute
+
+	err := at(c.from, "getxattr", name, func(source string) error {
+		var err error
+
+		attributes, err = read(source)
+
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	return at(c.to, "setxattr", name, func(target string) error {
+		for _, a := range attributes {
+			if err := unix.Lsetxattr(target, a.name, a.value, 0); err != nil {
 				return err
 			}
+		}
 
-			for _, attribute := range attributes {
-				value, err := get(source, attribute)
-				if err != nil {
-					return err
-				}
-
-				if err := unix.Lsetxattr(target, attribute, value, 0); err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
+		return nil
 	})
+}
+
+type attribute struct {
+	name  string
+	value []byte
+}
+
+// read is every extended attribute of a path with its value.
+func read(path string) ([]attribute, error) {
+	names, err := list(path)
+	if err != nil {
+		return nil, err
+	}
+
+	attributes := make([]attribute, 0, len(names))
+
+	for _, name := range names {
+		value, err := get(path, name)
+		if err != nil {
+			return nil, err
+		}
+
+		attributes = append(attributes, attribute{name: name, value: value})
+	}
+
+	return attributes, nil
 }
 
 // list names the extended attributes of a path.

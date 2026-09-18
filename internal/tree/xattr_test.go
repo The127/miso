@@ -49,6 +49,22 @@ func TestExtendedAttributesAreKept(t *testing.T) {
 	assert.Equal(t, "link", string(xattr(t, filepath.Join(target, "l"), "trusted.note")))
 }
 
+func TestAnAttributeThatCannotBeKeptNamesItsFile(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(source, "noted"), nil, 0o600))
+	require.NoError(t, unix.Lsetxattr(filepath.Join(source, "noted"), "user.note", []byte("file"), 0))
+	require.NoError(t, unix.Mount("ramfs", target, "ramfs", 0, ""))
+	t.Cleanup(func() { _ = unix.Unmount(target, unix.MNT_DETACH) })
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	assert.ErrorContains(t, err, "noted")
+}
+
 // xattr is the value of an extended attribute of a path, not following a
 // link.
 func xattr(t *testing.T, name, attribute string) []byte {
