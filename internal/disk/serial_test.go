@@ -24,3 +24,17 @@ func TestADiskIsFoundByItsSerial(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "vdb", name)
 }
+
+func TestASerialNoDiskHasIsNoDisk(t *testing.T) {
+	// arrange
+	block := fstest.MapFS{
+		"vda/serial": {Data: []byte("abc")},
+	}
+
+	// act
+	_, err := disk.BySerial(block, "0123456789abcdef0123")
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrNoDisk)
+	assert.ErrorContains(t, err, "0123456789abcdef0123")
+}

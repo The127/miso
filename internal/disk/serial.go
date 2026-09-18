@@ -1,9 +1,14 @@
 package disk
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
 	"path"
 )
+
+// ErrNoDisk is a serial no disk has.
+var ErrNoDisk = errors.New("no disk with that serial")
 
 // BySerial names the disk in a /sys/block whose serial is the one given.
 func BySerial(block fs.FS, serial string) (string, error) {
@@ -23,5 +28,5 @@ func BySerial(block fs.FS, serial string) (string, error) {
 		}
 	}
 
-	return "", nil
+	return "", fmt.Errorf("%s: %w", serial, ErrNoDisk)
 }
