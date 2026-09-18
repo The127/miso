@@ -11,4 +11,4 @@ type Exited struct {
 	Code int
 }
 
-func (Exited) message() {}
+func (x Exited) into(e *envelope) { e.Exited = &x }

@@ -7,7 +7,7 @@ type Output struct {
 	Bytes  []byte
 }
 
-func (Output) message() {}
+func (o Output) into(e *envelope) { e.Output = &o }
 
 // Stream is where a command wrote its output.
 type Stream string

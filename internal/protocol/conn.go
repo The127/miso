@@ -22,18 +22,7 @@ func New(agent string, r io.Reader, w io.Writer) *Conn {
 // Send writes a message to the other side.
 func (c *Conn) Send(message Message) error {
 	e := envelope{Agent: c.agent}
-	switch m := message.(type) {
-	case Run:
-		e.Run = &m
-	case Output:
-		e.Output = &m
-	case Done:
-		e.Done = &m
-	case Exited:
-		e.Exited = &m
-	case Failed:
-		e.Failed = &m
-	}
+	message.into(&e)
 
 	return c.encoder.Encode(e)
 }
@@ -49,25 +38,10 @@ func (c *Conn) Receive() (Message, error) {
 		return nil, fmt.Errorf("%w: sent by %s, read by %s", ErrAnotherAgent, e.Agent, c.agent)
 	}
 
-	if e.Output != nil {
-		return *e.Output, nil
+	message := e.open()
+	if message == nil {
+		return nil, ErrUnknownMessage
 	}
 
-	if e.Done != nil {
-		return *e.Done, nil
-	}
-
-	if e.Exited != nil {
-		return *e.Exited, nil
-	}
-
-	if e.Failed != nil {
-		return *e.Failed, nil
-	}
-
-	if e.Run != nil {
-		return *e.Run, nil
-	}
-
-	return nil, ErrUnknownMessage
+	return message, nil
 }

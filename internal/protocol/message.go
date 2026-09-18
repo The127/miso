@@ -7,7 +7,7 @@ var ErrUnknownMessage = errors.New("unknown message")
 
 // Message is anything miso and its agent send each other.
 type Message interface {
-	message()
+	into(e *envelope)
 }
 
 // envelope is a message on the wire, sent by the agent it names. Exactly
@@ -19,4 +19,23 @@ type envelope struct {
 	Done   *Done   `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
 	Failed *Failed `json:",omitempty"`
+}
+
+// open is the message the envelope holds, or nil when it holds none this
+// side knows.
+func (e envelope) open() Message {
+	switch {
+	case e.Run != nil:
+		return *e.Run
+	case e.Output != nil:
+		return *e.Output
+	case e.Done != nil:
+		return *e.Done
+	case e.Exited != nil:
+		return *e.Exited
+	case e.Failed != nil:
+		return *e.Failed
+	}
+
+	return nil
 }
