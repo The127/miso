@@ -138,3 +138,15 @@ func TestAPlannedStageKeepsItsNameAndItsBase(t *testing.T) {
 	assert.Equal(t, "build", planned.Stages[0].Name)
 	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
 }
+
+func TestAPlanKeepsTheAgentItWasKeyedWith(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\n")
+
+	// act
+	planned, err := plan.New(stages, "miso v0.3.1", noFiles, noImages)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "miso v0.3.1", planned.Agent)
+}

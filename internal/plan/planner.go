@@ -16,7 +16,7 @@ type planner struct {
 }
 
 func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
-	var planned Plan
+	planned := Plan{Agent: p.agent}
 	for _, stage := range stages {
 		from, digest, err := p.start(stage)
 		if err != nil {

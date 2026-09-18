@@ -4,6 +4,7 @@ import "github.com/The127/miso/internal/imagefile"
 
 // Plan is a build file with everything looked up and keyed.
 type Plan struct {
+	Agent  string
 	Stages []Stage
 }
 
