@@ -32,6 +32,10 @@ func (c *Cache) Fetch(ctx context.Context, name string) (string, error) {
 
 	defer func() { _ = response.Body.Close() }()
 
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GET %s: %s", url, response.Status)
+	}
+
 	digest, err := c.store(response.Body)
 	if err != nil {
 		return "", err

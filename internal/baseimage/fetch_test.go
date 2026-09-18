@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,4 +61,22 @@ func TestAFetchedImageIsKnownToACacheOpenedLaterOnTheSameDirectory(t *testing.T)
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, fetched, digest)
+}
+
+func TestAFetchThatIsRefusedIsAnErrorAndLeavesNothingBehind(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{})
+	dir := t.TempDir()
+	cache := baseimage.Open(dir, server.Client(), map[string]string{"debian:sid": server.URL + "/gone.qcow2"})
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorContains(t, err, server.URL+"/gone.qcow2")
+	assert.ErrorContains(t, err, "404 Not Found")
+	digest, digestErr := cache.Digest("debian:sid")
+	require.NoError(t, digestErr)
+	assert.Empty(t, digest)
+	assert.NoDirExists(t, filepath.Join(dir, "sha256"))
 }
