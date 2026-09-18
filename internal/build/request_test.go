@@ -11,7 +11,7 @@ import (
 	"github.com/The127/miso/internal/plan"
 )
 
-func TestARunOnScratchBecomesARequestWithItsCommand(t *testing.T) {
+func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
 		Base:  "scratch",
