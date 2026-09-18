@@ -59,3 +59,22 @@ func TestAStageOnAnEmptyScratchStageImportsNothing(t *testing.T) {
 	require.Len(t, requests, 1)
 	assert.IsType(t, protocol.Run{}, requests[0])
 }
+
+func TestTwoStagesOnOneImageImportItOnce(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nRUN a\nFROM debian:trixie\nRUN b\n")
+
+	// act
+	requests, err := build.Requests(source)
+
+	// assert
+	require.NoError(t, err)
+	imports := 0
+	for _, request := range requests {
+		if _, isImport := request.(protocol.Import); isImport {
+			imports++
+		}
+	}
+
+	assert.Equal(t, 1, imports)
+}
