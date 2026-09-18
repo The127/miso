@@ -39,6 +39,20 @@ func TestALineWithoutOptionsIsAnEntry(t *testing.T) {
 	assert.Equal(t, []fstab.Entry{{Source: "UUID=15c2", Target: "/", Type: "ext4"}}, entries)
 }
 
+func TestAnOctalEscapeInANameIsItsCharacter(t *testing.T) {
+	// arrange
+	text := `LABEL=my\040disk /mnt/my\040disk ext4` + "\n"
+
+	// act
+	entries, err := fstab.Parse(strings.NewReader(text))
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "LABEL=my disk", entries[0].Source)
+	assert.Equal(t, "/mnt/my disk", entries[0].Target)
+}
+
 func TestALineWithoutATypeIsABadLine(t *testing.T) {
 	// arrange
 	text := "# fstab\nUUID=15c2 /\n"
