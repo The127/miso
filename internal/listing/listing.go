@@ -27,11 +27,16 @@ func Write(w io.Writer, planned plan.Plan) error {
 }
 
 func from(stage plan.Stage) string {
+	line := "FROM " + stage.Base
 	if stage.Name != "" {
-		return "FROM " + stage.Base + " AS " + stage.Name
+		line += " AS " + stage.Name
 	}
 
-	return "FROM " + stage.Base
+	if stage.BaseDigest != "" {
+		line += "  base " + short(stage.BaseDigest)
+	}
+
+	return line
 }
 
 // short cuts a key to twelve characters, as git does with a commit.
