@@ -16,24 +16,6 @@ import (
 	"github.com/The127/miso/internal/baseimage"
 )
 
-// serving is an image server in memory, one image per path.
-func serving(t *testing.T, images map[string]string) *httptest.Server {
-	t.Helper()
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		image, found := images[r.URL.Path]
-		if !found {
-			http.NotFound(w, r)
-			return
-		}
-
-		_, _ = w.Write([]byte(image))
-	}))
-	t.Cleanup(server.Close)
-
-	return server
-}
-
 func TestAFetchDownloadsAnImageAndAnswersTheDigestOfItsBytes(t *testing.T) {
 	// arrange
 	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
