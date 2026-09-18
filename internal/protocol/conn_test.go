@@ -70,6 +70,21 @@ func TestAFailedSentIsTheFailedReceived(t *testing.T) {
 	assert.Equal(t, protocol.Failed{Reason: "mount overlay: no space left on device"}, received)
 }
 
+func TestADoneSentIsTheDoneReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	sent := conn.Send(protocol.Done{})
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, received)
+}
+
 func TestAnUnknownMessageIsAnError(t *testing.T) {
 	// arrange
 	wire := bytes.NewBufferString(`{"Agent":"miso 1.2.0","Nope":{}}` + "\n")

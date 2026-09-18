@@ -27,6 +27,8 @@ func (c *Conn) Send(message Message) error {
 		e.Run = &m
 	case Output:
 		e.Output = &m
+	case Done:
+		e.Done = &m
 	case Exited:
 		e.Exited = &m
 	case Failed:
@@ -49,6 +51,10 @@ func (c *Conn) Receive() (Message, error) {
 
 	if e.Output != nil {
 		return *e.Output, nil
+	}
+
+	if e.Done != nil {
+		return *e.Done, nil
 	}
 
 	if e.Exited != nil {
