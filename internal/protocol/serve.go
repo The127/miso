@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
@@ -13,6 +14,10 @@ type Runner interface {
 // Serve answers one request of the host with what the runner did.
 func (c *Conn) Serve(runner Runner) error {
 	message, err := c.Receive()
+	if errors.Is(err, ErrAnotherAgent) {
+		return c.Send(Failed{Reason: err.Error()})
+	}
+
 	if err != nil {
 		return err
 	}
