@@ -129,6 +129,28 @@ func TestTheTopTakesTheModeAndTimeOfTheSourceTop(t *testing.T) {
 	assert.True(t, then.Equal(top.ModTime()), top.ModTime())
 }
 
+func TestSetuidSetgidAndStickyAreKept(t *testing.T) {
+	// arrange
+	source := t.TempDir()
+	target := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(source, "tmp"), 0o700))
+	require.NoError(t, os.Chmod(filepath.Join(source, "tmp"), os.ModeSticky|0o777))
+	require.NoError(t, os.WriteFile(filepath.Join(source, "s"), nil, 0o600))
+	require.NoError(t, os.Chmod(filepath.Join(source, "s"), os.ModeSetuid|os.ModeSetgid|0o755))
+
+	// act
+	err := tree.Copy(source, target)
+
+	// assert
+	require.NoError(t, err)
+	dir, err := os.Lstat(filepath.Join(target, "tmp"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|os.ModeSticky|0o777, dir.Mode())
+	file, err := os.Lstat(filepath.Join(target, "s"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeSetuid|os.ModeSetgid|0o755, file.Mode())
+}
+
 func TestADirectoryKeepsWhatIsInItAndItsMode(t *testing.T) {
 	// arrange
 	source := t.TempDir()
