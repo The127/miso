@@ -10,9 +10,10 @@ type Message interface {
 	message()
 }
 
-// envelope is a message on the wire. Exactly one field is set, and that
-// field names what the line holds.
+// envelope is a message on the wire, sent by the agent it names. Exactly
+// one other field is set, and that field names what the line holds.
 type envelope struct {
+	Agent  string
 	Run    *Run    `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
 }
