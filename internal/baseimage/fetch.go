@@ -15,9 +15,9 @@ import (
 // Fetch downloads the image a name stands for and answers its digest, that
 // of the bytes as they arrived.
 func (c *Cache) Fetch(ctx context.Context, name string) (string, error) {
-	url, known := c.sources[name]
-	if !known {
-		return "", ErrUnknownBase
+	url, err := c.source(name)
+	if err != nil {
+		return "", err
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -86,9 +86,9 @@ func (c *Cache) blobs() string {
 	return filepath.Join(c.dir, "sha256")
 }
 
-// blob is where the bytes with a digest live, "sha256:<hex>" as sha256/<hex>.
+// blob is where the bytes with a digest live, sha256:<hex> under sha256/.
 func (c *Cache) blob(digest string) string {
-	return filepath.Join(c.dir, filepath.FromSlash(strings.Replace(digest, ":", "/", 1)))
+	return filepath.Join(c.blobs(), strings.TrimPrefix(digest, "sha256:"))
 }
 
 func (c *Cache) names() string {
