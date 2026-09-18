@@ -56,5 +56,11 @@ func (w *Work) Dir() string {
 
 // Finish puts the layer under its key.
 func (w *Work) Finish() error {
-	return os.Rename(w.dir, w.final)
+	err := os.Rename(w.dir, w.final)
+	// the same key is the same layer, so the one there already is as good
+	if errors.Is(err, fs.ErrExist) {
+		return os.RemoveAll(w.dir)
+	}
+
+	return err
 }
