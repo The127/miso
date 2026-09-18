@@ -13,6 +13,9 @@ const sector = 512
 // ErrBrokenTable is a partition table no real disk can have.
 var ErrBrokenTable = errors.New("broken partition table")
 
+// ErrNoRoot is a disk without a root partition.
+var ErrNoRoot = errors.New("no root partition")
+
 // rootX86_64 is the partition type of an x86-64 root file system in the
 // order its bytes are on disk.
 var rootX86_64 = []byte{
@@ -64,7 +67,7 @@ func Root(r io.ReaderAt) (Partition, error) {
 		}
 	}
 
-	return Partition{}, nil
+	return Partition{}, ErrNoRoot
 }
 
 // lba is a sector number that still fits a byte offset.

@@ -41,6 +41,17 @@ func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
 	assert.ErrorIs(t, err, disk.ErrBrokenTable)
 }
 
+func TestADiskWithoutARootPartitionHasNoRoot(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: esp, first: 34, last: 99})
+
+	// act
+	_, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	assert.ErrorIs(t, err, disk.ErrNoRoot)
+}
+
 type entry struct {
 	kind        string
 	first, last uint64
