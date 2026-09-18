@@ -34,8 +34,14 @@ func (r runner) Run(_ context.Context, _ protocol.Run, out io.Writer) (int, erro
 	return r.code, err
 }
 
-func (r runner) Import(context.Context, protocol.Import) error {
-	return r.err
+func (r runner) Import(_ context.Context, _ protocol.Import, out io.Writer) error {
+	if r.err != nil || r.writes == "" {
+		return r.err
+	}
+
+	_, err := io.WriteString(out, r.writes)
+
+	return err
 }
 
 func TestARunThatWorksIsDone(t *testing.T) {
@@ -72,6 +78,26 @@ func TestAnImportThatWorksIsDone(t *testing.T) {
 	require.NoError(t, err)
 	done, err := host.Receive()
 	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestTheOutputOfAnImportReachesTheHost(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Import{Key: "abc", Digest: "sha256:def"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{writes: "copied 1 GB\n"})
+
+	// assert
+	require.NoError(t, err)
+	output, err := host.Receive()
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Output{Bytes: []byte("copied 1 GB\n")}, output)
 	assert.Equal(t, protocol.Done{}, done)
 }
 
@@ -153,7 +179,7 @@ func (w *watched) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (w *watched) Import(context.Context, protocol.Import) error {
+func (w *watched) Import(context.Context, protocol.Import, io.Writer) error {
 	return nil
 }
 
@@ -190,7 +216,7 @@ func (w *waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, er
 	}
 }
 
-func (w *waiting) Import(ctx context.Context, _ protocol.Import) error {
+func (w *waiting) Import(ctx context.Context, _ protocol.Import, _ io.Writer) error {
 	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
 
 	return err

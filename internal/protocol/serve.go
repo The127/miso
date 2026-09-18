@@ -10,7 +10,7 @@ import (
 // Runner does the work the host asks for on the agent's side.
 type Runner interface {
 	Run(ctx context.Context, run Run, out io.Writer) (code int, err error)
-	Import(ctx context.Context, request Import) error
+	Import(ctx context.Context, request Import, out io.Writer) error
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -42,7 +42,7 @@ func (c *Conn) Serve(runner Runner) error {
 	}()
 
 	if isImport {
-		if err := runner.Import(ctx, request); err != nil {
+		if err := runner.Import(ctx, request, outputs{c}); err != nil {
 			return c.Send(Failed{Reason: err.Error()})
 		}
 
