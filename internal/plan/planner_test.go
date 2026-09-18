@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/plan"
 )
 
 func TestTheSameRunAfterADifferentStepGetsADifferentKey(t *testing.T) {
@@ -245,4 +247,18 @@ func TestAChangedCheckKeepsTheKeysOfAStageBasedOnItsStage(t *testing.T) {
 
 	// assert
 	assert.Equal(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
+}
+
+func TestAStageOnAnUnfetchedStageGetsNoKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM bootstrap\nRUN true\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	require.Len(t, planned.Stages[1].Steps, 1)
+	assert.Empty(t, planned.Stages[1].Steps[0].Key)
 }
