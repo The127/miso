@@ -1,7 +1,9 @@
 package cachedisk
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 )
@@ -23,5 +25,18 @@ func findMkfs() (string, error) {
 		}
 	}
 
-	return "", err
+	return "", fmt.Errorf("%w, it comes with e2fsprogs", err)
+}
+
+// format has mkfs make an ext4 of a size in bytes at a path.
+func format(mkfs, path string, size int64) error {
+	// a bare number would count blocks
+	kibibytes := fmt.Sprintf("%dk", size>>10)
+
+	said, err := exec.Command(mkfs, "-q", path, kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(said))
+	}
+
+	return nil
 }

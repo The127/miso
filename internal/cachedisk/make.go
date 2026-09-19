@@ -1,11 +1,9 @@
 package cachedisk
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -26,6 +24,12 @@ func Make(path string, size int64) error {
 
 // makeDisk is Make without naming the disk in its errors.
 func makeDisk(path string, size int64) error {
+	// before anything is touched, a missing mkfs leaves all as it was
+	mkfs, err := findMkfs()
+	if err != nil {
+		return err
+	}
+
 	if err := removeLeftovers(path); err != nil {
 		return err
 	}
@@ -43,21 +47,8 @@ func makeDisk(path string, size int64) error {
 		return err
 	}
 
-	// a bare number would count blocks
-	kibibytes := fmt.Sprintf("%dk", size>>10)
-
-	mkfs, err := findMkfs()
-	if errors.Is(err, exec.ErrNotFound) {
-		return fmt.Errorf("%w, it comes with e2fsprogs", err)
-	}
-
-	if err != nil {
+	if err := format(mkfs, temp.Name(), size); err != nil {
 		return err
-	}
-
-	said, err := exec.Command(mkfs, "-q", temp.Name(), kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(said))
 	}
 
 	// a link, unlike a rename, never replaces what is there
