@@ -2,9 +2,7 @@ package link
 
 import (
 	"encoding/binary"
-	"fmt"
 	"os"
-	"runtime"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -18,39 +16,24 @@ type Conn struct {
 // Open opens a route netlink socket in a network namespace, or in the
 // caller's own one for nil. It stays there whichever thread uses it.
 func Open(namespace *os.File) (*Conn, error) {
-	type opened struct {
-		sock int
-		err  error
+	var sock int
+	err := Within(namespace, func() error {
+		var err error
+		sock, err = unix.Socket(unix.AF_NETLINK, unix.SOCK_RAW|unix.SOCK_CLOEXEC, unix.NETLINK_ROUTE)
+
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	done := make(chan opened)
-	go func() {
-		if namespace != nil {
-			// never unlocked, so the thread that moved ends with this goroutine
-			runtime.LockOSThread()
-			if err := unix.Setns(int(namespace.Fd()), unix.CLONE_NEWNET); err != nil {
-				done <- opened{-1, fmt.Errorf("enter the network: %w", err)}
-
-				return
-			}
-		}
-
-		sock, err := unix.Socket(unix.AF_NETLINK, unix.SOCK_RAW|unix.SOCK_CLOEXEC, unix.NETLINK_ROUTE)
-		done <- opened{sock, err}
-	}()
-
-	found := <-done
-	if found.err != nil {
-		return nil, found.err
-	}
-
-	if err := unix.Bind(found.sock, &unix.SockaddrNetlink{Family: unix.AF_NETLINK}); err != nil {
-		_ = unix.Close(found.sock)
+	if err := unix.Bind(sock, &unix.SockaddrNetlink{Family: unix.AF_NETLINK}); err != nil {
+		_ = unix.Close(sock)
 
 		return nil, err
 	}
 
-	return &Conn{sock: found.sock}, nil
+	return &Conn{sock: sock}, nil
 }
 
 // Close closes the socket.

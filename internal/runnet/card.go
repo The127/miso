@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -58,20 +57,10 @@ func configureCard(run *link.Conn, namespace *os.File, arriving string, wanted s
 		// QEMU hands out routes and addresses of its own when asked, and on a
 		// timer, and a run has only what the host gave. No netlink request
 		// sets it, so a thread in the run's network writes the setting
-		refused := make(chan error)
-		go func() {
-			// never unlocked, so the thread that moved ends with this goroutine
-			runtime.LockOSThread()
-			if err := unix.Setns(int(namespace.Fd()), unix.CLONE_NEWNET); err != nil {
-				refused <- err
-
-				return
-			}
-
-			refused <- os.WriteFile("/proc/sys/net/ipv6/conf/eth0/accept_ra", []byte("0"), 0o600)
-		}()
-
-		if err := <-refused; err != nil {
+		err = link.Within(namespace, func() error {
+			return os.WriteFile("/proc/sys/net/ipv6/conf/eth0/accept_ra", []byte("0"), 0o600)
+		})
+		if err != nil {
 			return index, fmt.Errorf("refuse QEMU's routes: %w", err)
 		}
 
