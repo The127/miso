@@ -269,6 +269,30 @@ func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	assert.ErrorContains(t, err, "/bin/sh")
 }
 
+func TestARunLeavesNoMountPointsInItsLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	work, err := layer.Open(layers).Begin("bare")
+	require.NoError(t, err)
+	self, err := os.ReadFile("/proc/self/exe")
+	require.NoError(t, err)
+	require.NoError(t, os.Mkdir(filepath.Join(work.Dir(), "bin"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "bin", "sh"), self, 0o755)) //nolint:gosec // the shell must be executable
+	require.NoError(t, work.Finish())
+	worker := agent.New(layers, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"bare"}, Command: "true"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	for _, dir := range []string{"proc", "sys", "dev"} {
+		assert.NoDirExists(t, filepath.Join(layers, "run", dir))
+	}
+}
+
 func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
