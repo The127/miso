@@ -26,11 +26,13 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 	}
 
 	// the first that matches decides
-	filters := []struct {
+	type rule struct {
 		kind   uint16
 		keys   []byte
 		action uint32
-	}{
+	}
+
+	filters := []rule{
 		{unix.ETH_P_IP, destination(netip.PrefixFrom(wanted.ipv4.gateway, 32)), shot},
 		// QEMU checks no address, so a frame a run makes itself would reach
 		// the host's loopback
@@ -42,6 +44,15 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		{unix.ETH_P_IPV6, icmpv6(router), pass},
 		{unix.ETH_P_IPV6, icmpv6(solicit), pass},
 		{unix.ETH_P_IPV6, icmpv6(advert), pass},
+	}
+
+	// the nameserver sits in the range the next rule drops, so a query has
+	// to pass before it
+	if wanted.ipv6.nameserver.IsValid() {
+		filters = append(filters, rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver), pass})
+	}
+
+	filters = append(filters, []rule{
 		// QEMU takes its whole range to the host's loopback, the gateway and
 		// the run's neighbours with it
 		{unix.ETH_P_IPV6, destination(wanted.ipv6.address.Masked()), shot},
@@ -51,7 +62,8 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		// how a host with IPv6 alone reaches what has IPv4 alone
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b::/96")), pass},
 		{unix.ETH_P_ALL, nil, shot},
-	}
+	}...)
+
 	for i, f := range filters {
 		if err := addFilter(builder, card, uint32(i+1), f.kind, f.keys, f.action); err != nil {
 			return fmt.Errorf("fence the host off: %w", err)

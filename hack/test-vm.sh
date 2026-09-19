@@ -17,13 +17,17 @@
 # reach, is at MISO_VMTEST_HOST, and one on the internet reached over IPv6 at
 # MISO_VMTEST_SERVICE6, and one on a host's own network at
 # MISO_VMTEST_LOCAL6, and one on an IPv4 address reached through NAT64 at
-# MISO_VMTEST_MAPPED6.
+# MISO_VMTEST_MAPPED6. The nameservers are at MISO_VMTEST_NAMESERVER and
+# MISO_VMTEST_NAMESERVER6, answering every name with 192.0.2.53 and
+# 2001:db8::53.
 set -euo pipefail
 
 # QEMU runs in a network of its own, so the host QEMU connects to has only
-# what the harness puts there, and no internet
+# what the harness puts there, and no internet. In a mount namespace of its
+# own too, so the resolv.conf QEMU reads is the harness's and the
+# developer's own stays as it is
 if [ -z "${MISO_VMTEST_NETWORK:-}" ]; then
-    MISO_VMTEST_NETWORK=1 exec unshare --user --map-root-user --net bash "$0" "$@"
+    MISO_VMTEST_NETWORK=1 exec unshare --user --map-root-user --net --mount bash "$0" "$@"
 fi
 
 ip link set lo up
@@ -43,16 +47,42 @@ python3 hack/service.py fdcc::1 7 &
 local=$!
 python3 hack/service.py 64:ff9b::c000:201 7 &
 mapped=$!
+python3 hack/resolver.py &
+resolver=$!
 exec {loopback}< <(python3 hack/loopback.py)
 listener=$!
-trap 'kill "$listener" "$service" "$local" "$mapped"; rm -rf "$work"' EXIT
+trap 'kill "$listener" "$service" "$local" "$mapped" "$resolver"; rm -rf "$work"' EXIT
 read -r port <&"$loopback"
+
+# QEMU's built-in nameserver forwards to the resolvers of the host it runs
+# on, and in this network that is the harness's own. Over the real file,
+# because QEMU reads it by the name every resolver library uses
+printf 'nameserver 127.0.0.1\nnameserver ::1\n' > "$work/resolv.conf"
+resolvers=$(readlink -f /etc/resolv.conf)
+if ! mount --bind "$work/resolv.conf" "$resolvers"; then
+    echo "cannot put the harness's resolv.conf over $resolvers" >&2
+    exit 1
+fi
 
 # the tests that must never reach it only look for its answer to be missing,
 # so a listener that answers nothing would make them pass
 answer=$(python3 -c 'import socket, sys; print(socket.create_connection(("127.0.0.1", int(sys.argv[1])), 5).recv(64).decode(), end="")' "$port")
 if [ "$answer" != "loopback" ]; then
     echo "the loopback service answers $answer, not loopback" >&2
+    exit 1
+fi
+
+# a resolver that answers nothing would look like a fence that drops DNS
+resolved=$(python3 -c '
+import socket, struct
+query = struct.pack("!HHHHHH", 1, 0x0100, 1, 0, 0, 0) + b"\x04miso\x04test\x00" + struct.pack("!HH", 1, 1)
+asking = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+asking.settimeout(5)
+asking.sendto(query, ("127.0.0.1", 53))
+print(socket.inet_ntoa(asking.recv(512)[-4:]), end="")
+')
+if [ "$resolved" != "192.0.2.53" ]; then
+    echo "the resolver answers $resolved, not 192.0.2.53" >&2
     exit 1
 fi
 
@@ -100,6 +130,9 @@ environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8"
 # QEMU runs in
 environment+=("MISO_VMTEST_SERVICE6=[2001:db8::1]:7" "MISO_VMTEST_LOCAL6=[fdcc::1]:7")
 environment+=("MISO_VMTEST_MAPPED6=[64:ff9b::c000:201]:7")
+# the nameservers QEMU answers itself, forwarding to the harness's resolver,
+# which answers every name with 192.0.2.53 and 2001:db8::53
+environment+=("MISO_VMTEST_NAMESERVER=10.0.2.3" "MISO_VMTEST_NAMESERVER6=fd6d:6973:6f00::3")
 # QEMU maps the gateway to the host's loopback
 environment+=("MISO_VMTEST_HOST=10.0.2.2:$port")
 

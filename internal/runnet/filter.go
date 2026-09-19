@@ -22,6 +22,7 @@ const (
 	flowerDstMask  = 13
 	flowerDst6     = 16
 	flowerDst6Mask = 17
+	flowerUDPDst   = 21
 	flowerICMPv6   = 55
 	actKind        = 1
 	actOptions     = 2
@@ -56,6 +57,17 @@ func destination(prefix netip.Prefix) []byte {
 	}
 
 	return slices.Concat(link.Attribute(flowerDst, address), link.Attribute(flowerDstMask, mask))
+}
+
+// dns is the key of a filter that matches a query over UDP to a
+// nameserver, which is what slirp hands to the resolver of the host it
+// runs on.
+func dns(nameserver netip.Addr) []byte {
+	return slices.Concat(
+		destination(netip.PrefixFrom(nameserver, nameserver.BitLen())),
+		link.Attribute(flowerProto, []byte{unix.IPPROTO_UDP}),
+		link.Attribute(flowerUDPDst, binary.BigEndian.AppendUint16(nil, 53)),
+	)
 }
 
 // icmpv6 is the key of a filter that matches ICMPv6 of a type.
