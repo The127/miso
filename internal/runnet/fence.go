@@ -28,8 +28,9 @@ const (
 )
 
 // fenceHost lets only ARP and IPv4 leave the builder's card, and nothing
-// for the gateway, which QEMU maps to the host's loopback. A run sets up
-// its own card as it likes, so the fence sits where it cannot reach.
+// for the gateway or a loopback, which QEMU takes to the host's loopback.
+// A run sets up its own card as it likes, so the fence sits where it cannot
+// reach.
 func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 	qdisc := link.TrafficHeader(card, 0xFFFF0000, clsact, 0)
 	// the runs before this one made it already
@@ -37,17 +38,16 @@ func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 		return fmt.Errorf("fence the host off: %w", err)
 	}
 
-	address := gateway.As4()
 	// the first that matches decides
 	filters := []struct {
 		kind   uint16
 		keys   []byte
 		action uint32
 	}{
-		{unix.ETH_P_IP, slices.Concat(
-			link.Attribute(flowerDst, address[:]),
-			link.Attribute(flowerDstMask, []byte{0xFF, 0xFF, 0xFF, 0xFF}),
-		), shot},
+		{unix.ETH_P_IP, destination(netip.PrefixFrom(gateway, 32)), shot},
+		// QEMU checks no address, so a frame a run makes itself would reach
+		// the host's loopback
+		{unix.ETH_P_IP, destination(netip.MustParsePrefix("127.0.0.0/8")), shot},
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
 		{unix.ETH_P_ALL, nil, shot},
@@ -59,6 +59,14 @@ func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 	}
 
 	return nil
+}
+
+// destination is the key of a filter that matches IPv4 to a prefix.
+func destination(prefix netip.Prefix) []byte {
+	address := prefix.Addr().As4()
+	mask := binary.BigEndian.AppendUint32(nil, ^uint32(0)<<(32-prefix.Bits()))
+
+	return slices.Concat(link.Attribute(flowerDst, address[:]), link.Attribute(flowerDstMask, mask))
 }
 
 // addFilter sets the filter of a priority on the egress of a card, which

@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -403,6 +404,36 @@ func TestARunThatSetsUpIPv6ItselfCannotReachTheHostsLoopback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, code, out.String())
 	assert.NotContains(t, out.String(), "loopback")
+}
+
+//go:embed testdata/syn.py
+var syn string
+
+func TestARunCannotReachTheHostsLoopbackWithAFrameOfItsOwn(t *testing.T) {
+	// arrange
+	loopback := os.Getenv("MISO_VMTEST_HOST")
+	require.NotEmpty(t, loopback, "MISO_VMTEST_HOST names no service")
+	_, port, _ := strings.Cut(loopback, ":")
+	network := online(t)
+	address, _, _ := strings.Cut(network.Address, "/")
+	worker := mountedBase(t, t.TempDir())
+	// the attempt is dropped, but it teaches the run the gateway's MAC
+	sending := strings.Join([]string{
+		"set -e",
+		fmt.Sprintf("timeout 1 bash -c 'exec 3<>/dev/tcp/%s/1' || true", network.Gateway),
+		fmt.Sprintf("gateway=$(ip neigh show %s | awk '{print $5}')", network.Gateway),
+		fmt.Sprintf("python3 - \"$gateway\" %s 127.0.0.1 %s <<'EOF'\n%sEOF", address, port, syn),
+	}, "\n")
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: sending}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code, out.String())
+	assert.NotContains(t, out.String(), "reached")
 }
 
 func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
