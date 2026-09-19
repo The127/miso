@@ -78,3 +78,24 @@ func TestAnInitramfsHoldsItsModulesInTheOrderToLoadThem(t *testing.T) {
 	assert.Equal(t, uint64(5), first.FileSize)
 	assert.Equal(t, uint64(6), second.FileSize)
 }
+
+func TestAnInitramfsCarriesNothingOfTheMachineThatWroteIt(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+	modules := []initramfs.Module{{Name: "virtio_blk", Content: []byte("first")}}
+
+	// act
+	err := initramfs.Write(&archive, []byte("the init"), modules)
+
+	// assert
+	require.NoError(t, err)
+	records, err := cpio.ReadAllRecords(cpio.Newc.Reader(bytes.NewReader(archive.Bytes())))
+	require.NoError(t, err)
+	for _, found := range records {
+		assert.Zero(t, found.MTime, found.Name)
+		assert.Zero(t, found.UID, found.Name)
+		assert.Zero(t, found.GID, found.Name)
+		assert.Zero(t, found.Major, found.Name)
+		assert.Zero(t, found.Minor, found.Name)
+	}
+}
