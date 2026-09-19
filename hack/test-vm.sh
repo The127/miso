@@ -15,7 +15,8 @@
 # answers miso at MISO_VMTEST_SERVICE and the meeting point of meet.sh at
 # MISO_VMTEST_MEET. A service on the host's loopback, which a run must never
 # reach, is at MISO_VMTEST_HOST, and one on the internet reached over IPv6 at
-# MISO_VMTEST_SERVICE6.
+# MISO_VMTEST_SERVICE6, and one on a host's own network at
+# MISO_VMTEST_LOCAL6.
 set -euo pipefail
 
 # QEMU runs in a network of its own, so the host QEMU connects to has only
@@ -25,17 +26,21 @@ if [ -z "${MISO_VMTEST_NETWORK:-}" ]; then
 fi
 
 ip link set lo up
-# an address from the documentation range stands in for the internet
+# an address from the documentation range stands in for the internet, one
+# from the unique local range for a host's own network
 ip addr add 2001:db8::1/128 dev lo
+ip addr add fdcc::1/128 dev lo
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
 modules=${MISO_VMTEST_MODULES:-/lib/modules/$(uname -r)}
 work=$(mktemp -d)
 python3 hack/service.py 2001:db8::1 7 &
 service=$!
+python3 hack/service.py fdcc::1 7 &
+local=$!
 exec {loopback}< <(python3 hack/loopback.py)
 listener=$!
-trap 'kill "$listener" "$service"; rm -rf "$work"' EXIT
+trap 'kill "$listener" "$service" "$local"; rm -rf "$work"' EXIT
 read -r port <&"$loopback"
 
 packages=${MISO_VMTEST_PACKAGES:-$( (grep -rlx --include='*_test.go' '//go:build vmtest' cmd internal || true) | xargs -r -n1 dirname | sort -u)}
@@ -80,7 +85,7 @@ environment+=("MISO_VMTEST_ADDRESS6=fd6d:6973:6f00::15/64" "MISO_VMTEST_GATEWAY6
 environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8")
 # QEMU forwards to services in IPv4 only, so the IPv6 one is on the network
 # QEMU runs in
-environment+=("MISO_VMTEST_SERVICE6=[2001:db8::1]:7")
+environment+=("MISO_VMTEST_SERVICE6=[2001:db8::1]:7" "MISO_VMTEST_LOCAL6=[fdcc::1]:7")
 # QEMU maps the gateway to the host's loopback
 environment+=("MISO_VMTEST_HOST=10.0.2.2:$port")
 
