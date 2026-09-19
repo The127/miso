@@ -18,3 +18,17 @@ func TestAModuleThatNeedsNothingLoadsOnItsOwn(t *testing.T) {
 	// assert
 	assert.Equal(t, []string{"virtio_blk"}, loaded)
 }
+
+func TestAModuleLoadsAfterWhatItDependsOn(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{
+		{Name: "btrfs", Depends: []string{"libcrc32c"}},
+		{Name: "libcrc32c"},
+	}
+
+	// act
+	loaded := builderkernel.Order(have, "btrfs")
+
+	// assert
+	assert.Equal(t, []string{"libcrc32c", "btrfs"}, loaded)
+}
