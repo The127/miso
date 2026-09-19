@@ -92,12 +92,21 @@ func configureCard(run *link.Conn, arriving string, wanted settings) (int32, err
 		}
 
 		via := wanted.gateway.As4()
-		_, err = run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(),
+		_, err = run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(unix.AF_INET),
 			link.Attribute(unix.RTA_GATEWAY, via[:]),
 			link.Attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
 		)
 		if err != nil {
 			return index, fmt.Errorf("route via %s: %w", wanted.gateway, err)
+		}
+
+		via6 := wanted.gateway6.As16()
+		_, err = run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(unix.AF_INET6),
+			link.Attribute(unix.RTA_GATEWAY, via6[:]),
+			link.Attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
+		)
+		if err != nil {
+			return index, fmt.Errorf("route via %s: %w", wanted.gateway6, err)
 		}
 
 		return index, nil

@@ -36,9 +36,10 @@ func TrafficHeader(index int32, handle, parent, info uint32) []byte {
 	return binary.NativeEndian.AppendUint32(header, info)
 }
 
-// RouteHeader is the header of a request for the default IPv4 route.
-func RouteHeader() []byte {
-	header := []byte{unix.AF_INET, 0, 0, 0, unix.RT_TABLE_MAIN, unix.RTPROT_BOOT, unix.RT_SCOPE_UNIVERSE, unix.RTN_UNICAST}
+// RouteHeader is the header of a request for the default route of a
+// family.
+func RouteHeader(family byte) []byte {
+	header := []byte{family, 0, 0, 0, unix.RT_TABLE_MAIN, unix.RTPROT_BOOT, unix.RT_SCOPE_UNIVERSE, unix.RTN_UNICAST}
 
 	return binary.NativeEndian.AppendUint32(header, 0)
 }
