@@ -360,6 +360,24 @@ func TestARunCannotReachAnotherRun(t *testing.T) {
 	assert.NotContains(t, heard(), "accepted")
 }
 
+func TestARunCannotReachTheHostsLoopback(t *testing.T) {
+	// arrange
+	loopback := os.Getenv("MISO_VMTEST_HOST")
+	require.NotEmpty(t, loopback, "MISO_VMTEST_HOST names no service")
+	host, port, _ := strings.Cut(loopback, ":")
+	worker := mountedBase(t, t.TempDir())
+	connect := fmt.Sprintf("timeout 3 bash -c 'exec 3<>/dev/tcp/%s/%s && cat <&3'", host, port)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: connect}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.NotContains(t, out.String(), "loopback")
+}
+
 func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
