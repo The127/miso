@@ -195,3 +195,23 @@ func TestTheBuildersCardHasNoAddress(t *testing.T) {
 		assert.NotEqual(t, card, fields[len(fields)-1], "the builder's card has %s", fields[0])
 	}
 }
+
+func TestARunCleansUpTheCardsItMakes(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	// the MAC a run on 10.0.2.16 gets, which the kernel checks once a card is up
+	making := protocol.Run{Key: "making", Layers: []string{"base"}, Network: online(t), Command: "ip link add m1 link eth0 address 02:00:0a:00:02:10 type macvlan && ip link set m1 up"}
+	code, err := worker.Run(context.Background(), making, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	next := online(t)
+	next.Address = "10.0.2.16/24"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
+
+	// act
+	code, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}

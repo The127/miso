@@ -182,8 +182,17 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 		// the kernel removes the network of a run some time after it ended,
 		// and until then its card holds the MAC and address the next run
 		// needs
+		// every card, not only its own, the run may have made more
 		return func() {
-			_, _ = ask(run, unix.RTM_DELLINK, 0, link(index, 0, 0))
+			cards, _ := ask(run, unix.RTM_GETLINK, unix.NLM_F_DUMP, link(0, 0, 0))
+			for _, card := range cards {
+				if binary.NativeEndian.Uint32(card.Data[8:])&unix.IFF_LOOPBACK != 0 {
+					continue
+				}
+
+				_, _ = ask(run, unix.RTM_DELLINK, 0, link(int32(binary.NativeEndian.Uint32(card.Data[4:])), 0, 0)) //nolint:gosec // the kernel writes an int32 there
+			}
+
 			_ = unix.Close(run)
 		}, nil
 	}
