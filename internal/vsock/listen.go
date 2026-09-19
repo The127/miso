@@ -14,7 +14,7 @@ type Listener struct {
 
 // Listen takes the connections made to a port of this machine.
 func Listen(port uint32) (*Listener, error) {
-	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM, 0)
+	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}

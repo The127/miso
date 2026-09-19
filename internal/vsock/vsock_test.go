@@ -54,3 +54,14 @@ func TestAnAcceptedConnectionIsNotInheritedByAProcess(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, flags&unix.FD_CLOEXEC)
 }
+
+func TestAListenerIsNotInheritedByAProcess(t *testing.T) {
+	// act
+	listener, err := vsock.Listen(1026)
+
+	// assert
+	require.NoError(t, err)
+	flags, err := unix.FcntlInt(uintptr(vsock.FD(listener)), unix.F_GETFD, 0)
+	require.NoError(t, err)
+	assert.NotZero(t, flags&unix.FD_CLOEXEC)
+}
