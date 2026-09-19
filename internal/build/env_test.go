@@ -25,7 +25,7 @@ func TestARunKeepsTheVariablesSetBeforeItInOrder(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestAVariableSetTwiceIsSentOnceWithItsLastValue(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
