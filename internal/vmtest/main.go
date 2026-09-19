@@ -19,7 +19,44 @@ func Main(m *testing.M) {
 	}
 
 	code := 1
-	if err := mountAll(); err != nil {
+	if err := func() error {
+		if err := os.Mkdir("/vm", 0o700); err != nil {
+			return err
+		}
+
+		if err := syscall.Mount("tmpfs", "/vm", "tmpfs", 0, ""); err != nil {
+			return fmt.Errorf("mount /vm: %w", err)
+		}
+
+		init, err := os.ReadFile("/init")
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile("/vm/init", init, 0o700); err != nil { //nolint:gosec // init must be executable
+			return err
+		}
+
+		if err := os.CopyFS("/vm/modules", os.DirFS("/modules")); err != nil {
+			return err
+		}
+
+		if err := os.Chdir("/vm"); err != nil {
+			return err
+		}
+
+		if err := syscall.Mount(".", "/", "", syscall.MS_MOVE, ""); err != nil {
+			return fmt.Errorf("move /vm to /: %w", err)
+		}
+
+		if err := syscall.Chroot("."); err != nil {
+			return err
+		}
+
+		return os.Chdir("/")
+	}(); err != nil {
+		fmt.Println(err)
+	} else if err := mountAll(); err != nil {
 		fmt.Println(err)
 	} else if err := loadModules(); err != nil {
 		fmt.Println(err)
