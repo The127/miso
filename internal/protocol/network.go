@@ -7,6 +7,7 @@ type Network struct {
 	Card string
 
 	IPv4 Family
+	IPv6 Family
 }
 
 // Family is the part of a run's network in one address family.

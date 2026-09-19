@@ -13,9 +13,10 @@ import (
 type settings struct {
 	// the MAC of the builder's card, known by it because its name and place
 	// differ between builders
-	card    []byte
-	address netip.Prefix
-	gateway netip.Addr
+	card     []byte
+	address  netip.Prefix
+	gateway  netip.Addr
+	address6 netip.Prefix
 }
 
 // readSettings reads the network the host handed a run.
@@ -38,6 +39,11 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
 	}
 
+	address6, err := netip.ParsePrefix(network.IPv6.Address)
+	if err != nil {
+		return settings{}, fmt.Errorf("IPv6 address of the run: %w", err)
+	}
+
 	var card []byte
 	for _, part := range strings.Split(network.Card, ":") {
 		octet, err := strconv.ParseUint(part, 16, 8)
@@ -48,7 +54,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 		card = append(card, byte(octet))
 	}
 
-	return settings{card: card, address: address, gateway: gateway}, nil
+	return settings{card: card, address: address, gateway: gateway, address6: address6}, nil
 }
 
 // mac is the MAC of the run's own card. It follows from the address, so a
