@@ -72,17 +72,9 @@ func TestAListenerIsNotInheritedByAProcess(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	var added []int
-	for _, fd := range sockets(t) {
-		if !slices.Contains(before, fd) {
-			added = append(added, fd)
-		}
-	}
-
+	added := opened(t, before)
 	require.Len(t, added, 1)
-	flags, err := unix.FcntlInt(uintptr(added[0]), unix.F_GETFD, 0)
-	require.NoError(t, err)
-	assert.NotZero(t, flags&unix.FD_CLOEXEC)
+	assert.True(t, closedOnExecFD(t, uintptr(added[0])))
 }
 
 // sockets are the file descriptors of this process that are sockets. A
@@ -106,14 +98,34 @@ func sockets(t *testing.T) []int {
 	return fds
 }
 
+// opened are the sockets of this process that are not among those before.
+func opened(t *testing.T, before []int) []int {
+	t.Helper()
+	var added []int
+	for _, fd := range sockets(t) {
+		if !slices.Contains(before, fd) {
+			added = append(added, fd)
+		}
+	}
+
+	return added
+}
+
 func closedOnExec(t *testing.T, conn syscall.Conn) bool {
 	t.Helper()
 	raw, err := conn.SyscallConn()
 	require.NoError(t, err)
-	var flags int
+	var closed bool
 	require.NoError(t, raw.Control(func(fd uintptr) {
-		flags, err = unix.FcntlInt(fd, unix.F_GETFD, 0)
+		closed = closedOnExecFD(t, fd)
 	}))
+
+	return closed
+}
+
+func closedOnExecFD(t *testing.T, fd uintptr) bool {
+	t.Helper()
+	flags, err := unix.FcntlInt(fd, unix.F_GETFD, 0)
 	require.NoError(t, err)
 
 	return flags&unix.FD_CLOEXEC != 0
