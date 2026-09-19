@@ -1,8 +1,10 @@
 package builderkernel
 
+import "fmt"
+
 // order is the order to load the wanted modules in, each of them after the
 // modules it depends on.
-func order(have []info, want ...string) []string {
+func order(have []info, want ...string) ([]string, error) {
 	modules := make(map[string]info, len(have))
 	for _, module := range have {
 		modules[module.Name] = module
@@ -12,24 +14,38 @@ func order(have []info, want ...string) []string {
 
 	loaded := make([]string, 0, len(want))
 	for _, name := range want {
-		loaded = load(modules, done, loaded, name)
+		var err error
+
+		loaded, err = load(modules, done, loaded, name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return loaded
+	return loaded, nil
 }
 
 // load appends the module and what it depends on, the dependencies first.
-func load(modules map[string]info, done map[string]bool, loaded []string, name string) []string {
+func load(modules map[string]info, done map[string]bool, loaded []string, name string) ([]string, error) {
+	if done[name] {
+		return loaded, nil
+	}
+
 	module, found := modules[name]
-	if !found || done[name] {
-		return loaded
+	if !found {
+		return nil, fmt.Errorf("the package holds no module %s", name)
 	}
 
 	done[name] = true
 
 	for _, dependency := range module.Depends {
-		loaded = load(modules, done, loaded, dependency)
+		var err error
+
+		loaded, err = load(modules, done, loaded, dependency)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return append(loaded, name)
+	return append(loaded, name), nil
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/builderkernel"
 )
@@ -13,9 +14,10 @@ func TestAModuleThatNeedsNothingLoadsOnItsOwn(t *testing.T) {
 	have := []builderkernel.Info{{Name: "virtio_blk"}}
 
 	// act
-	loaded := builderkernel.Order(have, "virtio_blk")
+	loaded, err := builderkernel.Order(have, "virtio_blk")
 
 	// assert
+	require.NoError(t, err)
 	assert.Equal(t, []string{"virtio_blk"}, loaded)
 }
 
@@ -27,9 +29,10 @@ func TestAModuleLoadsAfterWhatItDependsOn(t *testing.T) {
 	}
 
 	// act
-	loaded := builderkernel.Order(have, "btrfs")
+	loaded, err := builderkernel.Order(have, "btrfs")
 
 	// assert
+	require.NoError(t, err)
 	assert.Equal(t, []string{"libcrc32c", "btrfs"}, loaded)
 }
 
@@ -42,8 +45,20 @@ func TestAModuleReachedTwiceLoadsOnce(t *testing.T) {
 	}
 
 	// act
-	loaded := builderkernel.Order(have, "btrfs")
+	loaded, err := builderkernel.Order(have, "btrfs")
 
 	// assert
+	require.NoError(t, err)
 	assert.Equal(t, []string{"xor", "raid6_pq", "btrfs"}, loaded)
+}
+
+func TestAModuleThatIsNotThereIsRefused(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{{Name: "btrfs", Depends: []string{"libcrc32c"}}}
+
+	// act
+	_, err := builderkernel.Order(have, "btrfs")
+
+	// assert
+	assert.ErrorContains(t, err, "libcrc32c")
 }

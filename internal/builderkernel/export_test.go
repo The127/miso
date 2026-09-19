@@ -21,6 +21,6 @@ func Modinfo(ko io.ReaderAt) (Info, error) {
 }
 
 // Order is the order to load the wanted modules in.
-func Order(have []Info, want ...string) []string {
+func Order(have []Info, want ...string) ([]string, error) {
 	return order(have, want...)
 }
