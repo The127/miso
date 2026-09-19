@@ -57,12 +57,22 @@ func configureCard(run *link.Conn, arriving string, wanted settings) (int32, err
 		// the address before the route, which the kernel only takes to a
 		// gateway it can reach
 		local := wanted.address.Addr().As4()
-		_, err = run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(index, wanted.address.Bits()),
+		_, err = run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(unix.AF_INET, index, wanted.address.Bits(), 0),
 			link.Attribute(unix.IFA_LOCAL, local[:]),
 			link.Attribute(unix.IFA_ADDRESS, local[:]),
 		)
 		if err != nil {
 			return index, fmt.Errorf("address card %s: %w", wanted.address, err)
+		}
+
+		// the host hands out every address once, so the run need not wait
+		// a second for the kernel to make sure
+		local6 := wanted.address6.Addr().As16()
+		_, err = run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(unix.AF_INET6, index, wanted.address6.Bits(), unix.IFA_F_NODAD),
+			link.Attribute(unix.IFA_ADDRESS, local6[:]),
+		)
+		if err != nil {
+			return index, fmt.Errorf("address card %s: %w", wanted.address6, err)
 		}
 
 		// a card that holds the same MAC may still be on its way out, in a

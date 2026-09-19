@@ -17,10 +17,10 @@ func CardHeader(index int32, flags, change uint32) []byte {
 	return header
 }
 
-// AddressHeader is the header of a request about an IPv4 address of a
-// card.
-func AddressHeader(index int32, bits int) []byte {
-	header := []byte{unix.AF_INET, byte(bits), 0, unix.RT_SCOPE_UNIVERSE} //nolint:gosec // a prefix length is at most 32
+// AddressHeader is the header of a request about an address of a card, in
+// a family, IFA_F_NODAD and the like among the flags.
+func AddressHeader(family byte, index int32, bits int, flags byte) []byte {
+	header := []byte{family, byte(bits), flags, unix.RT_SCOPE_UNIVERSE} //nolint:gosec // a prefix length is at most 128
 
 	return binary.NativeEndian.AppendUint32(header, uint32(index)) //nolint:gosec // an index is positive
 }

@@ -34,8 +34,16 @@ func online(t *testing.T) *protocol.Network {
 	require.NotEmpty(t, address, "MISO_VMTEST_ADDRESS names no address")
 	gateway := os.Getenv("MISO_VMTEST_GATEWAY")
 	require.NotEmpty(t, gateway, "MISO_VMTEST_GATEWAY names no gateway")
+	address6 := os.Getenv("MISO_VMTEST_ADDRESS6")
+	require.NotEmpty(t, address6, "MISO_VMTEST_ADDRESS6 names no address")
+	gateway6 := os.Getenv("MISO_VMTEST_GATEWAY6")
+	require.NotEmpty(t, gateway6, "MISO_VMTEST_GATEWAY6 names no gateway")
 
-	return &protocol.Network{Card: card, IPv4: protocol.Family{Address: address, Gateway: gateway}}
+	return &protocol.Network{
+		Card: card,
+		IPv4: protocol.Family{Address: address, Gateway: gateway},
+		IPv6: protocol.Family{Address: address6, Gateway: gateway6},
+	}
 }
 
 // started starts a run and returns once the run printed its first line,
@@ -85,6 +93,22 @@ func TestAnOnlineRunHasACardBesidesItsLoopback(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "eth0\nlo\n", out.String())
+}
+
+func TestAnOnlineRunHasItsIPv6AddressAtOnce(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "ip -6 -o addr show dev eth0 scope global"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "inet6 "+network.IPv6.Address)
+	assert.NotContains(t, out.String(), "tentative")
 }
 
 func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
@@ -393,8 +417,8 @@ func TestARunThatSetsUpIPv6ItselfCannotReachTheHostsLoopback(t *testing.T) {
 	// the host's loopback as it does in IPv4
 	connect := strings.Join([]string{
 		"set -e",
-		fmt.Sprintf("ip -6 addr add %s dev eth0 nodad", address),
-		// replace, QEMU may have handed out a route already
+		// replace, the agent or QEMU may have set them already
+		fmt.Sprintf("ip -6 addr replace %s dev eth0 nodad", address),
 		fmt.Sprintf("ip -6 route replace default via %s", gateway),
 		fmt.Sprintf("timeout 3 bash -c 'exec 3<>/dev/tcp/%s/%s && cat <&3' || true", gateway, port),
 	}, "\n")
