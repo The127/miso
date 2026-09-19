@@ -31,13 +31,11 @@ type rule struct {
 // addClsact gives a card the queue that filters hang on, unless it has it.
 func addClsact(fence *tc.Tc, card int32) error {
 	queue := tc.Object{
-		Msg: tc.Msg{
-			Family:  unix.AF_UNSPEC,
-			Ifindex: uint32(card), //nolint:gosec // an index is never negative
-			Handle:  core.BuildHandle(tc.HandleRoot, 0),
-			Parent:  tc.HandleIngress,
-		},
-		Attribute: tc.Attribute{Kind: "clsact"},
+		Family:  unix.AF_UNSPEC,
+		Ifindex: uint32(card), //nolint:gosec // an index is never negative
+		Handle:  core.BuildHandle(tc.HandleRoot, 0),
+		Parent:  tc.HandleIngress,
+		Kind:    "clsact",
 	}
 	// the runs before this one made it already
 	if err := fence.Qdisc().Add(&queue); err != nil && !errors.Is(err, unix.EEXIST) {
@@ -59,16 +57,15 @@ func addFilter(fence *tc.Tc, card int32, priority uint16, what rule) error {
 	actions := []*tc.Action{{Kind: "gact", Gact: &tc.Gact{Parms: &tc.GactParms{Action: what.action}}}}
 	keys.Actions = &actions
 	filter := tc.Object{
-		Msg: tc.Msg{
-			Family:  unix.AF_UNSPEC,
-			Ifindex: uint32(card), //nolint:gosec // an index is never negative
-			// named, so a later run replaces this filter instead of the
-			// kernel giving it a handle of its own and keeping both
-			Handle: 1,
-			Parent: egress,
-			Info:   core.FilterInfo(priority, what.kind),
-		},
-		Attribute: tc.Attribute{Kind: "flower", Flower: &keys},
+		Family:  unix.AF_UNSPEC,
+		Ifindex: uint32(card), //nolint:gosec // an index is never negative
+		// named, so a later run replaces this filter instead of the
+		// kernel giving it a handle of its own and keeping both
+		Handle: 1,
+		Parent: egress,
+		Info:   core.FilterInfo(priority, what.kind),
+		Kind:   "flower",
+		Flower: &keys,
 	}
 
 	// replaced, not added, because the run before this one left its own
