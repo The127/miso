@@ -29,56 +29,15 @@ type family struct {
 
 // readSettings reads the network the host handed a run.
 func readSettings(network *protocol.Network) (settings, error) {
-	address, err := netip.ParsePrefix(network.IPv4.Address)
+	ipv4, err := readFamily(network.IPv4, "IPv4", netip.Addr.Is4)
 	if err != nil {
-		return settings{}, fmt.Errorf("address of the run: %w", err)
+		return settings{}, err
 	}
 
-	if !address.Addr().Is4() {
-		return settings{}, fmt.Errorf("address of the run: %s is not IPv4", address)
-	}
-
-	gateway, err := netip.ParseAddr(network.IPv4.Gateway)
+	// an IPv4 address would pass as IPv4-mapped, which the kernel takes
+	ipv6, err := readFamily(network.IPv6, "IPv6", netip.Addr.Is6)
 	if err != nil {
-		return settings{}, fmt.Errorf("gateway of the run: %w", err)
-	}
-
-	if !gateway.Is4() {
-		return settings{}, fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
-	}
-
-	// a host without a resolver in this family names none, because slirp
-	// forwards a query only to a resolver of the query's own family, so one
-	// handed over anyway would cost every lookup a timeout
-	var nameserver netip.Addr
-	if network.IPv4.Nameserver != "" {
-		nameserver, err = netip.ParseAddr(network.IPv4.Nameserver)
-		if err != nil {
-			return settings{}, fmt.Errorf("nameserver of the run: %w", err)
-		}
-	}
-
-	address6, err := netip.ParsePrefix(network.IPv6.Address)
-	if err != nil {
-		return settings{}, fmt.Errorf("IPv6 address of the run: %w", err)
-	}
-
-	// an IPv4 one would pass as IPv4-mapped, which the kernel takes
-	if !address6.Addr().Is6() {
-		return settings{}, fmt.Errorf("IPv6 address of the run: %s is not IPv6", address6)
-	}
-
-	gateway6, err := netip.ParseAddr(network.IPv6.Gateway)
-	if err != nil {
-		return settings{}, fmt.Errorf("IPv6 gateway of the run: %w", err)
-	}
-
-	var nameserver6 netip.Addr
-	if network.IPv6.Nameserver != "" {
-		nameserver6, err = netip.ParseAddr(network.IPv6.Nameserver)
-		if err != nil {
-			return settings{}, fmt.Errorf("IPv6 nameserver of the run: %w", err)
-		}
+		return settings{}, err
 	}
 
 	var card []byte
@@ -91,11 +50,47 @@ func readSettings(network *protocol.Network) (settings, error) {
 		card = append(card, byte(octet))
 	}
 
-	return settings{
-		card: card,
-		ipv4: family{address: address, gateway: gateway, nameserver: nameserver},
-		ipv6: family{address: address6, gateway: gateway6, nameserver: nameserver6},
-	}, nil
+	return settings{card: card, ipv4: ipv4, ipv6: ipv6}, nil
+}
+
+// readFamily reads one family of a run's network. The two read alike, so
+// the name of the family goes in front of whatever went wrong, and own
+// says which addresses belong to it.
+func readFamily(handed protocol.Family, name string, own func(netip.Addr) bool) (family, error) {
+	address, err := netip.ParsePrefix(handed.Address)
+	if err != nil {
+		return family{}, fmt.Errorf("%s address of the run: %w", name, err)
+	}
+
+	if !own(address.Addr()) {
+		return family{}, fmt.Errorf("%s address of the run: %s is not %s", name, address, name)
+	}
+
+	gateway, err := netip.ParseAddr(handed.Gateway)
+	if err != nil {
+		return family{}, fmt.Errorf("%s gateway of the run: %w", name, err)
+	}
+
+	if !own(gateway) {
+		return family{}, fmt.Errorf("%s gateway of the run: %s is not %s", name, gateway, name)
+	}
+
+	// a host without a resolver in this family names none, because slirp
+	// forwards a query only to a resolver of the query's own family, so one
+	// handed over anyway would cost every lookup a timeout
+	var nameserver netip.Addr
+	if handed.Nameserver != "" {
+		nameserver, err = netip.ParseAddr(handed.Nameserver)
+		if err != nil {
+			return family{}, fmt.Errorf("%s nameserver of the run: %w", name, err)
+		}
+
+		if !own(nameserver) {
+			return family{}, fmt.Errorf("%s nameserver of the run: %s is not %s", name, nameserver, name)
+		}
+	}
+
+	return family{address: address, gateway: gateway, nameserver: nameserver}, nil
 }
 
 // mac is the MAC of the run's own card. It follows from the address, so a
