@@ -38,6 +38,12 @@ func helper(root, command string) error {
 		}
 	}
 
+	// a fixed name, because packages write it into what they install, and
+	// every hosts file knows this one
+	if err := syscall.Sethostname([]byte("localhost")); err != nil {
+		return fmt.Errorf("name the run: %w", err)
+	}
+
 	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
 
 	return fmt.Errorf("run /bin/sh: %w", err)
