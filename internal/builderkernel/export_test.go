@@ -29,3 +29,8 @@ func Order(have []Info, builtin []string, want ...string) ([]string, error) {
 func Modules(deb io.Reader) ([]Info, error) {
 	return modules(deb)
 }
+
+// Builtin names everything the kernel of a package has built in.
+func Builtin(deb io.Reader) ([]string, error) {
+	return builtin(deb)
+}
