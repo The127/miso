@@ -48,7 +48,10 @@ fi
 # a network card with the MAC the test finds in MISO_VMTEST_MAC, the way a
 # build hands the agent the MAC of its card
 mac=52:54:00:6d:69:73
-nic=(-netdev "user,id=net,net=10.0.2.0/24,host=10.0.2.2,dns=10.0.2.3,guestfwd=tcp:10.0.2.100:7-cmd:echo miso"
+# a decoy card first, so the tests pass only when the card is found by its
+# MAC, never by its name or its place
+nic=(-netdev hubport,id=decoy,hubid=0 -device virtio-net-pci,netdev=decoy,mac=52:54:00:00:00:01
+    -netdev "user,id=net,net=10.0.2.0/24,host=10.0.2.2,dns=10.0.2.3,guestfwd=tcp:10.0.2.100:7-cmd:echo miso"
     -device "virtio-net-pci,netdev=net,mac=$mac")
 environment+=("MISO_VMTEST_MAC=$mac" "MISO_VMTEST_ADDRESS=10.0.2.15/24" "MISO_VMTEST_GATEWAY=10.0.2.2")
 # a service beyond the builder that needs no internet, QEMU answers it

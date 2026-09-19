@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net/netip"
@@ -36,14 +37,16 @@ func addCard(pid int, network *protocol.Network) error {
 		return fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
 	}
 
-	text, err := os.ReadFile("/sys/class/net/eth0/ifindex")
-	if err != nil {
-		return err
-	}
+	// the card is known by the MAC the host gave it, its name and place
+	// differ between builders
+	var mac []byte
+	for _, part := range strings.Split(network.Card, ":") {
+		octet, err := strconv.ParseUint(part, 16, 8)
+		if err != nil {
+			return fmt.Errorf("card of the run %s: %w", network.Card, err)
+		}
 
-	parent, err := strconv.ParseUint(strings.TrimSpace(string(text)), 10, 32)
-	if err != nil {
-		return err
+		mac = append(mac, byte(octet))
 	}
 
 	namespace, err := os.Open(fmt.Sprintf("/proc/%d/ns/net", pid))
@@ -60,9 +63,25 @@ func addCard(pid int, network *protocol.Network) error {
 
 	defer func() { _ = unix.Close(builder) }()
 
+	builderCards, err := ask(builder, unix.RTM_GETLINK, unix.NLM_F_DUMP, link(0, 0, 0))
+	if err != nil {
+		return fmt.Errorf("find the builder's card: %w", err)
+	}
+
+	var parent int32
+	for _, card := range builderCards {
+		if bytes.Equal(cardAttribute(card, unix.IFLA_ADDRESS), mac) {
+			parent = int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+		}
+	}
+
+	if parent == 0 {
+		return fmt.Errorf("the builder has no card %s", network.Card)
+	}
+
 	// nothing else in the builder brings its card up, and a card on a card
 	// that is down never has a carrier
-	if _, err := ask(builder, unix.RTM_SETLINK, 0, link(int32(parent), unix.IFF_UP, unix.IFF_UP)); err != nil { //nolint:gosec // an index fits in an int32
+	if _, err := ask(builder, unix.RTM_SETLINK, 0, link(parent, unix.IFF_UP, unix.IFF_UP)); err != nil {
 		return fmt.Errorf("bring up the builder's card: %w", err)
 	}
 
@@ -92,48 +111,41 @@ func addCard(pid int, network *protocol.Network) error {
 	}
 
 	for _, card := range cards {
-		attributes, err := syscall.ParseNetlinkRouteAttr(&card)
+		if strings.TrimRight(string(cardAttribute(card, unix.IFLA_IFNAME)), "\x00") != arriving {
+			continue
+		}
+
+		// the index of the card in the answer's interface header
+		index := int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, 0, 0), attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
+			return fmt.Errorf("name card: %w", err)
+		}
+
+		local := address.Addr().As4()
+		// the address before the route, which the kernel only takes to a
+		// gateway it can reach
+		_, err = ask(run, unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, addressHeader(index, address.Bits()),
+			attribute(unix.IFA_LOCAL, local[:]),
+			attribute(unix.IFA_ADDRESS, local[:]),
+		)
 		if err != nil {
-			return fmt.Errorf("find card: %w", err)
+			return fmt.Errorf("address card %s: %w", address, err)
 		}
 
-		for _, a := range attributes {
-			if a.Attr.Type != unix.IFLA_IFNAME || strings.TrimRight(string(a.Value), "\x00") != arriving {
-				continue
-			}
-
-			// the index of the card in the answer's interface header
-			index := int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
-			if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, 0, 0), attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
-				return fmt.Errorf("name card: %w", err)
-			}
-
-			local := address.Addr().As4()
-			// the address before the route, which the kernel only takes to a
-			// gateway it can reach
-			_, err = ask(run, unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, addressHeader(index, address.Bits()),
-				attribute(unix.IFA_LOCAL, local[:]),
-				attribute(unix.IFA_ADDRESS, local[:]),
-			)
-			if err != nil {
-				return fmt.Errorf("address card %s: %w", address, err)
-			}
-
-			if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, unix.IFF_UP, unix.IFF_UP)); err != nil {
-				return fmt.Errorf("bring up card: %w", err)
-			}
-
-			via := gateway.As4()
-			_, err = ask(run, unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, routeHeader(),
-				attribute(unix.RTA_GATEWAY, via[:]),
-				attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
-			)
-			if err != nil {
-				return fmt.Errorf("route via %s: %w", gateway, err)
-			}
-
-			return nil
+		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, unix.IFF_UP, unix.IFF_UP)); err != nil {
+			return fmt.Errorf("bring up card: %w", err)
 		}
+
+		via := gateway.As4()
+		_, err = ask(run, unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, routeHeader(),
+			attribute(unix.RTA_GATEWAY, via[:]),
+			attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
+		)
+		if err != nil {
+			return fmt.Errorf("route via %s: %w", gateway, err)
+		}
+
+		return nil
 	}
 
 	return fmt.Errorf("find card: %s is not in the run", arriving)
@@ -195,7 +207,9 @@ func ask(sock int, kind, flags uint16, header []byte, attributes ...[]byte) ([]s
 	}
 
 	var found []syscall.NetlinkMessage
-	reply := make([]byte, os.Getpagesize())
+	// the kernel sends a dump in parts of up to 32 KiB, and cuts off what
+	// does not fit
+	reply := make([]byte, 32<<10)
 	for {
 		n, _, err := unix.Recvfrom(sock, reply, 0)
 		if err != nil {
@@ -226,6 +240,27 @@ func ask(sock int, kind, flags uint16, header []byte, attributes ...[]byte) ([]s
 			return found, nil
 		}
 	}
+}
+
+// cardAttribute is the value of an attribute of a card as the kernel
+// described it, nil when it has none. It reads no more than lengths and
+// types, which every kernel writes alike.
+func cardAttribute(card syscall.NetlinkMessage, kind uint16) []byte {
+	rest := card.Data[min(unix.SizeofIfInfomsg, len(card.Data)):]
+	for len(rest) >= unix.SizeofRtAttr {
+		length := int(binary.NativeEndian.Uint16(rest))
+		if length < unix.SizeofRtAttr || length > len(rest) {
+			return nil
+		}
+
+		if binary.NativeEndian.Uint16(rest[2:])&^(unix.NLA_F_NESTED|unix.NLA_F_NET_BYTEORDER) == kind {
+			return rest[unix.SizeofRtAttr:length]
+		}
+
+		rest = rest[min((length+3)&^3, len(rest)):]
+	}
+
+	return nil
 }
 
 // link is the header of a request about a card: its index, and the flags
