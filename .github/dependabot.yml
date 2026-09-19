@@ -7,6 +7,13 @@ updates:
     commit-message:
       prefix: "chore"
 
+  - package-ecosystem: gomod
+    directory: "/hack/tools"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore"
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
