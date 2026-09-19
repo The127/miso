@@ -9,7 +9,8 @@
 # of each shape that btrfs-test-disk.sh knows are always attached with the
 # serial miso-test-<shape>. A network card on QEMU's user network has the
 # MAC the test finds in MISO_VMTEST_MAC, with the address and gateway for a
-# run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, a service that
+# run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, their IPv6 twins in
+# MISO_VMTEST_ADDRESS6 and MISO_VMTEST_GATEWAY6, a service that
 # answers miso at MISO_VMTEST_SERVICE and the meeting point of meet.sh at
 # MISO_VMTEST_MEET. A service on the host's loopback, which a run must never
 # reach, is at MISO_VMTEST_HOST.
@@ -56,9 +57,10 @@ mac=52:54:00:6d:69:73
 # a decoy card first, so the tests pass only when the card is found by its
 # MAC, never by its name or its place
 nic=(-netdev hubport,id=decoy,hubid=0 -device virtio-net-pci,netdev=decoy,mac=52:54:00:00:00:01
-    -netdev "user,id=net,net=10.0.2.0/24,host=10.0.2.2,dns=10.0.2.3,guestfwd=tcp:10.0.2.100:7-cmd:echo miso,guestfwd=tcp:10.0.2.100:8-cmd:sh $PWD/hack/meet.sh $work/meet"
+    -netdev "user,id=net,net=10.0.2.0/24,host=10.0.2.2,dns=10.0.2.3,ipv6-net=fd6d:6973:6f00::/64,ipv6-host=fd6d:6973:6f00::2,ipv6-dns=fd6d:6973:6f00::3,guestfwd=tcp:10.0.2.100:7-cmd:echo miso,guestfwd=tcp:10.0.2.100:8-cmd:sh $PWD/hack/meet.sh $work/meet"
     -device "virtio-net-pci,netdev=net,mac=$mac")
 environment+=("MISO_VMTEST_MAC=$mac" "MISO_VMTEST_ADDRESS=10.0.2.15/24" "MISO_VMTEST_GATEWAY=10.0.2.2")
+environment+=("MISO_VMTEST_ADDRESS6=fd6d:6973:6f00::15/64" "MISO_VMTEST_GATEWAY6=fd6d:6973:6f00::2")
 # a service beyond the builder that needs no internet, QEMU answers it, and
 # a meeting point that answers met to two connections open at once
 environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8")
