@@ -3,6 +3,7 @@ package builderkernel
 import (
 	"bytes"
 	"debug/elf"
+	"errors"
 	"io"
 	"strings"
 )
@@ -21,7 +22,12 @@ func modinfo(ko io.ReaderAt) (info, error) {
 		return info{}, err
 	}
 
-	entries, err := module.Section(".modinfo").Data()
+	section := module.Section(".modinfo")
+	if section == nil {
+		return info{}, errors.New("not a kernel module: no .modinfo section")
+	}
+
+	entries, err := section.Data()
 	if err != nil {
 		return info{}, err
 	}

@@ -49,6 +49,25 @@ func module(t *testing.T, entries ...string) []byte {
 	return file.Bytes()
 }
 
+// withoutSections is an ELF file that holds no sections at all.
+func withoutSections(t *testing.T) []byte {
+	t.Helper()
+
+	header := elf.Header64{
+		Ident:     [elf.EI_NIDENT]byte{0x7f, 'E', 'L', 'F', byte(elf.ELFCLASS64), byte(elf.ELFDATA2LSB), byte(elf.EV_CURRENT)},
+		Type:      uint16(elf.ET_REL),
+		Machine:   uint16(elf.EM_X86_64),
+		Version:   uint32(elf.EV_CURRENT),
+		Ehsize:    64,
+		Shentsize: 64,
+	}
+
+	var file bytes.Buffer
+	require.NoError(t, binary.Write(&file, binary.LittleEndian, header))
+
+	return file.Bytes()
+}
+
 func TestAModuleNamesItselfAndWhatItNeeds(t *testing.T) {
 	// arrange
 	ko := module(t, "license=GPL", "depends=xor,raid6_pq,libcrc32c", "name=btrfs")
@@ -60,4 +79,15 @@ func TestAModuleNamesItselfAndWhatItNeeds(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "btrfs", info.Name)
 	assert.Equal(t, []string{"xor", "raid6_pq", "libcrc32c"}, info.Depends)
+}
+
+func TestSomethingThatIsNoModuleIsRefused(t *testing.T) {
+	// arrange
+	notAModule := withoutSections(t)
+
+	// act
+	_, err := builderkernel.Modinfo(bytes.NewReader(notAModule))
+
+	// assert
+	assert.ErrorContains(t, err, "no .modinfo")
 }
