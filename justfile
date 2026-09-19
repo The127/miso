@@ -15,6 +15,12 @@ test:
 test-vm *args:
     bash hack/test-vm-kernels.sh {{args}}
 
+# test one vm package on the host's kernel, stopping at the first failure,
+# for the red and green of one test, for example
+# just test-vm-one internal/agent -test.run=TestName
+test-vm-one package *args:
+    MISO_VMTEST_PACKAGES={{package}} bash hack/test-vm.sh -test.timeout=20s -test.failfast {{args}}
+
 # test with a coverage profile
 cover:
     go test -coverprofile=coverage.out -covermode=atomic ./...
