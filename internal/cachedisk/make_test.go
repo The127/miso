@@ -1,6 +1,7 @@
 package cachedisk_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,4 +44,36 @@ func TestANewCacheDiskHasTheSizeAskedFor(t *testing.T) {
 	info, err := os.Stat(path)
 	require.NoError(t, err)
 	assert.Equal(t, int64(96<<20), info.Size())
+}
+
+func TestACacheDiskThatIsThereIsNeverMadeAgain(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	require.NoError(t, cachedisk.Make(path, 64<<20))
+	before := fileSystemID(t, path)
+
+	// act
+	err := cachedisk.Make(path, 64<<20)
+
+	// assert
+	assert.ErrorIs(t, err, fs.ErrExist)
+	assert.Equal(t, before, fileSystemID(t, path))
+}
+
+// fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
+// anew.
+func fileSystemID(t *testing.T, path string) []byte {
+	t.Helper()
+
+	file, err := os.Open(path)
+	require.NoError(t, err)
+
+	defer func() { _ = file.Close() }()
+
+	id := make([]byte, 16)
+	// s_uuid in the superblock, which starts 1024 bytes in
+	_, err = file.ReadAt(id, 1024+0x68)
+	require.NoError(t, err)
+
+	return id
 }
