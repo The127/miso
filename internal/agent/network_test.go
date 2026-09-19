@@ -35,7 +35,7 @@ func online(t *testing.T) *protocol.Network {
 	gateway := os.Getenv("MISO_VMTEST_GATEWAY")
 	require.NotEmpty(t, gateway, "MISO_VMTEST_GATEWAY names no gateway")
 
-	return &protocol.Network{Card: card, Address: address, Gateway: gateway}
+	return &protocol.Network{Card: card, IPv4: protocol.Family{Address: address, Gateway: gateway}}
 }
 
 // started starts a run and returns once the run printed its first line,
@@ -110,7 +110,7 @@ func TestARunWithAnAddressThatIsNotIPv4FailsNamingIt(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
 	network := online(t)
-	network.Address = "fec0::15/64"
+	network.IPv4.Address = "fec0::15/64"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
 
 	// act
@@ -124,7 +124,7 @@ func TestARunWithAGatewayThatIsNotIPv4FailsNamingIt(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
 	network := online(t)
-	network.Gateway = "fec0::2"
+	network.IPv4.Gateway = "fec0::2"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
 
 	// act
@@ -190,7 +190,7 @@ func TestARunWhoseNetworkFailsGivesItsAddressBack(t *testing.T) {
 	worker := mountedBase(t, t.TempDir())
 	unreachable := online(t)
 	// outside the run's network, so the card is made and the route fails
-	unreachable.Gateway = "192.0.2.1"
+	unreachable.IPv4.Gateway = "192.0.2.1"
 	failing := protocol.Run{Key: "failing", Layers: []string{"base"}, Network: unreachable, Command: "true"}
 	_, err := worker.Run(context.Background(), failing, io.Discard)
 	require.ErrorContains(t, err, "192.0.2.1")
@@ -244,7 +244,7 @@ func TestARunCleansUpTheCardsItMakes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
 	next := online(t)
-	next.Address = "10.0.2.16/24"
+	next.IPv4.Address = "10.0.2.16/24"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
 
 	// act
@@ -269,7 +269,7 @@ func TestTwoRunsTalkAtTheSameTime(t *testing.T) {
 	// act
 	for i, address := range []string{"10.0.2.15/24", "10.0.2.16/24"} {
 		network := online(t)
-		network.Address = address
+		network.IPv4.Address = address
 		run := protocol.Run{Key: fmt.Sprintf("run%d", i), Layers: []string{"base"}, Network: network, Command: connect}
 		wait.Go(func() { _, errs[i] = worker.Run(context.Background(), run, &outs[i]) })
 	}
@@ -303,7 +303,7 @@ func TestACardARunHidesInANetworkOfItsOwnIsGoneForTheNextRun(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
 	next := online(t)
-	next.Address = "10.0.2.16/24"
+	next.IPv4.Address = "10.0.2.16/24"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
 
 	// act
@@ -324,7 +324,7 @@ func TestARunWaitsUntilItsMACIsFree(t *testing.T) {
 	}
 	finish := started(t, worker, holding, "holding\n")
 	next := online(t)
-	next.Address = "10.0.2.16/24"
+	next.IPv4.Address = "10.0.2.16/24"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
 
 	// act
@@ -345,7 +345,7 @@ func TestARunCannotReachAnotherRun(t *testing.T) {
 	}
 	heard := started(t, worker, listening, "listening\n")
 	other := online(t)
-	other.Address = "10.0.2.16/24"
+	other.IPv4.Address = "10.0.2.16/24"
 	connecting := protocol.Run{
 		Key: "connecting", Layers: []string{"base"}, Network: other,
 		Command: "timeout 3 bash -c 'exec 3<>/dev/tcp/10.0.2.15/9 && echo reached'",
@@ -419,13 +419,13 @@ func TestARunCannotReachTheHostsLoopbackWithAFrameOfItsOwn(t *testing.T) {
 	require.NotEmpty(t, loopback, "MISO_VMTEST_HOST names no service")
 	_, port, _ := strings.Cut(loopback, ":")
 	network := online(t)
-	address, _, _ := strings.Cut(network.Address, "/")
+	address, _, _ := strings.Cut(network.IPv4.Address, "/")
 	worker := mountedBase(t, t.TempDir())
 	// the attempt is dropped, but it teaches the run the gateway's MAC
 	sending := strings.Join([]string{
 		"set -e",
-		fmt.Sprintf("timeout 1 bash -c 'exec 3<>/dev/tcp/%s/1' || true", network.Gateway),
-		fmt.Sprintf("gateway=$(ip neigh show %s | awk '{print $5}')", network.Gateway),
+		fmt.Sprintf("timeout 1 bash -c 'exec 3<>/dev/tcp/%s/1' || true", network.IPv4.Gateway),
+		fmt.Sprintf("gateway=$(ip neigh show %s | awk '{print $5}')", network.IPv4.Gateway),
 		fmt.Sprintf("python3 - \"$gateway\" %s 127.0.0.1 %s <<'EOF'\n%sEOF", address, port, syn),
 	}, "\n")
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: sending}

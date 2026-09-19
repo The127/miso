@@ -20,7 +20,7 @@ type settings struct {
 
 // readSettings reads the network the host handed a run.
 func readSettings(network *protocol.Network) (settings, error) {
-	address, err := netip.ParsePrefix(network.Address)
+	address, err := netip.ParsePrefix(network.IPv4.Address)
 	if err != nil {
 		return settings{}, fmt.Errorf("address of the run: %w", err)
 	}
@@ -29,7 +29,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("address of the run: %s is not IPv4", address)
 	}
 
-	gateway, err := netip.ParseAddr(network.Gateway)
+	gateway, err := netip.ParseAddr(network.IPv4.Gateway)
 	if err != nil {
 		return settings{}, fmt.Errorf("gateway of the run: %w", err)
 	}
