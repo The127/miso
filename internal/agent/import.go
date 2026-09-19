@@ -6,6 +6,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/The127/miso/internal/basemount"
 	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/tree"
@@ -55,7 +56,7 @@ func (a *Agent) fill(dir, digest string) error {
 
 	defer func() { _ = os.Remove(base) }()
 
-	if err := mountRoot(protocol.Serial(digest), base); err != nil {
+	if err := basemount.Mount(protocol.Serial(digest), base); err != nil {
 		return err
 	}
 

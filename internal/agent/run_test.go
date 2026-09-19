@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/basemount"
 	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
@@ -31,7 +32,7 @@ func mountedBase(t *testing.T, layers string) *agent.Agent {
 	require.NotEmpty(t, os.Getenv("MISO_VMTEST_BASE_DIGEST"), "MISO_VMTEST_BASE names no base image")
 	base := filepath.Join(layers, "base")
 	require.NoError(t, os.Mkdir(base, 0o700))
-	require.NoError(t, agent.MountRoot("miso-test-base", base))
+	require.NoError(t, basemount.Mount("miso-test-base", base))
 	// before the layers are removed, which would fail on a read-only mount
 	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(base, syscall.MNT_DETACH)) })
 

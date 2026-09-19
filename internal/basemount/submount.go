@@ -1,4 +1,4 @@
-package agent
+package basemount
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func mountSubmounts(device, kind, target string, submounts []fstab.Entry) error 
 			return err
 		}
 
-		err = mount(device, fmt.Sprintf("/proc/self/fd/%d", point.Fd()), kind, data, submount.Target)
+		err = mountReadOnly(device, fmt.Sprintf("/proc/self/fd/%d", point.Fd()), kind, data, submount.Target)
 		_ = point.Close()
 
 		if err != nil {

@@ -1,6 +1,6 @@
 //go:build vmtest
 
-package agent_test
+package basemount_test
 
 import (
 	"os"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/basemount"
 )
 
 func TestTheRootOfABaseDiskIsMountedReadOnly(t *testing.T) {
@@ -19,7 +19,7 @@ func TestTheRootOfABaseDiskIsMountedReadOnly(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-base", target)
+	err := basemount.Mount("miso-test-base", target)
 
 	// assert
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestABtrfsRootIsMounted(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-flat", target)
+	err := basemount.Mount("miso-test-flat", target)
 
 	// assert
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestTheRootSubvolumeIsFoundByItsOwnFstab(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-subvolumes", target)
+	err := basemount.Mount("miso-test-subvolumes", target)
 
 	// assert
 	require.NoError(t, err)
@@ -72,7 +72,7 @@ func TestTheSubmountsOfTheRootAreMountedInIt(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-subvolumes", target)
+	err := basemount.Mount("miso-test-subvolumes", target)
 
 	// assert
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestTheSubmountsOfADefaultRootAreMountedInIt(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-default", target)
+	err := basemount.Mount("miso-test-default", target)
 
 	// assert
 	require.NoError(t, err)
@@ -108,11 +108,11 @@ func TestSubvolumesThatEachClaimTheRootAreSeveralRoots(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-twins", target)
+	err := basemount.Mount("miso-test-twins", target)
 
 	// assert
 	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
-	require.ErrorIs(t, err, agent.ErrSeveralRoots)
+	require.ErrorIs(t, err, basemount.ErrSeveralRoots)
 	assert.ErrorContains(t, err, "one")
 	assert.ErrorContains(t, err, "two")
 }
@@ -122,7 +122,7 @@ func TestAFailedMountLeavesNothingMounted(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-twins", target)
+	err := basemount.Mount("miso-test-twins", target)
 
 	// assert
 	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
@@ -137,7 +137,7 @@ func TestAFailedSubmountNamesWhatWentWhere(t *testing.T) {
 	target := t.TempDir()
 
 	// act
-	err := agent.MountRoot("miso-test-missing", target)
+	err := basemount.Mount("miso-test-missing", target)
 
 	// assert
 	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
@@ -156,7 +156,7 @@ func TestASubmountThroughALinkOutOfTheImageIsRefused(t *testing.T) {
 	})
 
 	// act
-	err := agent.MountRoot("miso-test-escape", target)
+	err := basemount.Mount("miso-test-escape", target)
 
 	// assert
 	t.Cleanup(func() { _ = syscall.Unmount(target, syscall.MNT_DETACH) })
