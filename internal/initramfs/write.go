@@ -18,6 +18,10 @@ func Write(w io.Writer, init []byte, modules []Module) error {
 		return fmt.Errorf("the init is no program: %w", err)
 	}
 
+	if program.Machine != elf.EM_X86_64 {
+		return fmt.Errorf("the init is a program for %s, the builder VM runs %s", program.Machine, elf.EM_X86_64)
+	}
+
 	for _, segment := range program.Progs {
 		if segment.Type == elf.PT_INTERP {
 			return errors.New("the init needs a dynamic loader, which the builder VM does not have: build miso with CGO_ENABLED=0")
