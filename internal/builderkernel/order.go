@@ -3,14 +3,18 @@ package builderkernel
 import "fmt"
 
 // order is the order to load the wanted modules in, each of them after the
-// modules it depends on.
-func order(have []info, want ...string) ([]string, error) {
+// modules it depends on. What the kernel has built in is no module and is
+// left out.
+func order(have []info, builtin []string, want ...string) ([]string, error) {
 	modules := make(map[string]info, len(have))
 	for _, module := range have {
 		modules[module.Name] = module
 	}
 
-	done := make(map[string]bool, len(modules))
+	done := make(map[string]bool, len(modules)+len(builtin))
+	for _, name := range builtin {
+		done[name] = true
+	}
 
 	loaded := make([]string, 0, len(want))
 	for _, name := range want {

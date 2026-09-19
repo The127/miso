@@ -14,7 +14,7 @@ func TestAModuleThatNeedsNothingLoadsOnItsOwn(t *testing.T) {
 	have := []builderkernel.Info{{Name: "virtio_blk"}}
 
 	// act
-	loaded, err := builderkernel.Order(have, "virtio_blk")
+	loaded, err := builderkernel.Order(have, nil, "virtio_blk")
 
 	// assert
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func TestAModuleLoadsAfterWhatItDependsOn(t *testing.T) {
 	}
 
 	// act
-	loaded, err := builderkernel.Order(have, "btrfs")
+	loaded, err := builderkernel.Order(have, nil, "btrfs")
 
 	// assert
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestAModuleReachedTwiceLoadsOnce(t *testing.T) {
 	}
 
 	// act
-	loaded, err := builderkernel.Order(have, "btrfs")
+	loaded, err := builderkernel.Order(have, nil, "btrfs")
 
 	// assert
 	require.NoError(t, err)
@@ -57,8 +57,21 @@ func TestAModuleThatIsNotThereIsRefused(t *testing.T) {
 	have := []builderkernel.Info{{Name: "btrfs", Depends: []string{"libcrc32c"}}}
 
 	// act
-	_, err := builderkernel.Order(have, "btrfs")
+	_, err := builderkernel.Order(have, nil, "btrfs")
 
 	// assert
 	assert.ErrorContains(t, err, "libcrc32c")
+}
+
+func TestAModuleBuiltIntoTheKernelIsSkipped(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{{Name: "btrfs", Depends: []string{"libcrc32c"}}}
+	builtin := []string{"libcrc32c"}
+
+	// act
+	loaded, err := builderkernel.Order(have, builtin, "btrfs")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"btrfs"}, loaded)
 }
