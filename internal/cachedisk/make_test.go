@@ -3,6 +3,7 @@ package cachedisk_test
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -73,6 +74,23 @@ func TestAFailedCacheDiskLeavesNothingAtThePath(t *testing.T) {
 	assert.NoFileExists(t, path)
 }
 
+func TestACacheDiskKilledHalfwayIsNeverAtThePath(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	killing(t)
+	self, err := os.Executable()
+	require.NoError(t, err)
+	child := exec.Command(self, path) //nolint:gosec // the test runs its own binary
+	child.Args[0] = maker
+
+	// act
+	err = child.Run()
+
+	// assert
+	require.Error(t, err)
+	assert.NoFileExists(t, path)
+}
+
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
 // anew.
 func fileSystemID(t *testing.T, path string) []byte {
@@ -89,4 +107,15 @@ func fileSystemID(t *testing.T, path string) []byte {
 	require.NoError(t, err)
 
 	return id
+}
+
+// killing puts an mkfs.ext4 first on the PATH that writes a little of the
+// disk and then kills the miso that started it.
+func killing(t *testing.T) {
+	t.Helper()
+
+	bin := t.TempDir()
+	script := "#!/bin/sh\nprintf half > \"$2\"\nkill -9 $PPID\n"
+	require.NoError(t, os.WriteFile(filepath.Join(bin, "mkfs.ext4"), []byte(script), 0o700)) //nolint:gosec // the script must be executable
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
