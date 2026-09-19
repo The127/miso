@@ -7,7 +7,8 @@
 # with the serial miso-test-base, and once more with the serial of its
 # digest, which the test finds in MISO_VMTEST_BASE_DIGEST. Small btrfs disks
 # of each shape that btrfs-test-disk.sh knows are always attached with the
-# serial miso-test-<shape>.
+# serial miso-test-<shape>. A network card on QEMU's user network has the
+# MAC the test finds in MISO_VMTEST_MAC.
 set -euo pipefail
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
@@ -42,13 +43,19 @@ if [ -n "${MISO_VMTEST_BASE:-}" ]; then
     environment+=("MISO_VMTEST_BASE_DIGEST=$digest")
 fi
 
+# a network card with the MAC the test finds in MISO_VMTEST_MAC, the way a
+# build hands the agent the MAC of its card
+mac=52:54:00:6d:69:73
+nic=(-netdev user,id=net -device "virtio-net-pci,netdev=net,mac=$mac")
+environment+=("MISO_VMTEST_MAC=$mac")
+
 # the modules the tests need that the kernel has not built in, each after
 # what it depends on. Unpacked here, because kernels differ in how their
 # modules are packed and not every kernel unpacks them itself. Numbered, so
 # the VM loads them in order
 mkdir -p "$work/root/modules"
 loaded=()
-for name in virtio_blk btrfs overlay; do
+for name in virtio_blk virtio_net btrfs overlay; do
     if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
         continue
     fi
@@ -91,7 +98,7 @@ for pkg in $packages; do
     # the test binary stops a hanging test, the outer timeout a hanging VM.
     # Unbuffered, so the log of a killed run shows how far it got
     timeout 3m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \
-        -kernel "$kernel" -initrd "$work/initrd" "${disks[@]}" \
+        -kernel "$kernel" -initrd "$work/initrd" "${disks[@]}" "${nic[@]}" \
         -append "console=ttyS0 panic=-1 quiet ${environment[*]} -- -test.v -test.timeout=2m $*" \
         | sed -u 's/\r$//' | tee "$work/log"
 
