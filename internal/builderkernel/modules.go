@@ -3,6 +3,7 @@ package builderkernel
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -10,8 +11,12 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-// moduleSuffix is what a module of a package is called, its name comes first
-const moduleSuffix = ".ko.xz"
+const (
+	// moduleExt ends the name of a kernel module, its packing follows
+	moduleExt = ".ko"
+	// modulePacking is how a package holds its modules
+	modulePacking = ".xz"
+)
 
 // modules is what every module a package holds says about itself.
 func modules(deb io.Reader) ([]info, error) {
@@ -32,8 +37,20 @@ func modules(deb io.Reader) ([]info, error) {
 			return nil, err
 		}
 
-		if !strings.HasSuffix(path.Base(header.Name), moduleSuffix) {
+		base := path.Base(header.Name)
+
+		// a packed module carries its packing as the last extension
+		plain := base
+		if path.Ext(plain) != moduleExt {
+			plain = strings.TrimSuffix(plain, path.Ext(plain))
+		}
+
+		if !strings.HasSuffix(plain, moduleExt) {
 			continue
+		}
+
+		if base != plain+modulePacking {
+			return nil, fmt.Errorf("the package holds %s, miso reads %s", base, plain+modulePacking)
 		}
 
 		packed, err := xz.NewReader(files)

@@ -44,3 +44,17 @@ func TestTheModulesOfAPackageAreReadFromWhatItHolds(t *testing.T) {
 	assert.Equal(t, "btrfs", found[0].Name)
 	assert.Equal(t, []string{"libcrc32c"}, found[0].Depends)
 }
+
+func TestAModulePackedOtherwiseIsRefused(t *testing.T) {
+	// arrange
+	deb := packaged(t, map[string]string{
+		"./lib/modules/6.12.107+deb13-cloud-amd64/kernel/fs/btrfs/btrfs.ko.zst": "packed some other way",
+	})
+
+	// act
+	_, err := builderkernel.Modules(bytes.NewReader(deb))
+
+	// assert
+	assert.ErrorContains(t, err, "btrfs.ko.zst")
+	assert.ErrorContains(t, err, "btrfs.ko.xz")
+}
