@@ -2,7 +2,6 @@ package builderkernel
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -31,50 +30,41 @@ func plain(file string) (string, bool) {
 
 // modules is what every module a package holds says about itself.
 func modules(deb io.Reader) ([]info, error) {
-	files, err := unpacked(deb)
-	if err != nil {
-		return nil, err
-	}
-
 	var found []info
 
-	for {
-		header, err := files.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
+	files, failed := eachFile(deb)
+	for name, file := range files {
+		base := path.Base(name)
 
-		if err != nil {
-			return nil, err
-		}
-
-		file := path.Base(header.Name)
-
-		name, isModule := plain(file)
+		ko, isModule := plain(base)
 		if !isModule {
 			continue
 		}
 
-		if file != name+modulePacking {
-			return nil, fmt.Errorf("the package holds %s, miso reads %s", file, name+modulePacking)
+		if base != ko+modulePacking {
+			return nil, fmt.Errorf("the package holds %s, miso reads %s", base, ko+modulePacking)
 		}
 
-		packed, err := xz.NewReader(files)
+		packed, err := xz.NewReader(file)
 		if err != nil {
 			return nil, err
 		}
 
-		ko, err := io.ReadAll(packed)
+		module, err := io.ReadAll(packed)
 		if err != nil {
 			return nil, err
 		}
 
-		said, err := modinfo(bytes.NewReader(ko))
+		said, err := modinfo(bytes.NewReader(module))
 		if err != nil {
 			return nil, err
 		}
 
 		found = append(found, said)
+	}
+
+	if err := failed(); err != nil {
+		return nil, err
 	}
 
 	return found, nil

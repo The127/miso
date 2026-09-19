@@ -2,7 +2,6 @@ package builderkernel
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -15,34 +14,25 @@ const builtinFile = "modules.builtin"
 // builtin names everything the kernel of a package has built in. None of it
 // is a module to load.
 func builtin(deb io.Reader) ([]string, error) {
-	files, err := unpacked(deb)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		header, err := files.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		if path.Base(header.Name) != builtinFile {
+	files, failed := eachFile(deb)
+	for name, file := range files {
+		if path.Base(name) != builtinFile {
 			continue
 		}
 
 		var found []string
 
 		// every line is the path a module would have been built to
-		lines := bufio.NewScanner(files)
+		lines := bufio.NewScanner(file)
 		for lines.Scan() {
 			found = append(found, strings.TrimSuffix(path.Base(lines.Text()), moduleExt))
 		}
 
 		return found, lines.Err()
+	}
+
+	if err := failed(); err != nil {
+		return nil, err
 	}
 
 	return nil, fmt.Errorf("the package holds no %s", builtinFile)
