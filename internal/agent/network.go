@@ -12,10 +12,17 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/protocol"
+)
+
+// macWait and macTimeout bound the wait for the MAC of a run to be free.
+const (
+	macWait    = 50 * time.Millisecond
+	macTimeout = 10 * time.Second
 )
 
 // addCard gives the run of a process a network card of its own on top of
@@ -165,8 +172,20 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 			return nil, fmt.Errorf("address card %s: %w", address, err)
 		}
 
-		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, unix.IFF_UP, unix.IFF_UP)); err != nil {
-			return nil, fmt.Errorf("bring up card: %w", err)
+		// a card that holds the same MAC may still be on its way out, in a
+		// network the kernel removes on its own time after the run that made
+		// it, so the MAC gets a while to become free
+		for waited := time.Duration(0); ; waited += macWait {
+			_, err := ask(run, unix.RTM_SETLINK, 0, link(index, unix.IFF_UP, unix.IFF_UP))
+			if err == nil {
+				break
+			}
+
+			if !errors.Is(err, unix.EADDRINUSE) || waited >= macTimeout {
+				return nil, fmt.Errorf("bring up card for %s: %w", address, err)
+			}
+
+			time.Sleep(macWait)
 		}
 
 		via := gateway.As4()
