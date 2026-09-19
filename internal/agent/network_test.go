@@ -3,6 +3,7 @@
 package agent_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -274,4 +275,37 @@ func TestACardARunHidesInANetworkOfItsOwnIsGoneForTheNextRun(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
+}
+
+func TestARunWaitsUntilItsMACIsFree(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	// the MAC a run on 10.0.2.16 gets, held a while longer
+	holding := protocol.Run{
+		Key: "holding", Layers: []string{"base"}, Network: online(t),
+		Command: "ip link add m1 link eth0 address 02:00:0a:00:02:10 type macvlan && ip link set m1 up && echo holding && sleep 2",
+	}
+	reader, writer := io.Pipe()
+	held := make(chan error, 1)
+	go func() {
+		_, err := worker.Run(context.Background(), holding, writer)
+		_ = writer.Close()
+		held <- err
+	}()
+
+	line, err := bufio.NewReader(reader).ReadString('\n')
+	require.NoError(t, err)
+	require.Equal(t, "holding\n", line)
+	go func() { _, _ = io.Copy(io.Discard, reader) }()
+	next := online(t)
+	next.Address = "10.0.2.16/24"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+	require.NoError(t, <-held)
 }
