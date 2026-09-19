@@ -17,7 +17,8 @@
 # reach, is at MISO_VMTEST_HOST, and one on the internet reached over IPv6 at
 # MISO_VMTEST_SERVICE6, and one on a host's own network at
 # MISO_VMTEST_LOCAL6, and one on an IPv4 address reached through NAT64 at
-# MISO_VMTEST_MAPPED6. The nameservers are at MISO_VMTEST_NAMESERVER and
+# MISO_VMTEST_MAPPED6, and through a network's own NAT64 prefix at
+# MISO_VMTEST_LOCALMAPPED6. The nameservers are at MISO_VMTEST_NAMESERVER and
 # MISO_VMTEST_NAMESERVER6, answering every name with 192.0.2.53 and
 # 2001:db8::53.
 set -euo pipefail
@@ -37,6 +38,8 @@ ip addr add 2001:db8::1/128 dev lo
 ip addr add fdcc::1/128 dev lo
 # and one from the NAT64 range, how an IPv6-only host reaches IPv4
 ip addr add 64:ff9b::c000:201/128 dev lo
+# and one from the range a network picks its own NAT64 prefix from
+ip addr add 64:ff9b:1::c000:201/128 dev lo
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
 modules=${MISO_VMTEST_MODULES:-/lib/modules/$(uname -r)}
@@ -47,11 +50,13 @@ python3 hack/service.py fdcc::1 7 &
 local=$!
 python3 hack/service.py 64:ff9b::c000:201 7 &
 mapped=$!
+python3 hack/service.py 64:ff9b:1::c000:201 7 &
+localmapped=$!
 python3 hack/resolver.py &
 resolver=$!
 exec {loopback}< <(python3 hack/loopback.py)
 listener=$!
-trap 'kill "$listener" "$service" "$local" "$mapped" "$resolver"; rm -rf "$work"' EXIT
+trap 'kill "$listener" "$service" "$local" "$mapped" "$localmapped" "$resolver"; rm -rf "$work"' EXIT
 read -r port <&"$loopback"
 
 # QEMU's built-in nameserver forwards to the resolvers of the host it runs
@@ -129,7 +134,7 @@ environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8"
 # QEMU forwards to services in IPv4 only, so the IPv6 one is on the network
 # QEMU runs in
 environment+=("MISO_VMTEST_SERVICE6=[2001:db8::1]:7" "MISO_VMTEST_LOCAL6=[fdcc::1]:7")
-environment+=("MISO_VMTEST_MAPPED6=[64:ff9b::c000:201]:7")
+environment+=("MISO_VMTEST_MAPPED6=[64:ff9b::c000:201]:7" "MISO_VMTEST_LOCALMAPPED6=[64:ff9b:1::c000:201]:7")
 # the nameservers QEMU answers itself, forwarding to the harness's resolver,
 # which answers every name with 192.0.2.53 and 2001:db8::53
 environment+=("MISO_VMTEST_NAMESERVER=10.0.2.3" "MISO_VMTEST_NAMESERVER6=fd6d:6973:6f00::3")
