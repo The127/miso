@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -214,4 +215,32 @@ func TestARunCleansUpTheCardsItMakes(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
+}
+
+func TestTwoRunsTalkAtTheSameTime(t *testing.T) {
+	// arrange
+	meet := os.Getenv("MISO_VMTEST_MEET")
+	require.NotEmpty(t, meet, "MISO_VMTEST_MEET names no meeting point")
+	host, port, _ := strings.Cut(meet, ":")
+	worker := mountedBase(t, t.TempDir())
+	connect := fmt.Sprintf("timeout 15 bash -c 'exec 3<>/dev/tcp/%s/%s && cat <&3'", host, port)
+	var outs [2]bytes.Buffer
+	var errs [2]error
+	var wait sync.WaitGroup
+
+	// act
+	for i, address := range []string{"10.0.2.15/24", "10.0.2.16/24"} {
+		network := online(t)
+		network.Address = address
+		run := protocol.Run{Key: fmt.Sprintf("run%d", i), Layers: []string{"base"}, Network: network, Command: connect}
+		wait.Go(func() { _, errs[i] = worker.Run(context.Background(), run, &outs[i]) })
+	}
+
+	wait.Wait()
+
+	// assert
+	for i := range outs {
+		require.NoError(t, errs[i])
+		assert.Equal(t, "met\n", outs[i].String())
+	}
 }
