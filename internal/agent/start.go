@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/The127/miso/internal/layer"
@@ -14,6 +15,10 @@ func Start(serial, dir string) (*Agent, error) {
 	}
 
 	layers := filepath.Join(dir, "layers")
+	if err := os.MkdirAll(layers, 0o700); err != nil {
+		return nil, err
+	}
+
 	if err := layer.Open(layers).Sweep(); err != nil {
 		return nil, err
 	}
