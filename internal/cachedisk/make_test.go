@@ -17,7 +17,7 @@ func TestANewCacheDiskIsExt4(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "layers.img")
 
 	// act
-	err := cachedisk.Make(path)
+	err := cachedisk.Make(path, 64<<20)
 
 	// assert
 	require.NoError(t, err)
@@ -29,4 +29,18 @@ func TestANewCacheDiskIsExt4(t *testing.T) {
 	kind, err := disk.FileSystem(file)
 	require.NoError(t, err)
 	assert.Equal(t, "ext4", kind)
+}
+
+func TestANewCacheDiskHasTheSizeAskedFor(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+
+	// act
+	err := cachedisk.Make(path, 96<<20)
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, int64(96<<20), info.Size())
 }
