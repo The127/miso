@@ -30,7 +30,7 @@ func TestAFinishedLayerIsWholeAfterACrash(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "hello"), written, 0o600))
 
 	// act
-	err = work.Finish()
+	err = layer.Rename(work)
 
 	// assert
 	require.NoError(t, err)
