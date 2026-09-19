@@ -10,6 +10,8 @@ import (
 func Write(w io.Writer, init []byte) error {
 	records := []cpio.Record{
 		cpio.StaticRecord(init, cpio.Info{Name: "init", Mode: cpio.S_IFREG | 0o700}),
+		// init has no output without it, and only some kernels bring one
+		cpio.CharDev("dev/console", 0o600, 5, 1),
 	}
 
 	archive := cpio.Newc.Writer(w)

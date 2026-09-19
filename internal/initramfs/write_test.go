@@ -36,3 +36,27 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "the init", string(content))
 }
+
+func TestAnInitramfsHoldsTheConsole(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, []byte("the init"))
+
+	// assert
+	require.NoError(t, err)
+	records, err := cpio.ReadAllRecords(cpio.Newc.Reader(bytes.NewReader(archive.Bytes())))
+	require.NoError(t, err)
+	var console *cpio.Record
+	for i := range records {
+		if records[i].Name == "dev/console" {
+			console = &records[i]
+		}
+	}
+
+	require.NotNil(t, console, "no dev/console in the archive")
+	assert.Equal(t, uint64(cpio.S_IFCHR|0o600), console.Mode)
+	assert.Equal(t, uint64(5), console.Rmajor)
+	assert.Equal(t, uint64(1), console.Rminor)
+}
