@@ -48,6 +48,14 @@ listener=$!
 trap 'kill "$listener" "$service" "$local" "$mapped"; rm -rf "$work"' EXIT
 read -r port <&"$loopback"
 
+# the tests that must never reach it only look for its answer to be missing,
+# so a listener that answers nothing would make them pass
+answer=$(python3 -c 'import socket, sys; print(socket.create_connection(("127.0.0.1", int(sys.argv[1])), 5).recv(64).decode(), end="")' "$port")
+if [ "$answer" != "loopback" ]; then
+    echo "the loopback service answers $answer, not loopback" >&2
+    exit 1
+fi
+
 packages=${MISO_VMTEST_PACKAGES:-$( (grep -rlx --include='*_test.go' '//go:build vmtest' cmd internal || true) | xargs -r -n1 dirname | sort -u)}
 if [ -z "$packages" ]; then
     echo "no vmtest packages"
