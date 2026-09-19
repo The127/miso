@@ -53,6 +53,7 @@ func makeDisk(path string, size int64) error {
 
 	// a link, unlike a rename, never replaces what is there
 	if err := os.Link(temp.Name(), path); err != nil {
+		// the temporary name in the error means nothing to a user
 		return errors.Unwrap(err)
 	}
 
