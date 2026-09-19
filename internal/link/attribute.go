@@ -2,6 +2,7 @@ package link
 
 import (
 	"encoding/binary"
+	"strings"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -37,4 +38,20 @@ func Value(card syscall.NetlinkMessage, kind uint16) []byte {
 	}
 
 	return nil
+}
+
+// Index is the index of a card as the kernel described it.
+func Index(card syscall.NetlinkMessage) int32 {
+	return int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+}
+
+// Name is the name of a card as the kernel described it.
+func Name(card syscall.NetlinkMessage) string {
+	return strings.TrimRight(string(Value(card, unix.IFLA_IFNAME)), "\x00")
+}
+
+// Flags are the flags of a card as the kernel described it, IFF_UP and the
+// like.
+func Flags(card syscall.NetlinkMessage) uint32 {
+	return binary.NativeEndian.Uint32(card.Data[8:])
 }

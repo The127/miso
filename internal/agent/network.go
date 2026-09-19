@@ -81,8 +81,8 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 	var name string
 	for _, card := range builderCards {
 		if bytes.Equal(link.Value(card, unix.IFLA_ADDRESS), mac) {
-			parent = int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
-			name = strings.TrimRight(string(link.Value(card, unix.IFLA_IFNAME)), "\x00")
+			parent = link.Index(card)
+			name = link.Name(card)
 		}
 	}
 
@@ -151,12 +151,11 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 	}
 
 	for _, card := range cards {
-		if strings.TrimRight(string(link.Value(card, unix.IFLA_IFNAME)), "\x00") != arriving {
+		if link.Name(card) != arriving {
 			continue
 		}
 
-		// the index of the card in the answer's interface header
-		index = int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+		index = link.Index(card)
 		if _, err := run.Ask(unix.RTM_SETLINK, 0, link.CardHeader(index, 0, 0), link.Attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
 			return nil, fmt.Errorf("name card: %w", err)
 		}
@@ -198,17 +197,16 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 
 		kept = true
 		// the kernel removes the network of a run some time after it ended,
-		// and until then its card holds the MAC and address the next run
-		// needs
-		// every card, not only its own, the run may have made more
+		// and until then its cards hold MACs and addresses a next run needs.
+		// Every card goes, the run may have made more than its own
 		return func() {
 			cards, _ := run.Ask(unix.RTM_GETLINK, unix.NLM_F_DUMP, link.CardHeader(0, 0, 0))
 			for _, card := range cards {
-				if binary.NativeEndian.Uint32(card.Data[8:])&unix.IFF_LOOPBACK != 0 {
+				if link.Flags(card)&unix.IFF_LOOPBACK != 0 {
 					continue
 				}
 
-				_, _ = run.Ask(unix.RTM_DELLINK, 0, link.CardHeader(int32(binary.NativeEndian.Uint32(card.Data[4:])), 0, 0)) //nolint:gosec // the kernel writes an int32 there
+				_, _ = run.Ask(unix.RTM_DELLINK, 0, link.CardHeader(link.Index(card), 0, 0))
 			}
 
 			_ = run.Close()
