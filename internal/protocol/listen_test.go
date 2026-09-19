@@ -2,9 +2,11 @@ package protocol_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,4 +64,45 @@ func TestEachConnectionGetsItsAnswer(t *testing.T) {
 	answer, err = second.Receive()
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Done{}, answer)
+}
+
+type blocking struct {
+	release chan struct{}
+	second  chan struct{}
+}
+
+func (b blocking) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, error) {
+	if run.Command == "wait" {
+		<-b.release
+
+		return 0, nil
+	}
+
+	close(b.second)
+
+	return 0, nil
+}
+
+func (blocking) Import(context.Context, protocol.Import, io.Writer) error { return nil }
+
+func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {
+	// arrange
+	_, firstConn := asking(t, protocol.Run{Command: "wait"})
+	_, secondConn := asking(t, protocol.Run{Command: "true"})
+	listener := &listener{conns: []io.ReadWriteCloser{firstConn, secondConn}}
+	runner := blocking{release: make(chan struct{}), second: make(chan struct{})}
+	served := make(chan error)
+
+	// act
+	go func() { served <- protocol.Serve(listener, "miso 1.2.0", runner) }()
+
+	// assert
+	select {
+	case <-runner.second:
+	case <-time.After(5 * time.Second):
+		assert.Fail(t, "the second connection waits for the first")
+	}
+
+	close(runner.release)
+	assert.ErrorIs(t, <-served, errClosed)
 }
