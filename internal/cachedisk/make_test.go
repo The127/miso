@@ -77,7 +77,8 @@ func TestAFailedCacheDiskLeavesNothingAtThePath(t *testing.T) {
 func TestACacheDiskKilledHalfwayIsNeverAtThePath(t *testing.T) {
 	// arrange
 	path := filepath.Join(t.TempDir(), "layers.img")
-	killing(t)
+	// writes a little of the disk, then kills the miso that started it
+	fakeMkfs(t, "printf half > \"$2\"\nkill -9 $PPID\n")
 	self, err := os.Executable()
 	require.NoError(t, err)
 	child := exec.Command(self, path) //nolint:gosec // the test runs its own binary
@@ -89,6 +90,18 @@ func TestACacheDiskKilledHalfwayIsNeverAtThePath(t *testing.T) {
 	// assert
 	require.Error(t, err)
 	assert.NoFileExists(t, path)
+}
+
+func TestAFailedCacheDiskSaysWhatMkfsSaid(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	fakeMkfs(t, "echo no room for a file system >&2\nexit 1\n")
+
+	// act
+	err := cachedisk.Make(path, 64<<20)
+
+	// assert
+	assert.ErrorContains(t, err, "no room for a file system")
 }
 
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
@@ -109,13 +122,12 @@ func fileSystemID(t *testing.T, path string) []byte {
 	return id
 }
 
-// killing puts an mkfs.ext4 first on the PATH that writes a little of the
-// disk and then kills the miso that started it.
-func killing(t *testing.T) {
+// fakeMkfs puts an mkfs.ext4 first on the PATH that runs a shell script,
+// which finds the disk in $2.
+func fakeMkfs(t *testing.T, script string) {
 	t.Helper()
 
 	bin := t.TempDir()
-	script := "#!/bin/sh\nprintf half > \"$2\"\nkill -9 $PPID\n"
-	require.NoError(t, os.WriteFile(filepath.Join(bin, "mkfs.ext4"), []byte(script), 0o700)) //nolint:gosec // the script must be executable
+	require.NoError(t, os.WriteFile(filepath.Join(bin, "mkfs.ext4"), []byte("#!/bin/sh\n"+script), 0o700)) //nolint:gosec // the script must be executable
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }

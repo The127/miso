@@ -1,6 +1,7 @@
 package cachedisk
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -27,8 +28,9 @@ func Make(path string, size int64) error {
 	// a bare number would count blocks
 	kibibytes := fmt.Sprintf("%dk", size>>10)
 
-	if err := exec.Command("mkfs.ext4", "-q", temp.Name(), kibibytes).Run(); err != nil { //nolint:gosec // the path is where miso keeps its own cache
-		return fmt.Errorf("make cache disk %s: %w", path, err)
+	said, err := exec.Command("mkfs.ext4", "-q", temp.Name(), kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
+	if err != nil {
+		return fmt.Errorf("make cache disk %s: %w: %s", path, err, bytes.TrimSpace(said))
 	}
 
 	// a link, unlike a rename, never replaces what is there
