@@ -3,6 +3,7 @@ package initramfs
 import (
 	"bytes"
 	"debug/elf"
+	"errors"
 	"fmt"
 	"io"
 
@@ -12,8 +13,15 @@ import (
 // Write writes an initial ramfs whose init is the program given, with the
 // modules in the order to load them.
 func Write(w io.Writer, init []byte, modules []Module) error {
-	if _, err := elf.NewFile(bytes.NewReader(init)); err != nil {
+	program, err := elf.NewFile(bytes.NewReader(init))
+	if err != nil {
 		return fmt.Errorf("the init is no program: %w", err)
+	}
+
+	for _, segment := range program.Progs {
+		if segment.Type == elf.PT_INTERP {
+			return errors.New("the init needs a dynamic loader, which the builder VM does not have: build miso with CGO_ENABLED=0")
+		}
 	}
 
 	records := []cpio.Record{

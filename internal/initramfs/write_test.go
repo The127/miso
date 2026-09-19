@@ -13,9 +13,17 @@ import (
 	"github.com/The127/miso/internal/initramfs"
 )
 
-// static is the start of a static program for x86-64, all the ELF header
-// and one segment to load, as much as an init must be.
+// static is the start of a static program for x86-64, as much as an init
+// must be.
 func static(t *testing.T) []byte {
+	t.Helper()
+
+	return program(t, elf.PT_LOAD)
+}
+
+// program is the start of a program for x86-64, all the ELF header and its
+// segments of the types given.
+func program(t *testing.T, segments ...elf.ProgType) []byte {
 	t.Helper()
 
 	var program bytes.Buffer
@@ -27,10 +35,12 @@ func static(t *testing.T) []byte {
 		Phoff:     64,
 		Ehsize:    64,
 		Phentsize: 56,
-		Phnum:     1,
+		Phnum:     uint16(len(segments)), //nolint:gosec // a test names a handful of segments
 	}
 	require.NoError(t, binary.Write(&program, binary.LittleEndian, header))
-	require.NoError(t, binary.Write(&program, binary.LittleEndian, elf.Prog64{Type: uint32(elf.PT_LOAD)}))
+	for _, segment := range segments {
+		require.NoError(t, binary.Write(&program, binary.LittleEndian, elf.Prog64{Type: uint32(segment)})) //nolint:gosec // the segment types of debug/elf fit
+	}
 
 	return program.Bytes()
 }
@@ -133,4 +143,15 @@ func TestAnInitThatIsNoProgramIsRefused(t *testing.T) {
 
 	// assert
 	assert.ErrorContains(t, err, "the init is no program")
+}
+
+func TestAnInitThatNeedsADynamicLoaderIsRefusedNamingCgo(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, program(t, elf.PT_LOAD, elf.PT_INTERP), nil)
+
+	// assert
+	assert.ErrorContains(t, err, "CGO_ENABLED=0")
 }
