@@ -18,10 +18,10 @@ func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer)
 	// to set up the namespaces, then becomes the shell
 	cmd := exec.CommandContext(ctx, "/proc/self/exe", root, run.Command) //nolint:gosec // running what the build file says is what a RUN is
 	cmd.Args[0] = helperName
-	// the shell is the init of its own PID namespace, and the kernel kills
-	// whatever it leaves behind before the wait for it returns
-	// and Go makes every mount private in its own mount namespace, so what the
-	// run mounts never reaches the agent
+	// the shell is the init of its own PID namespace, so the kernel kills
+	// whatever it leaves behind before the wait for it returns. Go makes every
+	// mount private in the new mount namespace, so what the run mounts never
+	// reaches the agent
 	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID, Unshareflags: syscall.CLONE_NEWNS}
 	cmd.Stdout = out
 	cmd.Stderr = out
