@@ -28,6 +28,15 @@ func kept(t *testing.T, dir, content string) string {
 	return "sha256:" + hash
 }
 
+// arrived is the digest bytes would have when they arrive.
+func arrived(t *testing.T, content string) string {
+	t.Helper()
+
+	sum := sha256.Sum256([]byte(content))
+
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
 func read(t *testing.T, path string) string {
 	t.Helper()
 
@@ -72,4 +81,23 @@ func TestAPinnedFileThatIsNotThereIsDownloadedAndKept(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "the kernel", read(t, path))
 	assert.Equal(t, store.Path(digest), path)
+}
+
+func TestADownloadThatDoesNotMatchThePinIsRefused(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/kernel.deb": "another kernel"})
+	dir := t.TempDir()
+	store := download.Open(dir, server.Client())
+	digest := arrived(t, "the kernel")
+
+	// act
+	_, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
+
+	// assert
+	require.Error(t, err)
+	assert.ErrorContains(t, err, server.URL+"/kernel.deb")
+	assert.ErrorContains(t, err, digest)
+	assert.ErrorContains(t, err, arrived(t, "another kernel"))
+	kept, _ := filepath.Glob(filepath.Join(dir, "sha256", "*"))
+	assert.Empty(t, kept)
 }
