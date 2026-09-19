@@ -11,13 +11,17 @@
 # MAC the test finds in MISO_VMTEST_MAC, with the address and gateway for a
 # run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, a service that
 # answers miso at MISO_VMTEST_SERVICE and the meeting point of meet.sh at
-# MISO_VMTEST_MEET.
+# MISO_VMTEST_MEET. A service on the host's loopback, which a run must never
+# reach, is at MISO_VMTEST_HOST.
 set -euo pipefail
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
 modules=${MISO_VMTEST_MODULES:-/lib/modules/$(uname -r)}
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+exec {loopback}< <(python3 hack/loopback.py)
+listener=$!
+trap 'kill "$listener"; rm -rf "$work"' EXIT
+read -r port <&"$loopback"
 
 packages=$( (grep -rlx --include='*_test.go' '//go:build vmtest' cmd internal || true) | xargs -r -n1 dirname | sort -u)
 if [ -z "$packages" ]; then
@@ -58,6 +62,8 @@ environment+=("MISO_VMTEST_MAC=$mac" "MISO_VMTEST_ADDRESS=10.0.2.15/24" "MISO_VM
 # a service beyond the builder that needs no internet, QEMU answers it, and
 # a meeting point that answers met to two connections open at once
 environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8")
+# QEMU maps the gateway to the host's loopback
+environment+=("MISO_VMTEST_HOST=10.0.2.2:$port")
 
 # the modules the tests need that the kernel has not built in, each after
 # what it depends on. Unpacked here, because kernels differ in how their
@@ -65,7 +71,7 @@ environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7" "MISO_VMTEST_MEET=10.0.2.100:8"
 # the VM loads them in order
 mkdir -p "$work/root/modules"
 loaded=()
-for name in virtio_blk virtio_net macvlan btrfs overlay; do
+for name in virtio_blk virtio_net macvlan btrfs overlay sch_ingress cls_flower act_gact; do
     if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
         continue
     fi
