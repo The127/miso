@@ -1,21 +1,8 @@
 package vsock
 
-import (
-	"os"
-
-	"golang.org/x/sys/unix"
-)
+import mdvsock "github.com/mdlayher/vsock"
 
 // Dial connects to a port of the machine with a context ID.
-func Dial(cid, port uint32) (*os.File, error) {
-	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := unix.Connect(fd, &unix.SockaddrVM{CID: cid, Port: port}); err != nil {
-		return nil, err
-	}
-
-	return os.NewFile(uintptr(fd), "vsock"), nil
+func Dial(cid, port uint32) (*mdvsock.Conn, error) {
+	return mdvsock.Dial(cid, port, nil)
 }
