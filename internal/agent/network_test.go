@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/agent"
 	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
@@ -34,6 +35,41 @@ func online(t *testing.T) *protocol.Network {
 	require.NotEmpty(t, gateway, "MISO_VMTEST_GATEWAY names no gateway")
 
 	return &protocol.Network{Card: card, Address: address, Gateway: gateway}
+}
+
+// started starts a run and returns once the run printed its first line,
+// which must be the line. What it answers waits for the end of the run and
+// answers what the run printed after that line.
+func started(t *testing.T, worker *agent.Agent, run protocol.Run, line string) func() string {
+	t.Helper()
+
+	reader, writer := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		_, err := worker.Run(context.Background(), run, writer)
+		_ = writer.Close()
+		done <- err
+	}()
+
+	lines := bufio.NewReader(reader)
+	first, err := lines.ReadString('\n')
+	require.NoError(t, err)
+	require.Equal(t, line, first)
+	var rest bytes.Buffer
+	copied := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(&rest, lines)
+		close(copied)
+	}()
+
+	return func() string {
+		t.Helper()
+
+		require.NoError(t, <-done)
+		<-copied
+
+		return rest.String()
+	}
 }
 
 func TestAnOnlineRunHasACardBesidesItsLoopback(t *testing.T) {
@@ -285,18 +321,7 @@ func TestARunWaitsUntilItsMACIsFree(t *testing.T) {
 		Key: "holding", Layers: []string{"base"}, Network: online(t),
 		Command: "ip link add m1 link eth0 address 02:00:0a:00:02:10 type macvlan && ip link set m1 up && echo holding && sleep 2",
 	}
-	reader, writer := io.Pipe()
-	held := make(chan error, 1)
-	go func() {
-		_, err := worker.Run(context.Background(), holding, writer)
-		_ = writer.Close()
-		held <- err
-	}()
-
-	line, err := bufio.NewReader(reader).ReadString('\n')
-	require.NoError(t, err)
-	require.Equal(t, "holding\n", line)
-	go func() { _, _ = io.Copy(io.Discard, reader) }()
+	finish := started(t, worker, holding, "holding\n")
 	next := online(t)
 	next.Address = "10.0.2.16/24"
 	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
@@ -307,7 +332,7 @@ func TestARunWaitsUntilItsMACIsFree(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
-	require.NoError(t, <-held)
+	finish()
 }
 
 func TestARunCannotReachAnotherRun(t *testing.T) {
@@ -317,25 +342,7 @@ func TestARunCannotReachAnotherRun(t *testing.T) {
 		Key: "listening", Layers: []string{"base"}, Network: online(t),
 		Command: `perl -MIO::Socket::INET -e '$| = 1; alarm 4; $s = IO::Socket::INET->new(LocalPort => 9, Listen => 1, ReuseAddr => 1) or die $!; print "listening\n"; $s->accept and print "accepted\n"'`,
 	}
-	reader, writer := io.Pipe()
-	var heard bytes.Buffer
-	listened := make(chan error, 1)
-	go func() {
-		_, err := worker.Run(context.Background(), listening, writer)
-		_ = writer.Close()
-		listened <- err
-	}()
-
-	lines := bufio.NewReader(reader)
-	line, err := lines.ReadString('\n')
-	require.NoError(t, err)
-	require.Equal(t, "listening\n", line)
-	copied := make(chan struct{})
-	go func() {
-		_, _ = io.Copy(&heard, lines)
-		close(copied)
-	}()
-
+	heard := started(t, worker, listening, "listening\n")
 	other := online(t)
 	other.Address = "10.0.2.16/24"
 	connecting := protocol.Run{
@@ -345,14 +352,12 @@ func TestARunCannotReachAnotherRun(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err = worker.Run(context.Background(), connecting, &out)
+	_, err := worker.Run(context.Background(), connecting, &out)
 
 	// assert
 	require.NoError(t, err)
-	require.NoError(t, <-listened)
-	<-copied
 	assert.NotContains(t, out.String(), "reached")
-	assert.NotContains(t, heard.String(), "accepted")
+	assert.NotContains(t, heard(), "accepted")
 }
 
 func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
