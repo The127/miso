@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // helperName is the name the agent starts itself under to run a command.
@@ -28,8 +30,19 @@ func Helper() {
 }
 
 func helper(root, command string) error {
-	if err := syscall.Chroot(root); err != nil {
-		return fmt.Errorf("chroot %s: %w", root, err)
+	if err := os.Chdir(root); err != nil {
+		return err
+	}
+
+	// with both at ".", the old root lands on the new one and needs no
+	// directory in the layers
+	if err := unix.PivotRoot(".", "."); err != nil {
+		return fmt.Errorf("pivot_root %s: %w", root, err)
+	}
+
+	// a chroot can be climbed out of, a root with nothing above it cannot
+	if err := unix.Unmount(".", unix.MNT_DETACH); err != nil {
+		return fmt.Errorf("detach the builder's root: %w", err)
 	}
 
 	if err := os.Chdir("/"); err != nil {
