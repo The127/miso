@@ -60,6 +60,19 @@ func TestACacheDiskThatIsThereIsNeverMadeAgain(t *testing.T) {
 	assert.Equal(t, before, fileSystemID(t, path))
 }
 
+func TestAFailedCacheDiskLeavesNothingAtThePath(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+
+	// act
+	// too small for mkfs, which fails after it made the file
+	err := cachedisk.Make(path, 8<<10)
+
+	// assert
+	require.Error(t, err)
+	assert.NoFileExists(t, path)
+}
+
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
 // anew.
 func fileSystemID(t *testing.T, path string) []byte {
