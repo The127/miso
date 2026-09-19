@@ -56,3 +56,20 @@ func TestAPinnedFileThatIsThereIsAnsweredWithoutARequest(t *testing.T) {
 	assert.Equal(t, "the kernel", read(t, path))
 	assert.Zero(t, requests)
 }
+
+func TestAPinnedFileThatIsNotThereIsDownloadedAndKept(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/kernel.deb": "the kernel"})
+	dir := t.TempDir()
+	store := download.Open(dir, server.Client())
+	sum := sha256.Sum256([]byte("the kernel"))
+	digest := "sha256:" + hex.EncodeToString(sum[:])
+
+	// act
+	path, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "the kernel", read(t, path))
+	assert.Equal(t, store.Path(digest), path)
+}
