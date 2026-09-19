@@ -96,6 +96,8 @@ func ipv6Rules(wanted family) []rule {
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("fc00::/7")), pass},
 		// how a host with IPv6 alone reaches what has IPv4 alone
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b::/96")), pass},
+		// and the range a network picks its own such prefix from
+		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b:1::/48")), pass},
 	})
 }
 
