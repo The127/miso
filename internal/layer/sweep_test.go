@@ -1,0 +1,23 @@
+package layer_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/layer"
+)
+
+func TestASweepRemovesALayerLeftUnfinished(t *testing.T) {
+	// arrange
+	store := layer.Open(t.TempDir())
+	left := begun(t, store, "def", "hi")
+
+	// act
+	err := store.Sweep()
+
+	// assert
+	require.NoError(t, err)
+	assert.NoDirExists(t, left.Dir())
+}
