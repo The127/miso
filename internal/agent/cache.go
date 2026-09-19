@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -16,5 +17,9 @@ func MountCache(serial, dir string) error {
 	}
 
 	// a run reads the layers below it, which must not write to the disk
-	return syscall.Mount(filepath.Join("/dev", name), dir, "ext4", syscall.MS_NOATIME, "")
+	if err := syscall.Mount(filepath.Join("/dev", name), dir, "ext4", syscall.MS_NOATIME, ""); err != nil {
+		return fmt.Errorf("mount cache disk %s: %w", serial, err)
+	}
+
+	return nil
 }

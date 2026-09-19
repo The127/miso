@@ -34,3 +34,14 @@ func TestALayerOnTheCacheIsThereAfterTheCacheIsMountedAgain(t *testing.T) {
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(dir, "abc", "hello"))
 }
+
+func TestACacheDiskWithoutAFileSystemFailsNamingItsSerial(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+
+	// act
+	err := agent.MountCache("miso-test-blank", dir)
+
+	// assert
+	assert.ErrorContains(t, err, "miso-test-blank")
+}
