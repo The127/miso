@@ -38,7 +38,7 @@ func AddCard(pid int, network *protocol.Network) (func(), error) {
 		return nil, err
 	}
 
-	if err := fenceHost(builder, parent, wanted.ipv4.gateway); err != nil {
+	if err := fenceHost(builder, parent, wanted); err != nil {
 		return nil, err
 	}
 
