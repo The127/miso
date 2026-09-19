@@ -7,14 +7,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
+// making names a disk while it is made, after the name it will have
+const making = ".making-"
+
 // Make makes a new cache disk of a size in bytes at a path, and never over
-// one that is there.
+// one that is there. Only under the Lock, because it removes what a killed
+// Make left, which a running one would still be making.
 func Make(path string, size int64) error {
+	if err := removeLeftovers(path); err != nil {
+		return fmt.Errorf("make cache disk %s: %w", path, err)
+	}
+
 	// the disk is made under another name, so a miso killed halfway never
 	// leaves a broken one at the path
-	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".making-*")
+	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+making+"*")
 	if err != nil {
 		return fmt.Errorf("make cache disk %s: %w", path, err)
 	}
@@ -45,6 +54,27 @@ func Make(path string, size int64) error {
 	// a link, unlike a rename, never replaces what is there
 	if err := os.Link(temp.Name(), path); err != nil {
 		return fmt.Errorf("make cache disk %s: %w", path, errors.Unwrap(err))
+	}
+
+	return nil
+}
+
+// removeLeftovers removes the disks a killed Make left at a path.
+func removeLeftovers(path string) error {
+	// by name and not by pattern, a directory's name may hold a [ or a *
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), filepath.Base(path)+making) {
+			continue
+		}
+
+		if err := os.Remove(filepath.Join(filepath.Dir(path), entry.Name())); err != nil {
+			return err
+		}
 	}
 
 	return nil
