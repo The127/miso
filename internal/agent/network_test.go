@@ -244,3 +244,34 @@ func TestTwoRunsTalkAtTheSameTime(t *testing.T) {
 		assert.Equal(t, "met\n", outs[i].String())
 	}
 }
+
+func TestACardARunHidesInANetworkOfItsOwnIsGoneForTheNextRun(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	// the MAC a run on 10.0.2.16 gets, on a card the agent cannot reach. The
+	// kernel removes that network soon after the run, and this test guards
+	// that it stays soon enough
+	hiding := strings.Join([]string{
+		"set -e",
+		"unshare -n sleep 1000 &",
+		"inner=$!",
+		"sleep 0.3",
+		"ip link add m1 link eth0 address 02:00:0a:00:02:10 type macvlan",
+		"ip link set m1 netns $inner",
+		"nsenter -t $inner -n ip link set m1 up",
+	}, "\n")
+	making := protocol.Run{Key: "making", Layers: []string{"base"}, Network: online(t), Command: hiding}
+	code, err := worker.Run(context.Background(), making, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	next := online(t)
+	next.Address = "10.0.2.16/24"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: next, Command: "true"}
+
+	// act
+	code, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
