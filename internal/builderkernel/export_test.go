@@ -19,3 +19,8 @@ type Info = info
 func Modinfo(ko io.ReaderAt) (Info, error) {
 	return modinfo(ko)
 }
+
+// Order is the order to load the wanted modules in.
+func Order(have []Info, want ...string) []string {
+	return order(have, want...)
+}
