@@ -2,6 +2,8 @@ package initramfs_test
 
 import (
 	"bytes"
+	"debug/elf"
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +12,28 @@ import (
 
 	"github.com/The127/miso/internal/initramfs"
 )
+
+// static is the start of a static program for x86-64, all the ELF header
+// and one segment to load, as much as an init must be.
+func static(t *testing.T) []byte {
+	t.Helper()
+
+	var program bytes.Buffer
+	header := elf.Header64{
+		Ident:     [elf.EI_NIDENT]byte{0x7f, 'E', 'L', 'F', byte(elf.ELFCLASS64), byte(elf.ELFDATA2LSB), byte(elf.EV_CURRENT)},
+		Type:      uint16(elf.ET_EXEC),
+		Machine:   uint16(elf.EM_X86_64),
+		Version:   uint32(elf.EV_CURRENT),
+		Phoff:     64,
+		Ehsize:    64,
+		Phentsize: 56,
+		Phnum:     1,
+	}
+	require.NoError(t, binary.Write(&program, binary.LittleEndian, header))
+	require.NoError(t, binary.Write(&program, binary.LittleEndian, elf.Prog64{Type: uint32(elf.PT_LOAD)}))
+
+	return program.Bytes()
+}
 
 // record is the file of a name in an archive, which must hold it.
 func record(t *testing.T, archive []byte, name string) cpio.Record {
@@ -33,7 +57,7 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"), nil)
+	err := initramfs.Write(&archive, static(t), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -42,7 +66,7 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	content := make([]byte, init.FileSize)
 	_, err = init.ReadAt(content, 0)
 	require.NoError(t, err)
-	assert.Equal(t, "the init", string(content))
+	assert.Equal(t, static(t), content)
 }
 
 func TestAnInitramfsHoldsTheConsole(t *testing.T) {
@@ -50,7 +74,7 @@ func TestAnInitramfsHoldsTheConsole(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"), nil)
+	err := initramfs.Write(&archive, static(t), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -69,7 +93,7 @@ func TestAnInitramfsHoldsItsModulesInTheOrderToLoadThem(t *testing.T) {
 	}
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"), modules)
+	err := initramfs.Write(&archive, static(t), modules)
 
 	// assert
 	require.NoError(t, err)
@@ -85,7 +109,7 @@ func TestAnInitramfsCarriesNothingOfTheMachineThatWroteIt(t *testing.T) {
 	modules := []initramfs.Module{{Name: "virtio_blk", Content: []byte("first")}}
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"), modules)
+	err := initramfs.Write(&archive, static(t), modules)
 
 	// assert
 	require.NoError(t, err)
@@ -98,4 +122,15 @@ func TestAnInitramfsCarriesNothingOfTheMachineThatWroteIt(t *testing.T) {
 		assert.Zero(t, found.Major, found.Name)
 		assert.Zero(t, found.Minor, found.Name)
 	}
+}
+
+func TestAnInitThatIsNoProgramIsRefused(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, []byte("the init"), nil)
+
+	// assert
+	assert.ErrorContains(t, err, "the init is no program")
 }

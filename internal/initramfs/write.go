@@ -1,6 +1,8 @@
 package initramfs
 
 import (
+	"bytes"
+	"debug/elf"
 	"fmt"
 	"io"
 
@@ -10,6 +12,10 @@ import (
 // Write writes an initial ramfs whose init is the program given, with the
 // modules in the order to load them.
 func Write(w io.Writer, init []byte, modules []Module) error {
+	if _, err := elf.NewFile(bytes.NewReader(init)); err != nil {
+		return fmt.Errorf("the init is no program: %w", err)
+	}
+
 	records := []cpio.Record{
 		cpio.StaticRecord(init, cpio.Info{Name: "init", Mode: cpio.S_IFREG | 0o700}),
 		// init has no output without it, and only some kernels bring one
