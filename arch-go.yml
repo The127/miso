@@ -218,6 +218,20 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the builder kernel takes miso's pinned Debian package apart into the
+  # kernel the builder VM boots and the modules its agent loads. It has the
+  # download fetch the package, and never starts a process, opens a
+  # connection or touches the kernel
+  - package: '**.internal.builderkernel$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.download$'
+        - '**.internal.initramfs$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
+        - syscall
   # the link speaks route netlink with the kernel about cards, addresses and
   # routes. It knows nothing of ours and never opens a connection or starts
   # a process. net/netip holds only addresses as values, so the rule names
