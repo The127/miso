@@ -111,6 +111,21 @@ func TestAnOnlineRunHasItsIPv6AddressAtOnce(t *testing.T) {
 	assert.NotContains(t, out.String(), "tentative")
 }
 
+func TestAnOnlineRunHasAnIPv6RouteThroughItsGateway(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "ip -6 route show default"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "default via "+network.IPv6.Gateway+" dev eth0")
+}
+
 func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
 	// arrange
 	service := os.Getenv("MISO_VMTEST_SERVICE")
