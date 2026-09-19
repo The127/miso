@@ -23,6 +23,10 @@ func addCard(pid int, network *protocol.Network) error {
 		return fmt.Errorf("address of the run: %w", err)
 	}
 
+	if !address.Addr().Is4() {
+		return fmt.Errorf("address of the run: %s is not IPv4", address)
+	}
+
 	gateway, err := netip.ParseAddr(network.Gateway)
 	if err != nil {
 		return fmt.Errorf("gateway of the run: %w", err)

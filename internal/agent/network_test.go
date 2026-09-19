@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -62,4 +63,18 @@ func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "miso\n", out.String())
+}
+
+func TestARunWithAnAddressThatIsNotIPv4FailsNamingIt(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	network.Address = "fec0::15/64"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "fec0::15/64")
 }
