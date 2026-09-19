@@ -134,6 +134,20 @@ func TestACacheDiskFindsMkfsWhereThePathDoesNotLook(t *testing.T) {
 	assert.FileExists(t, path)
 }
 
+func TestANewCacheDiskRemovesWhatAKilledOneLeft(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	left := path + ".making-123"
+	require.NoError(t, os.WriteFile(left, []byte("half"), 0o600))
+
+	// act
+	err := cachedisk.Make(path, 64<<20)
+
+	// assert
+	require.NoError(t, err)
+	assert.NoFileExists(t, left)
+}
+
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
 // anew.
 func fileSystemID(t *testing.T, path string) []byte {
