@@ -15,4 +15,8 @@ type Family struct {
 	// the run's own, with its prefix length, 10.0.2.15/24
 	Address string
 	Gateway string
+
+	// empty when the host has no resolver in this family, and then a run
+	// gets none, rather than one that answers nothing
+	Nameserver string
 }

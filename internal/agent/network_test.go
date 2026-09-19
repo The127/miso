@@ -39,11 +39,15 @@ func online(t *testing.T) *protocol.Network {
 	require.NotEmpty(t, address6, "MISO_VMTEST_ADDRESS6 names no address")
 	gateway6 := os.Getenv("MISO_VMTEST_GATEWAY6")
 	require.NotEmpty(t, gateway6, "MISO_VMTEST_GATEWAY6 names no gateway")
+	nameserver := os.Getenv("MISO_VMTEST_NAMESERVER")
+	require.NotEmpty(t, nameserver, "MISO_VMTEST_NAMESERVER names no nameserver")
+	nameserver6 := os.Getenv("MISO_VMTEST_NAMESERVER6")
+	require.NotEmpty(t, nameserver6, "MISO_VMTEST_NAMESERVER6 names no nameserver")
 
 	return &protocol.Network{
 		Card: card,
-		IPv4: protocol.Family{Address: address, Gateway: gateway},
-		IPv6: protocol.Family{Address: address6, Gateway: gateway6},
+		IPv4: protocol.Family{Address: address, Gateway: gateway, Nameserver: nameserver},
+		IPv6: protocol.Family{Address: address6, Gateway: gateway6, Nameserver: nameserver6},
 	}
 }
 
@@ -538,6 +542,27 @@ func TestARunThatSetsUpIPv6ItselfCannotReachTheHostsLoopback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, code, out.String())
 	assert.NotContains(t, out.String(), "loopback")
+}
+
+//go:embed testdata/query.py
+var query string
+
+func TestARunResolvesANameThroughTheNameserverOverIPv6(t *testing.T) {
+	// arrange
+	nameserver := os.Getenv("MISO_VMTEST_NAMESERVER6")
+	require.NotEmpty(t, nameserver, "MISO_VMTEST_NAMESERVER6 names no nameserver")
+	worker := mountedBase(t, t.TempDir())
+	asking := fmt.Sprintf("python3 - %s miso.test AAAA <<'EOF'\n%sEOF", nameserver, query)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: asking}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code, out.String())
+	assert.Equal(t, "2001:db8::53\n", out.String())
 }
 
 //go:embed testdata/syn.py

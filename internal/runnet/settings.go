@@ -22,6 +22,9 @@ type settings struct {
 type family struct {
 	address netip.Prefix
 	gateway netip.Addr
+
+	// not valid when the host named none in this family
+	nameserver netip.Addr
 }
 
 // readSettings reads the network the host handed a run.
@@ -59,6 +62,17 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("IPv6 gateway of the run: %w", err)
 	}
 
+	// a host without a resolver in this family names none, because slirp
+	// forwards a query only to a resolver of the query's own family, so one
+	// handed over anyway would cost every lookup a timeout
+	var nameserver6 netip.Addr
+	if network.IPv6.Nameserver != "" {
+		nameserver6, err = netip.ParseAddr(network.IPv6.Nameserver)
+		if err != nil {
+			return settings{}, fmt.Errorf("IPv6 nameserver of the run: %w", err)
+		}
+	}
+
 	var card []byte
 	for _, part := range strings.Split(network.Card, ":") {
 		octet, err := strconv.ParseUint(part, 16, 8)
@@ -72,7 +86,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 	return settings{
 		card: card,
 		ipv4: family{address: address, gateway: gateway},
-		ipv6: family{address: address6, gateway: gateway6},
+		ipv6: family{address: address6, gateway: gateway6, nameserver: nameserver6},
 	}, nil
 }
 
