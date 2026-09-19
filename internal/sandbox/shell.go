@@ -38,6 +38,9 @@ func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int
 	}
 
 	defer func() { _ = setup.Close() }()
+	// closed again as soon as the helper has it, or the read of setup would
+	// never end
+	defer func() { _ = failed.Close() }()
 
 	// the helper waits here before it becomes the shell, so the shell never
 	// runs before its network is ready
@@ -47,6 +50,7 @@ func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int
 	}
 
 	defer func() { _ = open.Close() }()
+	defer func() { _ = gate.Close() }()
 
 	cmd.ExtraFiles = []*os.File{failed, gate}
 	err = cmd.Start()
