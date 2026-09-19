@@ -24,6 +24,10 @@ standard systemd formats and leaves the rest to whoever runs the machine.
   better.
 - A behaviour is one commit: its test together with the code it drove out.
   Tests never get a commit of their own, and nothing is committed at red.
+- Decide for every machine miso may run on, never for this one. What
+  works on this kernel or distro proves nothing about a user's. A guard
+  that older or other systems need is written always, not only when
+  detected, and its test is shaped so it fails here without the guard.
 - This is the tool itself, not a first cut of it. Never frame plans as
   "v1", versions or phases, and never propose cutting scope to ship sooner.
   Talk about the order of work instead.
