@@ -42,6 +42,24 @@ func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 	assert.Equal(t, "echo hi", runsOf(requests)[0].Command)
 }
 
+func TestAnOfflineRunBecomesAnOfflineRequest(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:       "debian:13",
+		BaseDigest: "sha256:image",
+		BaseKey:    "base",
+		Steps:      []plan.Step{{Instruction: imagefile.Run{Line: 2, Offline: true, Command: "make test"}, Key: "k1", BuiltOn: []string{"base"}}},
+	}}}
+
+	// act
+	requests, err := build.Requests(planned)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, runsOf(requests), 1)
+	assert.True(t, runsOf(requests)[0].Offline)
+}
+
 func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
 	// arrange
 	planned := plan.Plan{Stages: []plan.Stage{{
