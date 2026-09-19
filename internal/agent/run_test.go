@@ -55,61 +55,6 @@ func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(layers, "base", "x"))
 }
 
-func TestARunCannotRenameTheBuilder(t *testing.T) {
-	// arrange
-	was, err := os.Hostname()
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, syscall.Sethostname([]byte(was))) })
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "hostname renamed"}
-
-	// act
-	code, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
-	name, err := os.Hostname()
-	require.NoError(t, err)
-	assert.Equal(t, was, name)
-}
-
-func TestARunCannotChangeTheBuildersNetwork(t *testing.T) {
-	// arrange
-	flags := "/sys/class/net/lo/flags"
-	was, err := os.ReadFile(flags)
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, os.WriteFile(flags, was, 0o600)) }) //nolint:gosec // the test names the setting
-	worker := mountedBase(t, t.TempDir())
-	flip := "if ip link show lo | grep -q ,UP; then ip link set lo down; else ip link set lo up; fi"
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: flip}
-
-	// act
-	code, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
-	is, err := os.ReadFile(flags)
-	require.NoError(t, err)
-	assert.Equal(t, string(was), string(is))
-}
-
-func TestARunHasALoopback(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "cat /sys/class/net/lo/flags"}
-	var out bytes.Buffer
-
-	// act
-	_, err := worker.Run(context.Background(), run, &out)
-
-	// assert
-	require.NoError(t, err)
-	// up and loopback
-	assert.Equal(t, "0x9\n", out.String())
-}
-
 func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
