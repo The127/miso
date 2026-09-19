@@ -1,4 +1,4 @@
-package agent
+package basemount
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 	"github.com/The127/miso/internal/fstab"
 )
 
-// mountRoot mounts the root partition of the disk with a serial read-only on
+// Mount mounts the root partition of the disk with a serial read-only on
 // a directory.
-func mountRoot(serial, target string) error {
+func Mount(serial, target string) error {
 	block := os.DirFS("/sys/block")
 
 	name, err := disk.BySerial(block, serial)
@@ -44,7 +44,7 @@ func mountRoot(serial, target string) error {
 	}
 
 	device := filepath.Join("/dev", partition)
-	if err := mount(device, target, kind, "", target); err != nil {
+	if err := mountReadOnly(device, target, kind, "", target); err != nil {
 		return err
 	}
 
@@ -71,7 +71,7 @@ func assembleRoot(device, kind, target string) error {
 			return err
 		}
 
-		if err := mount(device, target, kind, "subvol="+subvolume, target); err != nil {
+		if err := mountReadOnly(device, target, kind, "subvol="+subvolume, target); err != nil {
 			return err
 		}
 	}
@@ -104,8 +104,9 @@ func describedRoot(target string) (string, []fstab.Entry, error) {
 	return ownSubvolume(top)
 }
 
-// mount mounts a device read-only and names in a failure what went where.
-func mount(device, target, kind, data, where string) error {
+// mountReadOnly mounts a device read-only and names in a failure what went
+// where.
+func mountReadOnly(device, target, kind, data, where string) error {
 	if err := syscall.Mount(device, target, kind, syscall.MS_RDONLY, data); err != nil {
 		return fmt.Errorf("mount %s %s on %s: %w", device, data, where, err)
 	}

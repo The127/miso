@@ -176,18 +176,29 @@ dependenciesRules:
       standard:
         - os/exec
         - '^net$'
+  # the basemount mounts a base disk's root, found through disk, as its
+  # fstab read through fstab describes it. It touches the kernel, and never
+  # starts a process or touches the network
+  - package: '**.internal.basemount$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.disk$'
+        - '**.internal.fstab$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
   # the agent is the builder VM's side of a build. It does what the host asks
-  # through the protocol, finds base disks through disk, reads their fstab
-  # through fstab, copies them through tree, keeps layers through layer and
-  # sets up the network of a run through link. It touches the kernel and
-  # starts the commands of a build, and never opens a connection itself.
-  # net/netip holds only addresses as values, so the rule names net alone
+  # through the protocol, mounts base disks through basemount, copies them
+  # through tree, keeps layers through layer and sets up the network of a
+  # run through link. It touches the kernel and starts the commands of a
+  # build, and never opens a connection itself. net/netip holds only
+  # addresses as values, so the rule names net alone
   - package: '**.internal.agent$'
     shouldOnlyDependsOn:
       internal:
         - '**.internal.protocol$'
-        - '**.internal.disk$'
-        - '**.internal.fstab$'
+        - '**.internal.basemount$'
         - '**.internal.tree$'
         - '**.internal.layer$'
         - '**.internal.link$'
