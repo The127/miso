@@ -23,6 +23,20 @@ func TestRunKeepsItsCommandVerbatim(t *testing.T) {
 	}, stages[0].Instructions)
 }
 
+func TestRunWithoutNetworkIsOffline(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --network=none make test\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Line: 2, Offline: true, Command: "make test"},
+	}, stages[0].Instructions)
+}
+
 func TestRunWithoutACommandIsRejected(t *testing.T) {
 	// arrange
 	source := "FROM debian:sid\nRUN\n"
