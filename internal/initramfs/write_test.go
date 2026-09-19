@@ -33,7 +33,7 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"))
+	err := initramfs.Write(&archive, []byte("the init"), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestAnInitramfsHoldsTheConsole(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"))
+	err := initramfs.Write(&archive, []byte("the init"), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -58,4 +58,23 @@ func TestAnInitramfsHoldsTheConsole(t *testing.T) {
 	assert.Equal(t, uint64(cpio.S_IFCHR|0o600), console.Mode)
 	assert.Equal(t, uint64(5), console.Rmajor)
 	assert.Equal(t, uint64(1), console.Rminor)
+}
+
+func TestAnInitramfsHoldsItsModulesInTheOrderToLoadThem(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+	modules := []initramfs.Module{
+		{Name: "virtio_blk", Content: []byte("first")},
+		{Name: "btrfs", Content: []byte("second")},
+	}
+
+	// act
+	err := initramfs.Write(&archive, []byte("the init"), modules)
+
+	// assert
+	require.NoError(t, err)
+	first := record(t, archive.Bytes(), "modules/01-virtio_blk.ko")
+	second := record(t, archive.Bytes(), "modules/02-btrfs.ko")
+	assert.Equal(t, uint64(5), first.FileSize)
+	assert.Equal(t, uint64(6), second.FileSize)
 }
