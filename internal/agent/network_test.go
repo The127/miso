@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -162,4 +163,35 @@ func TestARunWhoseNetworkFailsGivesItsAddressBack(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
+}
+
+func TestTheBuildersCardHasNoAddress(t *testing.T) {
+	// arrange
+	mac := os.Getenv("MISO_VMTEST_MAC")
+	var card string
+	addresses, err := filepath.Glob("/sys/class/net/*/address")
+	require.NoError(t, err)
+	for _, path := range addresses {
+		address, err := os.ReadFile(path)
+		require.NoError(t, err)
+		if strings.TrimSpace(string(address)) == mac {
+			card = filepath.Base(filepath.Dir(path))
+		}
+	}
+
+	require.NotEmpty(t, card, "no card has the MAC %s", mac)
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: "true"}
+
+	// act
+	_, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	ipv6, err := os.ReadFile("/proc/net/if_inet6")
+	require.NoError(t, err)
+	for line := range strings.Lines(string(ipv6)) {
+		fields := strings.Fields(line)
+		assert.NotEqual(t, card, fields[len(fields)-1], "the builder's card has %s", fields[0])
+	}
 }
