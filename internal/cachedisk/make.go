@@ -17,21 +17,30 @@ const making = ".making-"
 // one that is there. Only under the Lock, because it removes what a killed
 // Make left, which a running one would still be making.
 func Make(path string, size int64) error {
-	if err := removeLeftovers(path); err != nil {
+	if err := makeDisk(path, size); err != nil {
 		return fmt.Errorf("make cache disk %s: %w", path, err)
+	}
+
+	return nil
+}
+
+// makeDisk is Make without naming the disk in its errors.
+func makeDisk(path string, size int64) error {
+	if err := removeLeftovers(path); err != nil {
+		return err
 	}
 
 	// the disk is made under another name, so a miso killed halfway never
 	// leaves a broken one at the path
 	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+making+"*")
 	if err != nil {
-		return fmt.Errorf("make cache disk %s: %w", path, err)
+		return err
 	}
 
 	defer func() { _ = os.Remove(temp.Name()) }()
 
 	if err := temp.Close(); err != nil {
-		return fmt.Errorf("make cache disk %s: %w", path, err)
+		return err
 	}
 
 	// a bare number would count blocks
@@ -39,21 +48,21 @@ func Make(path string, size int64) error {
 
 	mkfs, err := findMkfs()
 	if errors.Is(err, exec.ErrNotFound) {
-		return fmt.Errorf("make cache disk %s: %w, it comes with e2fsprogs", path, err)
+		return fmt.Errorf("%w, it comes with e2fsprogs", err)
 	}
 
 	if err != nil {
-		return fmt.Errorf("make cache disk %s: %w", path, err)
+		return err
 	}
 
 	said, err := exec.Command(mkfs, "-q", temp.Name(), kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
 	if err != nil {
-		return fmt.Errorf("make cache disk %s: %w: %s", path, err, bytes.TrimSpace(said))
+		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(said))
 	}
 
 	// a link, unlike a rename, never replaces what is there
 	if err := os.Link(temp.Name(), path); err != nil {
-		return fmt.Errorf("make cache disk %s: %w", path, errors.Unwrap(err))
+		return errors.Unwrap(err)
 	}
 
 	return nil
