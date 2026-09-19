@@ -11,6 +11,23 @@ import (
 	"github.com/The127/miso/internal/initramfs"
 )
 
+// record is the file of a name in an archive, which must hold it.
+func record(t *testing.T, archive []byte, name string) cpio.Record {
+	t.Helper()
+
+	records, err := cpio.ReadAllRecords(cpio.Newc.Reader(bytes.NewReader(archive)))
+	require.NoError(t, err)
+	for _, found := range records {
+		if found.Name == name {
+			return found
+		}
+	}
+
+	require.Failf(t, "not in the archive", "no %s in the archive", name)
+
+	return cpio.Record{}
+}
+
 func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	// arrange
 	var archive bytes.Buffer
@@ -20,16 +37,7 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	records, err := cpio.ReadAllRecords(cpio.Newc.Reader(bytes.NewReader(archive.Bytes())))
-	require.NoError(t, err)
-	var init *cpio.Record
-	for i := range records {
-		if records[i].Name == "init" {
-			init = &records[i]
-		}
-	}
-
-	require.NotNil(t, init, "no init in the archive")
+	init := record(t, archive.Bytes(), "init")
 	assert.Equal(t, uint64(cpio.S_IFREG|0o700), init.Mode)
 	content := make([]byte, init.FileSize)
 	_, err = init.ReadAt(content, 0)
@@ -46,16 +54,7 @@ func TestAnInitramfsHoldsTheConsole(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	records, err := cpio.ReadAllRecords(cpio.Newc.Reader(bytes.NewReader(archive.Bytes())))
-	require.NoError(t, err)
-	var console *cpio.Record
-	for i := range records {
-		if records[i].Name == "dev/console" {
-			console = &records[i]
-		}
-	}
-
-	require.NotNil(t, console, "no dev/console in the archive")
+	console := record(t, archive.Bytes(), "dev/console")
 	assert.Equal(t, uint64(cpio.S_IFCHR|0o600), console.Mode)
 	assert.Equal(t, uint64(5), console.Rmajor)
 	assert.Equal(t, uint64(1), console.Rminor)
