@@ -184,6 +184,16 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the vsock connects the host and its builder VM. It knows nothing of ours
+  # and never starts a process or touches the network
+  - package: '**.internal.vsock$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
   # the link speaks route netlink with the kernel about cards, addresses and
   # routes. It knows nothing of ours and never opens a connection or starts
   # a process. net/netip holds only addresses as values, so the rule names

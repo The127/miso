@@ -155,7 +155,7 @@ environment+=("MISO_VMTEST_HOST=10.0.2.2:$port")
 # the VM loads them in order
 mkdir -p "$work/root/modules"
 loaded=()
-for name in virtio_blk virtio_net macvlan btrfs overlay sch_ingress cls_flower act_gact loop; do
+for name in virtio_blk virtio_net macvlan btrfs overlay sch_ingress cls_flower act_gact loop vsock_loopback; do
     if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
         continue
     fi
