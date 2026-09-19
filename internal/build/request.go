@@ -14,8 +14,9 @@ import (
 // have no keys, so nothing can be asked for them.
 var ErrNotFetched = errors.New("not fetched yet")
 
-// Requests are what the agent is asked, in the order it is asked.
-func Requests(planned plan.Plan) ([]protocol.Message, error) {
+// Requests are what the agent is asked, in the order it is asked. A run
+// with network gets the network the host set up for the builder.
+func Requests(planned plan.Plan, network protocol.Network) ([]protocol.Message, error) {
 	if len(planned.Downloads) > 0 {
 		return nil, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
 	}
@@ -35,7 +36,12 @@ func Requests(planned plan.Plan) ([]protocol.Message, error) {
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 			if run, isRun := step.Instruction.(imagefile.Run); isRun {
-				requests = append(requests, protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command, Offline: run.Offline})
+				request := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command, Offline: run.Offline}
+				if !run.Offline {
+					request.Network = &network
+				}
+
+				requests = append(requests, request)
 			}
 
 			roots[step.Key] = under.after(step)

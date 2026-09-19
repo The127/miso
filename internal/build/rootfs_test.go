@@ -21,7 +21,7 @@ func TestARunIsBuiltOnTheBaseLayerOfItsStage(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestARunIsBuiltOnTheRunsBeforeItLowestFirst(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestARunIsBuiltOnTheCopiesBeforeIt(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestAnEnvMakesNoLayer(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestAnOutputMakesNoLayer(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestARunOnScratchIsBuiltOnNoLayer(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)

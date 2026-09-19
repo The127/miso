@@ -12,6 +12,9 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
+// network is the host's network in these tests.
+var network = protocol.Network{Card: "52:54:00:6d:69:73", Address: "10.0.2.15/24", Gateway: "10.0.2.2"}
+
 // runsOf are the runs among the requests, in their order.
 func runsOf(requests []protocol.Message) []protocol.Run {
 	var runs []protocol.Run
@@ -34,12 +37,30 @@ func TestARunBecomesARequestWithItsCommand(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
 	require.Len(t, runsOf(requests), 1)
 	assert.Equal(t, "echo hi", runsOf(requests)[0].Command)
+}
+
+func TestAnOnlineRunCarriesTheNetworkOfTheHost(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:       "debian:13",
+		BaseDigest: "sha256:image",
+		BaseKey:    "base",
+		Steps:      []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "apt-get update"}, Key: "k1", BuiltOn: []string{"base"}}},
+	}}}
+
+	// act
+	requests, err := build.Requests(planned, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, runsOf(requests), 1)
+	assert.Equal(t, &network, runsOf(requests)[0].Network)
 }
 
 func TestAnOfflineRunBecomesAnOfflineRequest(t *testing.T) {
@@ -52,7 +73,7 @@ func TestAnOfflineRunBecomesAnOfflineRequest(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -70,7 +91,7 @@ func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -86,7 +107,7 @@ func TestAPlanWithABaseToFetchHasNoRequests(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.Error(t, err)

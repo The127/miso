@@ -22,7 +22,7 @@ func TestAStageOnAnImageImportsItsBaseFirst(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestAStageOnScratchImportsNothing(t *testing.T) {
 	}}}
 
 	// act
-	requests, err := build.Requests(planned)
+	requests, err := build.Requests(planned, network)
 
 	// assert
 	require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestAStageOnAnEmptyScratchStageImportsNothing(t *testing.T) {
 	source := planned(t, "FROM scratch AS empty\nFROM empty\nRUN x\n")
 
 	// act
-	requests, err := build.Requests(source)
+	requests, err := build.Requests(source, network)
 
 	// assert
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestTwoStagesOnOneImageImportItOnce(t *testing.T) {
 	source := planned(t, "FROM debian:13\nRUN a\nFROM debian:trixie\nRUN b\n")
 
 	// act
-	requests, err := build.Requests(source)
+	requests, err := build.Requests(source, network)
 
 	// assert
 	require.NoError(t, err)

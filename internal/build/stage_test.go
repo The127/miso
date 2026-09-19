@@ -37,7 +37,7 @@ func TestAStageOnAStageIsBuiltOnTheLayersOfThatStage(t *testing.T) {
 	source := planned(t, "FROM debian:13 AS one\nRUN a\nFROM one\nRUN b\n")
 
 	// act
-	requests, err := build.Requests(source)
+	requests, err := build.Requests(source, network)
 
 	// assert
 	require.NoError(t, err)
