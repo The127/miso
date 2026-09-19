@@ -2,7 +2,8 @@
 # Runs the tests built with the vmtest tag, one package per VM, each test
 # binary as the init of the host's kernel, which loads the modules put next
 # to it. MISO_VMTEST_MODULES names the modules of another MISO_VMTEST_KERNEL.
-# Arguments go to the test binary.
+# Arguments go to the test binary. MISO_VMTEST_PACKAGES picks packages,
+# for example internal/agent, instead of all.
 # MISO_VMTEST_BASE names a base image in qcow2 that is attached read-only
 # with the serial miso-test-base, and once more with the serial of its
 # digest, which the test finds in MISO_VMTEST_BASE_DIGEST. Small btrfs disks
@@ -24,7 +25,7 @@ listener=$!
 trap 'kill "$listener"; rm -rf "$work"' EXIT
 read -r port <&"$loopback"
 
-packages=$( (grep -rlx --include='*_test.go' '//go:build vmtest' cmd internal || true) | xargs -r -n1 dirname | sort -u)
+packages=${MISO_VMTEST_PACKAGES:-$( (grep -rlx --include='*_test.go' '//go:build vmtest' cmd internal || true) | xargs -r -n1 dirname | sort -u)}
 if [ -z "$packages" ]; then
     echo "no vmtest packages"
     exit 0
@@ -116,6 +117,9 @@ for pkg in $packages; do
     (cd "$dir/root" && find init modules | cpio --quiet -o -H newc) > "$dir/initrd"
 done
 
+# one package shows its VM as it runs, several would mix their lines
+live=$([ "$(wc -w <<< "$packages")" -eq 1 ] && echo 1 || true)
+vms=()
 for pkg in $packages; do
     dir=$work/vm/$pkg
     # the test binary stops a hanging test, the outer timeout a hanging VM.
@@ -123,15 +127,20 @@ for pkg in $packages; do
     timeout 3m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \
         -kernel "$kernel" -initrd "$dir/initrd" "${disks[@]}" "${nic[@]}" \
         -append "console=ttyS0 panic=-1 quiet ${environment[*]} -- -test.v -test.timeout=2m $*" \
-        < /dev/null 2>&1 | sed -u 's/\r$//' > "$dir/log" &
+        < /dev/null 2>&1 | sed -u 's/\r$//' | if [ -n "$live" ]; then tee "$dir/log"; else cat > "$dir/log"; fi &
+    vms+=($!)
 done
 
-wait
+# the VMs alone, the services never end
+wait "${vms[@]}"
 
 failed=0
 for pkg in $packages; do
     echo "== $pkg on $kernel"
-    cat "$work/vm/$pkg/log"
+    if [ -z "$live" ]; then
+        cat "$work/vm/$pkg/log"
+    fi
+
     if ! grep -qx 'miso-vmtest: exit 0' "$work/vm/$pkg/log"; then
         failed=1
     fi
