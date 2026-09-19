@@ -32,3 +32,18 @@ func TestAModuleLoadsAfterWhatItDependsOn(t *testing.T) {
 	// assert
 	assert.Equal(t, []string{"libcrc32c", "btrfs"}, loaded)
 }
+
+func TestAModuleReachedTwiceLoadsOnce(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{
+		{Name: "btrfs", Depends: []string{"xor", "raid6_pq"}},
+		{Name: "xor"},
+		{Name: "raid6_pq", Depends: []string{"xor"}},
+	}
+
+	// act
+	loaded := builderkernel.Order(have, "btrfs")
+
+	// assert
+	assert.Equal(t, []string{"xor", "raid6_pq", "btrfs"}, loaded)
+}
