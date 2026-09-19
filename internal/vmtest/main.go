@@ -41,7 +41,8 @@ func Main(m *testing.M) {
 }
 
 func loadModules() error {
-	names, err := filepath.Glob("/modules/*.ko.xz")
+	// in the order of their numbers, which put each after what it needs
+	names, err := filepath.Glob("/modules/*.ko")
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func loadModule(name string) error {
 
 	defer func() { _ = f.Close() }()
 
-	return unix.FinitModule(int(f.Fd()), "", unix.MODULE_INIT_COMPRESSED_FILE)
+	return unix.FinitModule(int(f.Fd()), "", 0)
 }
 
 func mountAll() error {
