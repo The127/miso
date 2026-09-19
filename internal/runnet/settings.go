@@ -41,7 +41,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 	}
 
 	var card []byte
-	for _, part := range strings.Split(network.Card, ":") {
+	for part := range strings.SplitSeq(network.Card, ":") {
 		octet, err := strconv.ParseUint(part, 16, 8)
 		if err != nil {
 			return settings{}, fmt.Errorf("card of the run %s: %w", network.Card, err)

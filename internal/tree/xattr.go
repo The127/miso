@@ -75,7 +75,7 @@ func list(path string) ([]string, error) {
 
 	var attributes []string
 
-	for _, attribute := range bytes.Split(names[:size], []byte{0}) {
+	for attribute := range bytes.SplitSeq(names[:size], []byte{0}) {
 		if len(attribute) > 0 {
 			attributes = append(attributes, string(attribute))
 		}
