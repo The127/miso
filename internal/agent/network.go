@@ -3,7 +3,9 @@ package agent
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/netip"
 	"os"
 	"runtime"
@@ -70,14 +72,24 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 	}
 
 	var parent int32
+	var name string
 	for _, card := range builderCards {
 		if bytes.Equal(cardAttribute(card, unix.IFLA_ADDRESS), mac) {
 			parent = int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+			name = strings.TrimRight(string(cardAttribute(card, unix.IFLA_IFNAME)), "\x00")
 		}
 	}
 
 	if parent == 0 {
 		return nil, fmt.Errorf("the builder has no card %s", network.Card)
+	}
+
+	// the builder's card carries the runs and has no address of its own, or
+	// IPv6 gives it one the moment it is up. A kernel without IPv6 has
+	// nothing to switch off
+	disable := "/proc/sys/net/ipv6/conf/" + name + "/disable_ipv6"
+	if err := os.WriteFile(disable, []byte("1"), 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("switch off IPv6 on the builder's card: %w", err)
 	}
 
 	// nothing else in the builder brings its card up, and a card on a card
