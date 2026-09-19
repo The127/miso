@@ -1,6 +1,9 @@
 package imagefile
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Run is a shell command, kept verbatim. An offline run has no network.
 type Run struct {
@@ -12,11 +15,30 @@ type Run struct {
 func (Run) instruction() {}
 
 func readRun(line int, arguments string) ([]Instruction, error) {
-	command, offline := strings.CutPrefix(arguments, "--network=none ")
-	command, err := shellCommand(command)
+	// options come first, the command after them stays verbatim
+	var flags []string
+	command := arguments
+	for strings.HasPrefix(command, "--") {
+		var flag string
+		flag, command, _ = strings.Cut(command, " ")
+		flags = append(flags, flag)
+	}
+
+	_, options, err := splitOptions(flags)
 	if err != nil {
 		return nil, err
 	}
 
-	return []Instruction{Run{Line: line, Offline: offline, Command: command}}, nil
+	for name := range options {
+		if name != "network" {
+			return nil, fmt.Errorf("does not know --%s", name)
+		}
+	}
+
+	command, err = shellCommand(command)
+	if err != nil {
+		return nil, err
+	}
+
+	return []Instruction{Run{Line: line, Offline: options["network"] == "none", Command: command}}, nil
 }
