@@ -13,11 +13,15 @@ import (
 type settings struct {
 	// the MAC of the builder's card, known by it because its name and place
 	// differ between builders
-	card     []byte
-	address  netip.Prefix
-	gateway  netip.Addr
-	address6 netip.Prefix
-	gateway6 netip.Addr
+	card []byte
+	ipv4 family
+	ipv6 family
+}
+
+// family is the part of a run's network in one address family, read.
+type family struct {
+	address netip.Prefix
+	gateway netip.Addr
 }
 
 // readSettings reads the network the host handed a run.
@@ -65,7 +69,11 @@ func readSettings(network *protocol.Network) (settings, error) {
 		card = append(card, byte(octet))
 	}
 
-	return settings{card: card, address: address, gateway: gateway, address6: address6, gateway6: gateway6}, nil
+	return settings{
+		card: card,
+		ipv4: family{address: address, gateway: gateway},
+		ipv6: family{address: address6, gateway: gateway6},
+	}, nil
 }
 
 // mac is the MAC of the run's own card. It follows from the address, so a
@@ -73,7 +81,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 // loudly instead of taking turns in the gateway's table. 02 is a MAC of our
 // own making.
 func (s settings) mac() []byte {
-	local := s.address.Addr().As4()
+	local := s.ipv4.address.Addr().As4()
 
 	return append([]byte{0x02, 0x00}, local[:]...)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"time"
 
@@ -64,63 +65,86 @@ func configureCard(run *link.Conn, namespace *os.File, arriving string, wanted s
 			return index, fmt.Errorf("refuse QEMU's routes: %w", err)
 		}
 
-		// the address before the route, which the kernel only takes to a
-		// gateway it can reach
-		local := wanted.address.Addr().As4()
-		_, err = run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(unix.AF_INET, index, wanted.address.Bits(), 0),
-			link.Attribute(unix.IFA_LOCAL, local[:]),
-			link.Attribute(unix.IFA_ADDRESS, local[:]),
-		)
-		if err != nil {
-			return index, fmt.Errorf("address card %s: %w", wanted.address, err)
+		// the addresses before the routes, which the kernel only takes to a
+		// gateway it can reach. The host hands out every address once, so
+		// the run need not wait a second for the kernel to make sure of one
+		if err := addAddress(run, index, wanted.ipv4.address, 0); err != nil {
+			return index, err
 		}
 
-		// the host hands out every address once, so the run need not wait
-		// a second for the kernel to make sure
-		local6 := wanted.address6.Addr().As16()
-		_, err = run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(unix.AF_INET6, index, wanted.address6.Bits(), unix.IFA_F_NODAD),
-			link.Attribute(unix.IFA_ADDRESS, local6[:]),
-		)
-		if err != nil {
-			return index, fmt.Errorf("address card %s: %w", wanted.address6, err)
+		if err := addAddress(run, index, wanted.ipv6.address, unix.IFA_F_NODAD); err != nil {
+			return index, err
 		}
 
-		// a card that holds the same MAC may still be on its way out, in a
-		// network the kernel removes on its own time after the run that made
-		// it, so the MAC gets a while to become free
-		for waited := time.Duration(0); ; waited += macWait {
-			_, err := run.Ask(unix.RTM_SETLINK, 0, link.CardHeader(index, unix.IFF_UP, unix.IFF_UP))
-			if err == nil {
-				break
+		if err := bringUp(run, index, wanted.ipv4.address); err != nil {
+			return index, err
+		}
+
+		for _, f := range []family{wanted.ipv4, wanted.ipv6} {
+			if err := addRoute(run, index, f.gateway); err != nil {
+				return index, err
 			}
-
-			if !errors.Is(err, unix.EADDRINUSE) || waited >= macTimeout {
-				return index, fmt.Errorf("bring up card for %s: %w", wanted.address, err)
-			}
-
-			time.Sleep(macWait)
-		}
-
-		via := wanted.gateway.As4()
-		_, err = run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(unix.AF_INET),
-			link.Attribute(unix.RTA_GATEWAY, via[:]),
-			link.Attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
-		)
-		if err != nil {
-			return index, fmt.Errorf("route via %s: %w", wanted.gateway, err)
-		}
-
-		via6 := wanted.gateway6.As16()
-		_, err = run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(unix.AF_INET6),
-			link.Attribute(unix.RTA_GATEWAY, via6[:]),
-			link.Attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
-		)
-		if err != nil {
-			return index, fmt.Errorf("route via %s: %w", wanted.gateway6, err)
 		}
 
 		return index, nil
 	}
 
 	return 0, fmt.Errorf("find card: %s is not in the run", arriving)
+}
+
+// addAddress gives the card at an index an address, IFA_F_NODAD and the
+// like among the flags.
+func addAddress(run *link.Conn, index int32, address netip.Prefix, flags byte) error {
+	local := address.Addr().AsSlice()
+	_, err := run.Ask(unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.AddressHeader(familyOf(address.Addr()), index, address.Bits(), flags),
+		link.Attribute(unix.IFA_LOCAL, local),
+		link.Attribute(unix.IFA_ADDRESS, local),
+	)
+	if err != nil {
+		return fmt.Errorf("address card %s: %w", address, err)
+	}
+
+	return nil
+}
+
+// bringUp brings up the card at an index, which holds the MAC that follows
+// from an address.
+func bringUp(run *link.Conn, index int32, address netip.Prefix) error {
+	// a card that holds the same MAC may still be on its way out, in a
+	// network the kernel removes on its own time after the run that made
+	// it, so the MAC gets a while to become free
+	for waited := time.Duration(0); ; waited += macWait {
+		_, err := run.Ask(unix.RTM_SETLINK, 0, link.CardHeader(index, unix.IFF_UP, unix.IFF_UP))
+		if err == nil {
+			return nil
+		}
+
+		if !errors.Is(err, unix.EADDRINUSE) || waited >= macTimeout {
+			return fmt.Errorf("bring up card for %s: %w", address, err)
+		}
+
+		time.Sleep(macWait)
+	}
+}
+
+// addRoute gives the card at an index the default route through a gateway.
+func addRoute(run *link.Conn, index int32, gateway netip.Addr) error {
+	_, err := run.Ask(unix.RTM_NEWROUTE, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link.RouteHeader(familyOf(gateway)),
+		link.Attribute(unix.RTA_GATEWAY, gateway.AsSlice()),
+		link.Attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
+	)
+	if err != nil {
+		return fmt.Errorf("route via %s: %w", gateway, err)
+	}
+
+	return nil
+}
+
+// familyOf is the address family of an address, as netlink names it.
+func familyOf(address netip.Addr) byte {
+	if address.Is4() {
+		return unix.AF_INET
+	}
+
+	return unix.AF_INET6
 }
