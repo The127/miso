@@ -127,6 +127,22 @@ func TestAnOnlineRunHasAnIPv6RouteThroughItsGateway(t *testing.T) {
 	assert.Contains(t, out.String(), "default via "+network.IPv6.Gateway+" dev eth0")
 }
 
+func TestARunsIPv6RoutesAreOnlyTheOnesTheHostGave(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	// the kernel asks QEMU for routes a moment after the card is up
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: "sleep 3; ip -6 route show default"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	// a second gateway may show as a second route or as a second way of one
+	assert.Equal(t, 1, strings.Count(out.String(), "via"), out.String())
+}
+
 func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
 	// arrange
 	service := os.Getenv("MISO_VMTEST_SERVICE")

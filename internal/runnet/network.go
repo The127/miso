@@ -55,7 +55,7 @@ func AddCard(pid int, network *protocol.Network) (func(), error) {
 		return nil, err
 	}
 
-	index, err := configureCard(run, arriving, wanted)
+	index, err := configureCard(run, namespace, arriving, wanted)
 	if err != nil {
 		// a card that failed half way goes at once, or it holds the MAC and
 		// address until the kernel removes the run's network
