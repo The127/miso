@@ -12,6 +12,10 @@ import (
 func describe(instruction imagefile.Instruction) (int, string) {
 	switch step := instruction.(type) {
 	case imagefile.Run:
+		if step.Offline {
+			return step.Line, "RUN --network=none " + step.Command
+		}
+
 		return step.Line, "RUN " + step.Command
 	case imagefile.Env:
 		return step.Line, "ENV " + step.Key + "=" + step.Value
