@@ -32,6 +32,10 @@ func addCard(pid int, network *protocol.Network) error {
 		return fmt.Errorf("gateway of the run: %w", err)
 	}
 
+	if !gateway.Is4() {
+		return fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
+	}
+
 	text, err := os.ReadFile("/sys/class/net/eth0/ifindex")
 	if err != nil {
 		return err

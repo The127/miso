@@ -78,3 +78,17 @@ func TestARunWithAnAddressThatIsNotIPv4FailsNamingIt(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "fec0::15/64")
 }
+
+func TestARunWithAGatewayThatIsNotIPv4FailsNamingIt(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	network.Gateway = "fec0::2"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "fec0::2")
+}
