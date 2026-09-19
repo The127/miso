@@ -2,6 +2,7 @@ package builderkernel
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -39,9 +40,12 @@ func named(name string) string {
 }
 
 // loader walks the modules it is given, collecting them in the order to load.
+// walking is the path it is on, which is how it sees a module depend on one
+// that depends on it.
 type loader struct {
 	modules map[string]info
 	done    map[string]bool
+	walking []string
 	loaded  []string
 }
 
@@ -57,7 +61,13 @@ func (l *loader) load(name string) error {
 		return fmt.Errorf("the package holds no module %s", name)
 	}
 
-	l.done[key] = true
+	if at := slices.Index(l.walking, key); at >= 0 {
+		cycle := append(slices.Clone(l.walking[at:]), key)
+
+		return fmt.Errorf("the modules depend on each other: %s", strings.Join(cycle, ", "))
+	}
+
+	l.walking = append(l.walking, key)
 
 	for _, dependency := range module.Depends {
 		if err := l.load(dependency); err != nil {
@@ -65,6 +75,8 @@ func (l *loader) load(name string) error {
 		}
 	}
 
+	l.walking = l.walking[:len(l.walking)-1]
+	l.done[key] = true
 	l.loaded = append(l.loaded, module.Name)
 
 	return nil

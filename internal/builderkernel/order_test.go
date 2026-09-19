@@ -90,3 +90,18 @@ func TestADashInAModuleNameReadsAsAnUnderscore(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"xxhash_generic", "btrfs"}, loaded)
 }
+
+func TestModulesThatDependOnEachOtherAreRefused(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{
+		{Name: "btrfs", Depends: []string{"libcrc32c"}},
+		{Name: "libcrc32c", Depends: []string{"btrfs"}},
+	}
+
+	// act
+	_, err := builderkernel.Order(have, nil, "btrfs")
+
+	// assert
+	assert.ErrorContains(t, err, "btrfs")
+	assert.ErrorContains(t, err, "libcrc32c")
+}
