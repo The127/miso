@@ -14,14 +14,23 @@ import (
 	"github.com/The127/miso/internal/vsock"
 )
 
-func TestAConnectionCarriesWhatTheOtherSideWrites(t *testing.T) {
-	// arrange
-	listener, err := vsock.Listen(1024)
+// dialing is a listener on a port of this machine with a connection made
+// to it that is not accepted yet.
+func dialing(t *testing.T, port uint32) (*vsock.Listener, *os.File) {
+	t.Helper()
+	listener, err := vsock.Listen(port)
 	require.NoError(t, err)
-	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, 1024)
+	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, port)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
-	_, err = io.WriteString(dialed, "hello")
+
+	return listener, dialed
+}
+
+func TestAConnectionCarriesWhatTheOtherSideWrites(t *testing.T) {
+	// arrange
+	listener, dialed := dialing(t, 1024)
+	_, err := io.WriteString(dialed, "hello")
 	require.NoError(t, err)
 
 	// act
@@ -38,11 +47,7 @@ func TestAConnectionCarriesWhatTheOtherSideWrites(t *testing.T) {
 
 func TestAnAcceptedConnectionIsNotInheritedByAProcess(t *testing.T) {
 	// arrange
-	listener, err := vsock.Listen(1025)
-	require.NoError(t, err)
-	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, 1025)
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
+	listener, _ := dialing(t, 1025)
 
 	// act
 	accepted, err := listener.Accept()
