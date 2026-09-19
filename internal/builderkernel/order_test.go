@@ -75,3 +75,18 @@ func TestAModuleBuiltIntoTheKernelIsSkipped(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"btrfs"}, loaded)
 }
+
+func TestADashInAModuleNameReadsAsAnUnderscore(t *testing.T) {
+	// arrange
+	have := []builderkernel.Info{
+		{Name: "btrfs", Depends: []string{"xxhash-generic"}},
+		{Name: "xxhash_generic"},
+	}
+
+	// act
+	loaded, err := builderkernel.Order(have, nil, "btrfs")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"xxhash_generic", "btrfs"}, loaded)
+}

@@ -1,6 +1,9 @@
 package builderkernel
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // order is the order to load the wanted modules in, each of them after the
 // modules it depends on. What the kernel has built in is no module and is
@@ -8,12 +11,12 @@ import "fmt"
 func order(have []info, builtin []string, want ...string) ([]string, error) {
 	modules := make(map[string]info, len(have))
 	for _, module := range have {
-		modules[module.Name] = module
+		modules[named(module.Name)] = module
 	}
 
 	done := make(map[string]bool, len(modules)+len(builtin))
 	for _, name := range builtin {
-		done[name] = true
+		done[named(name)] = true
 	}
 
 	loaded := make([]string, 0, len(want))
@@ -29,18 +32,25 @@ func order(have []info, builtin []string, want ...string) ([]string, error) {
 	return loaded, nil
 }
 
+// named is a module's name as the kernel reads it, which takes a dash and an
+// underscore for the same character.
+func named(name string) string {
+	return strings.ReplaceAll(name, "-", "_")
+}
+
 // load appends the module and what it depends on, the dependencies first.
 func load(modules map[string]info, done map[string]bool, loaded []string, name string) ([]string, error) {
-	if done[name] {
+	key := named(name)
+	if done[key] {
 		return loaded, nil
 	}
 
-	module, found := modules[name]
+	module, found := modules[key]
 	if !found {
 		return nil, fmt.Errorf("the package holds no module %s", name)
 	}
 
-	done[name] = true
+	done[key] = true
 
 	for _, dependency := range module.Depends {
 		var err error
@@ -51,5 +61,5 @@ func load(modules map[string]info, done map[string]bool, loaded []string, name s
 		}
 	}
 
-	return append(loaded, name), nil
+	return append(loaded, module.Name), nil
 }
