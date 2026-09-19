@@ -23,5 +23,7 @@ func Start(serial, dir string) (*Agent, error) {
 		return nil, err
 	}
 
-	return nil, nil
+	// base disks are mounted on the VM's tmpfs, so a crash leaves no mount
+	// points on the cache disk
+	return New(layers, os.TempDir()), nil
 }

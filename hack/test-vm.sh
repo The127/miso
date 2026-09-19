@@ -197,8 +197,9 @@ for pkg in $packages; do
     CGO_ENABLED=0 go test -c -tags vmtest -o "$dir/root/init" "./$pkg"
     # a cache disk made the way a build makes it, and a disk with no file
     # system, which must never be taken for one. Each VM writes its own,
-    # QEMU gives a writable image to one VM at a time
-    go run ./hack/cachedisk "$dir/cache.img" $((256 << 20))
+    # QEMU gives a writable image to one VM at a time. Big enough for an
+    # imported base, and sparse, so it takes only what the tests write
+    go run ./hack/cachedisk "$dir/cache.img" $((4 << 30))
     truncate -s 16M "$dir/blank.img"
     (cd "$dir/root" && find init modules | cpio --quiet -o -H newc) > "$dir/initrd"
 done

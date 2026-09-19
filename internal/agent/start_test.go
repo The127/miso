@@ -3,6 +3,8 @@
 package agent_test
 
 import (
+	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -12,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/protocol"
 )
 
 func TestAStartedAgentHasSweptWhatAStoppedOneLeft(t *testing.T) {
@@ -44,4 +47,22 @@ func TestAnAgentStartsOnACacheDiskThatHoldsNoLayersYet(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.DirExists(t, filepath.Join(dir, "layers"))
+}
+
+func TestAStartedAgentKeepsAnImportedBaseOnTheCacheDisk(t *testing.T) {
+	// arrange
+	digest := os.Getenv("MISO_VMTEST_BASE_DIGEST")
+	require.NotEmpty(t, digest, "MISO_VMTEST_BASE names no base image")
+	dir := t.TempDir()
+	worker, err := agent.Start("miso-cache", dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+	require.NotNil(t, worker)
+
+	// act
+	err = worker.Import(context.Background(), protocol.Import{Key: "started", Digest: digest}, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(dir, "layers", "started", "etc", "os-release"))
 }
