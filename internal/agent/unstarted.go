@@ -16,10 +16,14 @@ type Unstarted struct {
 
 // Run fails naming why the agent did not start.
 func (u Unstarted) Run(context.Context, protocol.Run, io.Writer) (int, error) {
-	return 0, fmt.Errorf("agent did not start: %w", u.Err)
+	return 0, u.why()
 }
 
 // Import fails naming why the agent did not start.
 func (u Unstarted) Import(context.Context, protocol.Import, io.Writer) error {
+	return u.why()
+}
+
+func (u Unstarted) why() error {
 	return fmt.Errorf("agent did not start: %w", u.Err)
 }
