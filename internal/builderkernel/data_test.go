@@ -63,3 +63,14 @@ func TestAPackageWithTwoKernelsIsRefused(t *testing.T) {
 	assert.ErrorContains(t, err, "6.12.107+deb13-cloud-amd64")
 	assert.ErrorContains(t, err, "6.12.108+deb13-cloud-amd64")
 }
+
+func TestAPackageWithNoKernelIsRefused(t *testing.T) {
+	// arrange
+	deb := packaged(t, map[string]string{"./usr/share/doc/linux-image/changelog": "the changelog"})
+
+	// act
+	_, _, err := builderkernel.Kernel(bytes.NewReader(deb))
+
+	// assert
+	assert.ErrorContains(t, err, "no kernel")
+}
