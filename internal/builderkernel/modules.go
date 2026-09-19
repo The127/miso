@@ -18,6 +18,17 @@ const (
 	modulePacking = ".xz"
 )
 
+// plain is what a module file is called unpacked, and whether the file holds
+// a module at all. A module carries its packing as the last extension.
+func plain(file string) (string, bool) {
+	name := file
+	if path.Ext(name) != moduleExt {
+		name = strings.TrimSuffix(name, path.Ext(name))
+	}
+
+	return name, strings.HasSuffix(name, moduleExt)
+}
+
 // modules is what every module a package holds says about itself.
 func modules(deb io.Reader) ([]info, error) {
 	files, err := unpacked(deb)
@@ -37,20 +48,15 @@ func modules(deb io.Reader) ([]info, error) {
 			return nil, err
 		}
 
-		base := path.Base(header.Name)
+		file := path.Base(header.Name)
 
-		// a packed module carries its packing as the last extension
-		plain := base
-		if path.Ext(plain) != moduleExt {
-			plain = strings.TrimSuffix(plain, path.Ext(plain))
-		}
-
-		if !strings.HasSuffix(plain, moduleExt) {
+		name, isModule := plain(file)
+		if !isModule {
 			continue
 		}
 
-		if base != plain+modulePacking {
-			return nil, fmt.Errorf("the package holds %s, miso reads %s", base, plain+modulePacking)
+		if file != name+modulePacking {
+			return nil, fmt.Errorf("the package holds %s, miso reads %s", file, name+modulePacking)
 		}
 
 		packed, err := xz.NewReader(files)
