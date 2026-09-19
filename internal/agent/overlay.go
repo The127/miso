@@ -11,15 +11,13 @@ import (
 // written going into upper.
 func mountOverlay(root string, lowers []string, upper, work string) error {
 	// overlay shows the top of the upper directory as /
-	if len(lowers) > 0 {
-		below, err := os.Stat(lowers[0])
-		if err != nil {
-			return err
-		}
+	below, err := os.Stat(lowers[0])
+	if err != nil {
+		return err
+	}
 
-		if err := os.Chmod(upper, below.Mode().Perm()); err != nil {
-			return err
-		}
+	if err := os.Chmod(upper, below.Mode().Perm()); err != nil {
+		return err
 	}
 
 	// one option per layer, because all layers in one text outgrow the page
