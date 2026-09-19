@@ -164,13 +164,23 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
-  # the vmtest runs tests as the init of a VM, which takes the kernel. It
-  # knows nothing of ours and never starts a process or touches the network
-  - package: '**.internal.vmtest$'
+  # the boot readies a VM for its init, which takes the kernel. It knows
+  # nothing of ours and never starts a process or touches the network
+  - package: '**.internal.boot$'
     shouldNotDependsOn:
       internal:
         - '**.internal.**'
         - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
+  # the vmtest runs tests as the init of a VM, readied through boot. It
+  # never starts a process or touches the network
+  - package: '**.internal.vmtest$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.boot$'
+    shouldNotDependsOn:
       standard:
         - os/exec
         - net

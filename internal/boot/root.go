@@ -1,4 +1,4 @@
-package vmtest
+package boot
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"syscall"
 )
 
-// switchRoot moves the tests off the initial ramfs onto a tmpfs, because
+// switchRoot moves init off the initial ramfs onto a tmpfs, because
 // kernels before the empty mount under the initial ramfs refuse to
 // pivot_root out of it, and a run pivots.
 func switchRoot() error {

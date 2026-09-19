@@ -1,6 +1,6 @@
 //go:build vmtest
 
-package vmtest_test
+package boot_test
 
 import (
 	"os"
