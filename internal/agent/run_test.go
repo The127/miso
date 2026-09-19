@@ -288,6 +288,25 @@ func TestARunLeavesTheKernelSettingsAsItFoundThem(t *testing.T) {
 	assert.Equal(t, "60\n", string(setting))
 }
 
+func TestARunCannotRenameTheBuilder(t *testing.T) {
+	// arrange
+	was, err := os.Hostname()
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, syscall.Sethostname([]byte(was))) })
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "hostname renamed"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	name, err := os.Hostname()
+	require.NoError(t, err)
+	assert.Equal(t, was, name)
+}
+
 func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
