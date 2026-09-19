@@ -224,14 +224,15 @@ dependenciesRules:
       standard:
         - net
   # the agent is the builder VM's side of a build. It does what the host asks
-  # through the protocol, mounts base disks through basemount, copies them
-  # through tree, keeps layers through layer and runs steps on them through
-  # sandbox. It touches the kernel, and never starts a process or opens a
-  # connection itself
+  # through the protocol, finds its cache disk through disk, mounts base
+  # disks through basemount, copies them through tree, keeps layers through
+  # layer and runs steps on them through sandbox. It touches the kernel, and
+  # never starts a process or opens a connection itself
   - package: '**.internal.agent$'
     shouldOnlyDependsOn:
       internal:
         - '**.internal.protocol$'
+        - '**.internal.disk$'
         - '**.internal.basemount$'
         - '**.internal.tree$'
         - '**.internal.layer$'
@@ -240,6 +241,11 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # a tool of the test harness makes what miso makes, through miso's own code
+  - package: '**.hack.**'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.cachedisk$'
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:

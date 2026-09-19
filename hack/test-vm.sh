@@ -8,9 +8,11 @@
 # with the serial miso-test-base, and once more with the serial of its
 # digest, which the test finds in MISO_VMTEST_BASE_DIGEST. Small btrfs disks
 # of each shape that btrfs-test-disk.sh knows are always attached with the
-# serial miso-test-<shape>. A network card on QEMU's user network has the
-# MAC the test finds in MISO_VMTEST_MAC, with the address and gateway for a
-# run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, their IPv6 twins in
+# serial miso-test-<shape>. A cache disk made by hack/cachedisk is attached
+# writable with the serial miso-cache. A network card on QEMU's user network
+# has the MAC the test finds in MISO_VMTEST_MAC, with the address and
+# gateway for a run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, their
+# IPv6 twins in
 # MISO_VMTEST_ADDRESS6 and MISO_VMTEST_GATEWAY6, a service that
 # answers miso at MISO_VMTEST_SERVICE and the meeting point of meet.sh at
 # MISO_VMTEST_MEET. A service on the host's loopback, which a run must never
@@ -187,6 +189,9 @@ for pkg in $packages; do
     mkdir -p "$dir/root"
     cp -r "$work/root/modules" "$dir/root/"
     CGO_ENABLED=0 go test -c -tags vmtest -o "$dir/root/init" "./$pkg"
+    # a cache disk made the way a build makes it. Each VM writes its own,
+    # QEMU gives a writable image to one VM at a time
+    go run ./hack/cachedisk "$dir/cache.img" $((256 << 20))
     (cd "$dir/root" && find init modules | cpio --quiet -o -H newc) > "$dir/initrd"
 done
 
@@ -199,6 +204,7 @@ for pkg in $packages; do
     # Unbuffered, so the log of a killed run shows how far it got
     timeout 3m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \
         -kernel "$kernel" -initrd "$dir/initrd" "${disks[@]}" "${nic[@]}" \
+        -drive "file=$dir/cache.img,format=raw,if=none,id=cache" -device virtio-blk-pci,drive=cache,serial=miso-cache \
         -append "console=ttyS0 panic=-1 quiet ${environment[*]} -- -test.v -test.timeout=2m $*" \
         < /dev/null 2>&1 | sed -u 's/\r$//' | if [ -n "$live" ]; then tee "$dir/log"; else cat > "$dir/log"; fi &
     vms+=($!)
