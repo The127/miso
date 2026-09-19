@@ -48,3 +48,18 @@ func TestTheKernelOfAPackageIsItsBootVmlinuz(t *testing.T) {
 	assert.Equal(t, "6.12.107+deb13-cloud-amd64", release)
 	assert.Equal(t, "the kernel", string(image))
 }
+
+func TestAPackageWithTwoKernelsIsRefused(t *testing.T) {
+	// arrange
+	deb := packaged(t, map[string]string{
+		"./boot/vmlinuz-6.12.107+deb13-cloud-amd64": "the kernel",
+		"./boot/vmlinuz-6.12.108+deb13-cloud-amd64": "another kernel",
+	})
+
+	// act
+	_, _, err := builderkernel.Kernel(bytes.NewReader(deb))
+
+	// assert
+	assert.ErrorContains(t, err, "6.12.107+deb13-cloud-amd64")
+	assert.ErrorContains(t, err, "6.12.108+deb13-cloud-amd64")
+}

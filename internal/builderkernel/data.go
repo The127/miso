@@ -3,6 +3,7 @@ package builderkernel
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -21,10 +22,12 @@ func kernel(deb io.Reader) (string, []byte, error) {
 		return "", nil, err
 	}
 
+	var release string
+	var image []byte
 	for {
 		header, err := files.Next()
 		if errors.Is(err, io.EOF) {
-			return "", nil, errors.New("the package holds no kernel")
+			break
 		}
 
 		if err != nil {
@@ -38,13 +41,22 @@ func kernel(deb io.Reader) (string, []byte, error) {
 			continue
 		}
 
-		image, err := io.ReadAll(files)
-		if err != nil {
-			return "", nil, err
+		found := strings.TrimPrefix(name, kernelPrefix)
+		if release != "" {
+			return "", nil, fmt.Errorf("the package holds the kernels %s and %s", release, found)
 		}
 
-		return strings.TrimPrefix(name, kernelPrefix), image, nil
+		release = found
+		if image, err = io.ReadAll(files); err != nil {
+			return "", nil, err
+		}
 	}
+
+	if release == "" {
+		return "", nil, errors.New("the package holds no kernel")
+	}
+
+	return release, image, nil
 }
 
 // unpacked reads the files of a package's data.
