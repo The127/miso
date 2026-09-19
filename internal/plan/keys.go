@@ -15,7 +15,12 @@ func words(instruction imagefile.Instruction) []string {
 	var found []string
 	switch step := instruction.(type) {
 	case imagefile.Run:
-		found = []string{"RUN", step.Command}
+		found = []string{"RUN"}
+		if step.Offline {
+			found = append(found, "--network=none")
+		}
+
+		found = append(found, step.Command)
 	case imagefile.Env:
 		found = []string{"ENV", step.Key, step.Value}
 	case imagefile.Copy:
