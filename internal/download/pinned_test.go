@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,25 +17,24 @@ import (
 	"github.com/The127/miso/internal/download"
 )
 
-// kept writes bytes into a store by hand and answers their digest.
-func kept(t *testing.T, dir, content string) string {
-	t.Helper()
-
-	sum := sha256.Sum256([]byte(content))
-	hash := hex.EncodeToString(sum[:])
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", hash), []byte(content), 0o600))
-
-	return "sha256:" + hash
-}
-
-// arrived is the digest bytes would have when they arrive.
+// arrived is the digest bytes have once they are in.
 func arrived(t *testing.T, content string) string {
 	t.Helper()
 
 	sum := sha256.Sum256([]byte(content))
 
 	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// kept writes bytes into a store by hand and answers their digest.
+func kept(t *testing.T, dir, content string) string {
+	t.Helper()
+
+	digest := arrived(t, content)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", strings.TrimPrefix(digest, "sha256:")), []byte(content), 0o600))
+
+	return digest
 }
 
 func read(t *testing.T, path string) string {
@@ -71,8 +71,7 @@ func TestAPinnedFileThatIsNotThereIsDownloadedAndKept(t *testing.T) {
 	server := serving(t, map[string]string{"/kernel.deb": "the kernel"})
 	dir := t.TempDir()
 	store := download.Open(dir, server.Client())
-	sum := sha256.Sum256([]byte("the kernel"))
-	digest := "sha256:" + hex.EncodeToString(sum[:])
+	digest := arrived(t, "the kernel")
 
 	// act
 	path, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
