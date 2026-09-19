@@ -10,19 +10,7 @@ import (
 // modules it depends on. What the kernel has built in is no module and is
 // left out.
 func order(have []info, builtin []string, want ...string) ([]string, error) {
-	l := loader{
-		modules: make(map[string]info, len(have)),
-		done:    make(map[string]bool, len(have)+len(builtin)),
-		loaded:  make([]string, 0, len(want)),
-	}
-
-	for _, module := range have {
-		l.modules[named(module.Name)] = module
-	}
-
-	for _, name := range builtin {
-		l.done[named(name)] = true
-	}
+	l := loading(have, builtin)
 
 	for _, name := range want {
 		if err := l.load(name); err != nil {
@@ -37,6 +25,26 @@ func order(have []info, builtin []string, want ...string) ([]string, error) {
 // underscore for the same character.
 func named(name string) string {
 	return strings.ReplaceAll(name, "-", "_")
+}
+
+// loading is a loader over the modules there are, with what the kernel has
+// built in already behind it.
+func loading(have []info, builtin []string) loader {
+	l := loader{
+		modules: make(map[string]info, len(have)),
+		done:    make(map[string]bool, len(have)+len(builtin)),
+		loaded:  make([]string, 0, len(have)),
+	}
+
+	for _, module := range have {
+		l.modules[named(module.Name)] = module
+	}
+
+	for _, name := range builtin {
+		l.done[named(name)] = true
+	}
+
+	return l
 }
 
 // loader walks the modules it is given, collecting them in the order to load.
