@@ -21,6 +21,10 @@ test-vm *args:
 test-vm-one package *args:
     MISO_VMTEST_PACKAGES={{package}} bash hack/test-vm.sh -test.timeout=20s -test.failfast {{args}}
 
+# test the miso binary from the outside, as a user runs it
+test-cli: build
+    MISO={{justfile_directory()}}/bin/miso bats test
+
 # test with a coverage profile
 cover:
     go test -coverprofile=coverage.out -covermode=atomic ./...
@@ -61,4 +65,4 @@ hooks:
     lefthook install
 
 # everything that must pass before a push
-ci: lint prose doccheck arch build cover vuln
+ci: lint prose doccheck arch build cover test-cli vuln
