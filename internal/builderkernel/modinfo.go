@@ -27,7 +27,7 @@ func modinfo(ko io.ReaderAt) (info, error) {
 	}
 
 	var said info
-	for _, entry := range bytes.Split(entries, []byte{0}) {
+	for entry := range bytes.SplitSeq(entries, []byte{0}) {
 		key, value, found := strings.Cut(string(entry), "=")
 		if !found {
 			continue
