@@ -11,3 +11,11 @@ func Data(deb io.Reader) (io.Reader, error) {
 func Kernel(deb io.Reader) (string, []byte, error) {
 	return kernel(deb)
 }
+
+// Info is what a module says about itself.
+type Info = info
+
+// Modinfo is what a module says about itself.
+func Modinfo(ko io.ReaderAt) (Info, error) {
+	return modinfo(ko)
+}
