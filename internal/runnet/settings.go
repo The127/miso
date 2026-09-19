@@ -47,6 +47,17 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
 	}
 
+	// a host without a resolver in this family names none, because slirp
+	// forwards a query only to a resolver of the query's own family, so one
+	// handed over anyway would cost every lookup a timeout
+	var nameserver netip.Addr
+	if network.IPv4.Nameserver != "" {
+		nameserver, err = netip.ParseAddr(network.IPv4.Nameserver)
+		if err != nil {
+			return settings{}, fmt.Errorf("nameserver of the run: %w", err)
+		}
+	}
+
 	address6, err := netip.ParsePrefix(network.IPv6.Address)
 	if err != nil {
 		return settings{}, fmt.Errorf("IPv6 address of the run: %w", err)
@@ -62,9 +73,6 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("IPv6 gateway of the run: %w", err)
 	}
 
-	// a host without a resolver in this family names none, because slirp
-	// forwards a query only to a resolver of the query's own family, so one
-	// handed over anyway would cost every lookup a timeout
 	var nameserver6 netip.Addr
 	if network.IPv6.Nameserver != "" {
 		nameserver6, err = netip.ParseAddr(network.IPv6.Nameserver)
@@ -85,7 +93,7 @@ func readSettings(network *protocol.Network) (settings, error) {
 
 	return settings{
 		card: card,
-		ipv4: family{address: address, gateway: gateway},
+		ipv4: family{address: address, gateway: gateway, nameserver: nameserver},
 		ipv6: family{address: address6, gateway: gateway6, nameserver: nameserver6},
 	}, nil
 }
