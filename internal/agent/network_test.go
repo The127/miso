@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,6 +140,26 @@ func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
 
 	// act
 	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "miso\n", out.String())
+}
+
+func TestARunReachesAServiceBeyondTheBuilderOverIPv6(t *testing.T) {
+	// arrange
+	service := os.Getenv("MISO_VMTEST_SERVICE6")
+	require.NotEmpty(t, service, "MISO_VMTEST_SERVICE6 names no service")
+	host, port, err := net.SplitHostPort(service)
+	require.NoError(t, err)
+	worker := mountedBase(t, t.TempDir())
+	// bounded, so a run that cannot connect fails before the test does
+	connect := fmt.Sprintf("timeout 5 bash -c 'exec 3<>/dev/tcp/%s/%s && cat <&3'", host, port)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: connect}
+	var out bytes.Buffer
+
+	// act
+	_, err = worker.Run(context.Background(), run, &out)
 
 	// assert
 	require.NoError(t, err)

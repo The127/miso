@@ -18,8 +18,14 @@ const (
 	egress        = 0xFFFFFFF3
 	flowerAct     = 3
 	flowerEthType = 8
+	flowerProto   = 9
 	flowerDst     = 12
 	flowerDstMask = 13
+	flowerDst6    = 16
+	flowerDst6Msk = 17
+	flowerICMPv6  = 55
+	solicit       = 135
+	advert        = 136
 	actKind       = 1
 	actOptions    = 2
 	gactParms     = 2
@@ -27,8 +33,9 @@ const (
 	shot          = 2
 )
 
-// fenceHost lets only ARP and IPv4 leave the builder's card, and nothing
-// for the gateway or a loopback, which QEMU takes to the host's loopback.
+// fenceHost lets only ARP, IPv4 and IPv6 to the internet leave the builder's
+// card, and nothing for the gateway or a loopback, which QEMU takes to the
+// host's loopback.
 // A run sets up its own card as it likes, so the fence sits where it cannot
 // reach.
 func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
@@ -50,6 +57,11 @@ func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("127.0.0.0/8")), shot},
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
+		// how a run finds the gateway's MAC in IPv6, which QEMU answers
+		// itself
+		{unix.ETH_P_IPV6, icmpv6(solicit), pass},
+		{unix.ETH_P_IPV6, icmpv6(advert), pass},
+		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("2000::/3")), pass},
 		{unix.ETH_P_ALL, nil, shot},
 	}
 	for i, f := range filters {
@@ -61,12 +73,25 @@ func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 	return nil
 }
 
-// destination is the key of a filter that matches IPv4 to a prefix.
+// destination is the key of a filter that matches a prefix of IPv4 or
+// IPv6.
 func destination(prefix netip.Prefix) []byte {
-	address := prefix.Addr().As4()
-	mask := binary.BigEndian.AppendUint32(nil, ^uint32(0)<<(32-prefix.Bits()))
+	address := prefix.Addr().AsSlice()
+	mask := make([]byte, len(address))
+	for i := range prefix.Bits() {
+		mask[i/8] |= 0x80 >> (i % 8)
+	}
 
-	return slices.Concat(link.Attribute(flowerDst, address[:]), link.Attribute(flowerDstMask, mask))
+	if prefix.Addr().Is6() {
+		return slices.Concat(link.Attribute(flowerDst6, address), link.Attribute(flowerDst6Msk, mask))
+	}
+
+	return slices.Concat(link.Attribute(flowerDst, address), link.Attribute(flowerDstMask, mask))
+}
+
+// icmpv6 is the key of a filter that matches ICMPv6 of a type.
+func icmpv6(kind byte) []byte {
+	return slices.Concat(link.Attribute(flowerProto, []byte{unix.IPPROTO_ICMPV6}), link.Attribute(flowerICMPv6, []byte{kind}))
 }
 
 // addFilter sets the filter of a priority on the egress of a card, which
