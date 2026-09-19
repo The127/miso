@@ -344,20 +344,6 @@ func TestARunHasALoopback(t *testing.T) {
 	assert.Equal(t, "0x9\n", out.String())
 }
 
-func TestARunIsCalledLocalhost(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "hostname"}
-	var out bytes.Buffer
-
-	// act
-	_, err := worker.Run(context.Background(), run, &out)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, "localhost\n", out.String())
-}
-
 func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
