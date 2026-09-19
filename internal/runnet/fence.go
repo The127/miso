@@ -1,15 +1,16 @@
 package runnet
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 
+	"github.com/florianl/go-tc"
+	"github.com/florianl/go-tc/core"
 	"golang.org/x/sys/unix"
-
-	"github.com/The127/miso/internal/link"
 )
 
-// the ICMPv6 types of neighbor discovery that x/sys does not name
+// the ICMPv6 types of neighbor discovery
 const (
 	router  = 133
 	solicit = 135
@@ -20,15 +21,32 @@ const (
 // network leave the builder's card, and nothing for the gateway or a
 // loopback, which QEMU takes to the host's loopback. A run sets up its own
 // card as it likes, so the fence sits where it cannot reach.
-func fenceHost(builder *link.Conn, card int32, wanted settings) error {
-	if err := addClsact(builder, card); err != nil {
+func fenceHost(card int32, wanted settings) error {
+	fence, err := tc.Open(&tc.Config{})
+	if err != nil {
+		return fmt.Errorf("fence the host off: %w", err)
+	}
+
+	defer func() { _ = fence.Close() }()
+
+	queue := tc.Object{
+		Msg: tc.Msg{
+			Family:  unix.AF_UNSPEC,
+			Ifindex: uint32(card), //nolint:gosec // an index is never negative
+			Handle:  core.BuildHandle(tc.HandleRoot, 0),
+			Parent:  tc.HandleIngress,
+		},
+		Attribute: tc.Attribute{Kind: "clsact"},
+	}
+	// the runs before this one made it already
+	if err := fence.Qdisc().Add(&queue); err != nil && !errors.Is(err, unix.EEXIST) {
 		return fmt.Errorf("fence the host off: %w", err)
 	}
 
 	// the first that matches decides
 	type rule struct {
 		kind   uint16
-		keys   []byte
+		keys   tc.Flower
 		action uint32
 	}
 
@@ -58,8 +76,8 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 	}
 
 	filters = append(filters, []rule{
-		{unix.ETH_P_IP, nil, pass},
-		{unix.ETH_P_ARP, nil, pass},
+		{unix.ETH_P_IP, tc.Flower{}, pass},
+		{unix.ETH_P_ARP, tc.Flower{}, pass},
 		// how a run finds the gateway's MAC and asks for its routes in
 		// IPv6, which QEMU answers itself
 		{unix.ETH_P_IPV6, icmpv6(router), pass},
@@ -85,11 +103,33 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("fc00::/7")), pass},
 		// how a host with IPv6 alone reaches what has IPv4 alone
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b::/96")), pass},
-		{unix.ETH_P_ALL, nil, shot},
+		{unix.ETH_P_ALL, tc.Flower{}, shot},
 	}...)
 
 	for i, f := range filters {
-		if err := addFilter(builder, card, uint32(i+1), f.kind, f.keys, f.action); err != nil {
+		keys := f.keys
+		if f.kind != unix.ETH_P_ALL {
+			kind := f.kind
+			keys.KeyEthType = &kind
+		}
+
+		actions := []*tc.Action{{Kind: "gact", Gact: &tc.Gact{Parms: &tc.GactParms{Action: f.action}}}}
+		keys.Actions = &actions
+		filter := tc.Object{
+			Msg: tc.Msg{
+				Family:  unix.AF_UNSPEC,
+				Ifindex: uint32(card), //nolint:gosec // an index is never negative
+				// named, so a later run replaces this filter instead of the
+				// kernel giving it a handle of its own and keeping both
+				Handle: 1,
+				Parent: egress,
+				Info:   core.FilterInfo(uint16(i+1), f.kind),
+			},
+			Attribute: tc.Attribute{Kind: "flower", Flower: &keys},
+		}
+		// replaced, not added, because the run before this one left its own
+		// filters on the card
+		if err := fence.Filter().Replace(&filter); err != nil {
 			return fmt.Errorf("fence the host off: %w", err)
 		}
 	}
