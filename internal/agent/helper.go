@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // helperName is the name the agent starts itself under to run a command.
@@ -38,13 +40,35 @@ func helper(root, command string) error {
 		}
 	}
 
+	// a new network namespace starts with its loopback down
+	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM|unix.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = unix.Close(sock) }()
+
+	lo, err := unix.NewIfreq("lo")
+	if err != nil {
+		return err
+	}
+
+	if err := unix.IoctlIfreq(sock, unix.SIOCGIFFLAGS, lo); err != nil {
+		return fmt.Errorf("read lo: %w", err)
+	}
+
+	lo.SetUint16(lo.Uint16() | unix.IFF_UP)
+	if err := unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, lo); err != nil {
+		return fmt.Errorf("bring lo up: %w", err)
+	}
+
 	// a fixed name, because packages write it into what they install, and
 	// every hosts file knows this one
 	if err := syscall.Sethostname([]byte("localhost")); err != nil {
 		return fmt.Errorf("name the run: %w", err)
 	}
 
-	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
+	err = syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
 
 	return fmt.Errorf("run /bin/sh: %w", err)
 }

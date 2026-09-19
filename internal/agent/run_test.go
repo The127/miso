@@ -328,6 +328,21 @@ func TestARunCannotChangeTheBuildersNetwork(t *testing.T) {
 	assert.Equal(t, string(was), string(is))
 }
 
+func TestARunHasALoopback(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "cat /sys/class/net/lo/flags"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	// up and loopback
+	assert.Equal(t, "0x9\n", out.String())
+}
+
 func TestARunIsCalledLocalhost(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
