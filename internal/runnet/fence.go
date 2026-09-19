@@ -37,6 +37,10 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		// QEMU checks no address, so a frame a run makes itself would reach
 		// the host's loopback
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("127.0.0.0/8")), shot},
+		// and QEMU takes the unspecified address there as well. Only the
+		// address itself does, but nothing routes the rest of the range
+		// anywhere either
+		{unix.ETH_P_IP, destination(netip.MustParsePrefix("0.0.0.0/8")), shot},
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
 		// how a run finds the gateway's MAC and asks for its routes in

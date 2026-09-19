@@ -595,6 +595,34 @@ func TestARunCannotReachTheHostsLoopbackWithAFrameOfItsOwn(t *testing.T) {
 	assert.NotContains(t, out.String(), "reached")
 }
 
+func TestARunCannotReachTheHostsLoopbackThroughTheUnspecifiedAddress(t *testing.T) {
+	// arrange
+	loopback := os.Getenv("MISO_VMTEST_HOST")
+	require.NotEmpty(t, loopback, "MISO_VMTEST_HOST names no service")
+	_, port, _ := strings.Cut(loopback, ":")
+	network := online(t)
+	address, _, _ := strings.Cut(network.IPv4.Address, "/")
+	worker := mountedBase(t, t.TempDir())
+	// a run's own kernel turns a connect to it into one to the run's
+	// loopback, so only a frame a run makes itself gets out
+	sending := strings.Join([]string{
+		"set -e",
+		fmt.Sprintf("timeout 1 bash -c 'exec 3<>/dev/tcp/%s/1' || true", network.IPv4.Gateway),
+		fmt.Sprintf("gateway=$(ip neigh show %s | awk '{print $5}')", network.IPv4.Gateway),
+		fmt.Sprintf("python3 - \"$gateway\" %s 0.0.0.0 %s <<'EOF'\n%sEOF", address, port, syn),
+	}, "\n")
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: sending}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code, out.String())
+	assert.NotContains(t, out.String(), "reached")
+}
+
 func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
