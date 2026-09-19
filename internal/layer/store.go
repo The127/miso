@@ -73,6 +73,12 @@ func (w *Work) Discard() error {
 
 // Finish puts the layer under its key.
 func (w *Work) Finish() error {
+	// a crash may lose a finished layer but must never leave a key whose
+	// files the disk does not hold yet
+	if err := syncFileSystem(w.dir); err != nil {
+		return err
+	}
+
 	err := os.Rename(w.dir, w.final)
 	// the same key is the same layer, so the one there already is as good
 	if errors.Is(err, fs.ErrExist) {

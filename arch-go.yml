@@ -153,7 +153,8 @@ dependenciesRules:
         - os/exec
         - net
   # the layer keeps the layers on the agent's cache disk. It knows nothing
-  # of ours and never touches a process, the network or the kernel
+  # of ours, never touches a process or the network, and asks the kernel
+  # only to put its file system on the disk before a key names a layer
   - package: '**.internal.layer$'
     shouldNotDependsOn:
       internal:
