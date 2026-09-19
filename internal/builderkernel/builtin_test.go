@@ -23,3 +23,14 @@ func TestWhatTheKernelBuildsInIsNamedByItsModulesBuiltin(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"btrfs", "xor"}, found)
 }
+
+func TestAPackageWithNoModulesBuiltinIsRefused(t *testing.T) {
+	// arrange
+	deb := packaged(t, map[string]string{"./boot/vmlinuz-6.12.107+deb13-cloud-amd64": "the kernel"})
+
+	// act
+	_, err := builderkernel.Builtin(bytes.NewReader(deb))
+
+	// assert
+	assert.ErrorContains(t, err, "modules.builtin")
+}

@@ -3,6 +3,7 @@ package builderkernel
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -44,5 +45,5 @@ func builtin(deb io.Reader) ([]string, error) {
 		return found, lines.Err()
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("the package holds no %s", builtinFile)
 }
