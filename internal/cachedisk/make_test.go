@@ -108,12 +108,30 @@ func TestACacheDiskWithoutMkfsNamesWhereToGetIt(t *testing.T) {
 	// arrange
 	path := filepath.Join(t.TempDir(), "layers.img")
 	t.Setenv("PATH", t.TempDir())
+	cachedisk.SearchAlso(t)
 
 	// act
 	err := cachedisk.Make(path, 64<<20)
 
 	// assert
 	assert.ErrorContains(t, err, "e2fsprogs")
+}
+
+func TestACacheDiskFindsMkfsWhereThePathDoesNotLook(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	t.Setenv("PATH", t.TempDir())
+	// as /usr/sbin, which a user's PATH on Debian leaves out
+	sbin := t.TempDir()
+	mkfsIn(t, sbin, "printf made > \"$2\"\n")
+	cachedisk.SearchAlso(t, sbin)
+
+	// act
+	err := cachedisk.Make(path, 64<<20)
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, path)
 }
 
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
@@ -134,12 +152,19 @@ func fileSystemID(t *testing.T, path string) []byte {
 	return id
 }
 
-// fakeMkfs puts an mkfs.ext4 first on the PATH that runs a shell script,
-// which finds the disk in $2.
+// fakeMkfs puts an mkfs.ext4 first on the PATH that runs a shell script.
 func fakeMkfs(t *testing.T, script string) {
 	t.Helper()
 
 	bin := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(bin, "mkfs.ext4"), []byte("#!/bin/sh\n"+script), 0o700)) //nolint:gosec // the script must be executable
+	mkfsIn(t, bin, script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// mkfsIn puts an mkfs.ext4 into a directory that runs a shell script, which
+// finds the disk in $2.
+func mkfsIn(t *testing.T, dir, script string) {
+	t.Helper()
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "mkfs.ext4"), []byte("#!/bin/sh\n"+script), 0o700)) //nolint:gosec // the script must be executable
 }
