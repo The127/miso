@@ -4,6 +4,7 @@ package vsock_test
 
 import (
 	"io"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,4 +34,23 @@ func TestAConnectionCarriesWhatTheOtherSideWrites(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(got))
+}
+
+func TestAnAcceptedConnectionIsNotInheritedByAProcess(t *testing.T) {
+	// arrange
+	listener, err := vsock.Listen(1025)
+	require.NoError(t, err)
+	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, 1025)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
+
+	// act
+	accepted, err := listener.Accept()
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, accepted.Close()) })
+	flags, err := unix.FcntlInt(accepted.(*os.File).Fd(), unix.F_GETFD, 0)
+	require.NoError(t, err)
+	assert.NotZero(t, flags&unix.FD_CLOEXEC)
 }
