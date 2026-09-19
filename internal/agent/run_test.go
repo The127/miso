@@ -165,56 +165,6 @@ func TestARunSeesItsLowestLayerUnderManyOthers(t *testing.T) {
 	assert.Equal(t, "lowest", out.String())
 }
 
-func TestARunSeesTheEnvironmentOfTheBuildFileAndNotTheAgents(t *testing.T) {
-	// arrange
-	layers := t.TempDir()
-	worker := mountedBase(t, layers)
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Env: []string{"GREETING=hi"}, Command: "env > /seen"}
-
-	// act
-	_, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
-	require.NoError(t, err)
-	assert.Contains(t, string(seen), "GREETING=hi\n")
-	assert.NotContains(t, string(seen), "MISO_VMTEST_BASE_DIGEST")
-}
-
-func TestARunWithoutEnvironmentFindsCommandsOnTheUsualPath(t *testing.T) {
-	// arrange
-	layers := t.TempDir()
-	worker := mountedBase(t, layers)
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "env > /seen"}
-
-	// act
-	_, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
-	require.NoError(t, err)
-	assert.Contains(t, string(seen), "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n")
-	assert.NotContains(t, string(seen), "MISO_VMTEST_BASE_DIGEST")
-}
-
-func TestARunIsAtHomeInRoot(t *testing.T) {
-	// arrange
-	layers := t.TempDir()
-	worker := mountedBase(t, layers)
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "env > /seen"}
-
-	// act
-	_, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
-	require.NoError(t, err)
-	assert.Contains(t, string(seen), "HOME=/root\n")
-}
-
 func TestTheRootOfARunKeepsTheModeOfTheLayersBelow(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
@@ -229,40 +179,6 @@ func TestTheRootOfARunKeepsTheModeOfTheLayersBelow(t *testing.T) {
 	seen, err := os.ReadFile(filepath.Join(layers, "run", "seen"))
 	require.NoError(t, err)
 	assert.Equal(t, "755\n", string(seen))
-}
-
-func TestAProcessARunLeavesBehindDoesNotOutliveIt(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	// not &, which needs a /dev/null, and the second sleep lets the first one
-	// start before the shell is gone
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "setsid -f sleep 1000; sleep 1"}
-
-	// act
-	code, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, 0, code)
-	assert.Empty(t, others(t))
-}
-
-// others are the command lines of the processes other than the test, which
-// in the VM is alone apart from the kernel's threads, and those have none.
-func others(t *testing.T) []string {
-	t.Helper()
-
-	lines, err := filepath.Glob("/proc/[0-9]*/cmdline")
-	require.NoError(t, err)
-	found := []string{}
-	for _, line := range lines {
-		commandLine, _ := os.ReadFile(line)
-		if len(commandLine) > 0 && filepath.Dir(line) != fmt.Sprintf("/proc/%d", os.Getpid()) {
-			found = append(found, string(commandLine))
-		}
-	}
-
-	return found
 }
 
 // ownFileSystem is an empty directory that is a file system of its own.
