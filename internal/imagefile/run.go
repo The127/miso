@@ -34,7 +34,7 @@ func readRun(line int, arguments string) ([]Instruction, error) {
 			return nil, fmt.Errorf("does not know --%s", name)
 		}
 
-		if value != "none" {
+		if value != "none" && value != "default" {
 			return nil, fmt.Errorf("does not know --network=%s", value)
 		}
 	}
