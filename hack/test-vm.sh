@@ -42,9 +42,45 @@ if [ -n "${MISO_VMTEST_BASE:-}" ]; then
     environment+=("MISO_VMTEST_BASE_DIGEST=$digest")
 fi
 
-# the modules the tests need that the host's kernel has not built in
+# the modules the tests need that the kernel has not built in, each after
+# what it depends on. Unpacked here, because kernels differ in how their
+# modules are packed and not every kernel unpacks them itself. Numbered, so
+# the VM loads them in order
 mkdir -p "$work/root/modules"
-cp "$modules/kernel/fs/overlayfs/overlay.ko.xz" "$work/root/modules/"
+loaded=()
+for name in virtio_blk btrfs overlay; do
+    if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
+        continue
+    fi
+
+    line=$(grep -E "/$name\.ko(\.[a-z]+)?:" "$modules/modules.dep")
+    read -ra deps <<< "${line#*:}"
+    # modules.dep lists what a module needs before what that needs in turn
+    for ((i = ${#deps[@]} - 1; i >= 0; i--)); do
+        loaded+=("${deps[i]}")
+    done
+
+    loaded+=("${line%%:*}")
+done
+
+n=0
+declare -A seen=()
+for path in "${loaded[@]}"; do
+    if [ -n "${seen[$path]:-}" ]; then
+        continue
+    fi
+
+    seen[$path]=1
+    n=$((n + 1))
+    out=$(printf '%s/root/modules/%02d-%s' "$work" "$n" "$(basename "${path%%.ko*}").ko")
+    case $path in
+        *.ko.xz) xz -dc "$modules/$path" > "$out" ;;
+        *.ko.zst) zstd -qdc "$modules/$path" > "$out" ;;
+        *.ko.gz) gzip -dc "$modules/$path" > "$out" ;;
+        *.ko) cp "$modules/$path" "$out" ;;
+        *) echo "unknown module packing: $path" >&2; exit 1 ;;
+    esac
+done
 
 failed=0
 for pkg in $packages; do

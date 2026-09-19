@@ -10,9 +10,11 @@ build:
 test:
     go test ./...
 
-# test what needs root and a real kernel, inside a vm (needs /dev/kvm)
+# test what needs root and a real kernel, inside a vm (needs /dev/kvm), once
+# on the host's kernel and once on the base image's
 test-vm *args:
     bash hack/test-vm.sh {{args}}
+    bash hack/test-vm-image-kernel.sh {{args}}
 
 # test with a coverage profile
 cover:
