@@ -37,6 +37,20 @@ func TestRunWithoutNetworkIsOffline(t *testing.T) {
 	}, stages[0].Instructions)
 }
 
+func TestRunWithTheDefaultNetworkIsOnline(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --network=default make test\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Line: 2, Command: "make test"},
+	}, stages[0].Instructions)
+}
+
 func TestRunWithAnUnknownFlagIsRejected(t *testing.T) {
 	// arrange
 	source := "FROM debian:sid\nRUN --netwrk=none make test\n"
