@@ -1,4 +1,4 @@
-package agent
+package sandbox
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/The127/miso/internal/runnet"
 )
 
-// runShell runs the command of a run in a root and answers its exit code.
-func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer) (int, error) {
+// Run runs the command of a run in a root and answers its exit code.
+func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int, error) {
 	// Go runs nothing between clone and exec, so the agent itself goes first
 	// to set up the namespaces, then becomes the shell
 	cmd := exec.CommandContext(ctx, "/proc/self/exe", root, run.Command) //nolint:gosec // running what the build file says is what a RUN is

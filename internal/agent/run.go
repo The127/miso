@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/The127/miso/internal/protocol"
+	"github.com/The127/miso/internal/sandbox"
 )
 
 // Run runs a command on top of layers and keeps what it writes as the layer
@@ -56,7 +57,7 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 
 	// the run's mount points live below every layer, so a layer holds only
 	// what its command wrote
-	floor, err := makeFloor(scratch)
+	floor, err := sandbox.Floor(scratch)
 	if err != nil {
 		return 0, err
 	}
@@ -70,7 +71,7 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 	// removing scratch must never reach into the root, so it goes first
 	defer func() { _ = syscall.Unmount(root, syscall.MNT_DETACH) }()
 
-	code, err := runShell(ctx, root, run, out)
+	code, err := sandbox.Run(ctx, root, run, out)
 	if err != nil || code != 0 {
 		return code, err
 	}
