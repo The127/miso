@@ -120,6 +120,15 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the cachedisk makes the host's file the builder keeps its layers on. It
+  # knows nothing of ours and never touches the network
+  - package: '**.internal.cachedisk$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - net
   # the fstab reads the fstab of a base image from the reader it is handed.
   # It knows nothing of ours, opens nothing and never touches a process, the
   # network or the kernel
