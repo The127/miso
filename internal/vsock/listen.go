@@ -32,7 +32,7 @@ func Listen(port uint32) (*Listener, error) {
 
 // Accept waits for the next connection.
 func (l *Listener) Accept() (io.ReadWriteCloser, error) {
-	fd, _, err := unix.Accept(l.fd)
+	fd, _, err := unix.Accept4(l.fd, unix.SOCK_CLOEXEC)
 	if err != nil {
 		return nil, err
 	}
