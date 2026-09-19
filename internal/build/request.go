@@ -35,7 +35,7 @@ func Requests(planned plan.Plan) ([]protocol.Message, error) {
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 			if run, isRun := step.Instruction.(imagefile.Run); isRun {
-				requests = append(requests, protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command})
+				requests = append(requests, protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command, Offline: run.Offline})
 			}
 
 			roots[step.Key] = under.after(step)
