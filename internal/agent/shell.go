@@ -21,8 +21,8 @@ func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer)
 	// the shell is the init of its own PID namespace, so the kernel kills
 	// whatever it leaves behind before the wait for it returns. Go makes every
 	// mount private in the new mount namespace, so what the run mounts never
-	// reaches the agent
-	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID, Unshareflags: syscall.CLONE_NEWNS}
+	// reaches the agent. A name the run gives itself stays its own
+	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWUTS, Unshareflags: syscall.CLONE_NEWNS}
 	cmd.Stdout = out
 	cmd.Stderr = out
 	// Docker's defaults, and os/exec keeps the last of a key, so the build
