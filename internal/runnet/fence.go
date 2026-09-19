@@ -1,12 +1,11 @@
 package runnet
 
 import (
-	"errors"
 	"fmt"
 	"net/netip"
+	"slices"
 
 	"github.com/florianl/go-tc"
-	"github.com/florianl/go-tc/core"
 	"golang.org/x/sys/unix"
 )
 
@@ -18,14 +17,8 @@ const (
 )
 
 // fenceHost keeps a run away from the host the builder runs on and lets
-// everything else through. What a host takes for itself is dropped, what is
-// somebody else's is passed, and every drop below follows from that: an
-// address QEMU rewrites to the host's loopback, one a host's own kernel
-// resolves to itself, or one a host delivers to its own listeners. IPv6
-// names the pass side instead, because two prefixes there cover the whole
-// internet and every private network, which IPv4 has no equal of. A run
-// sets up its own card as it likes, so the fence sits on the builder's
-// card, where the run cannot reach it.
+// everything else through. A run sets up its own card as it likes, so the
+// fence sits on the builder's card, where the run cannot reach it.
 func fenceHost(card int32, wanted settings) error {
 	fence, err := tc.Open(&tc.Config{})
 	if err != nil {
@@ -34,29 +27,36 @@ func fenceHost(card int32, wanted settings) error {
 
 	defer func() { _ = fence.Close() }()
 
-	queue := tc.Object{
-		Msg: tc.Msg{
-			Family:  unix.AF_UNSPEC,
-			Ifindex: uint32(card), //nolint:gosec // an index is never negative
-			Handle:  core.BuildHandle(tc.HandleRoot, 0),
-			Parent:  tc.HandleIngress,
-		},
-		Attribute: tc.Attribute{Kind: "clsact"},
-	}
-	// the runs before this one made it already
-	if err := fence.Qdisc().Add(&queue); err != nil && !errors.Is(err, unix.EEXIST) {
+	if err := addClsact(fence, card); err != nil {
 		return fmt.Errorf("fence the host off: %w", err)
 	}
 
-	// the first that matches decides
-	type rule struct {
-		kind   uint16
-		keys   tc.Flower
-		action uint32
+	for i, what := range rules(wanted) {
+		if err := addFilter(fence, card, uint16(i+1), what); err != nil {
+			return fmt.Errorf("fence the host off: %w", err)
+		}
 	}
 
-	filters := []rule{
-		{unix.ETH_P_IP, destination(netip.PrefixFrom(wanted.ipv4.gateway, 32)), shot},
+	return nil
+}
+
+// rules are the fence's filters in the order the kernel tries them, the
+// first that matches decides. A filter names the kind of frame it is for,
+// so the families never meet and only the order within one matters.
+func rules(wanted settings) []rule {
+	return slices.Concat(ipv4Rules(wanted.ipv4), ipv6Rules(wanted.ipv6), []rule{
+		// how a run finds the gateway's MAC in IPv4
+		{unix.ETH_P_ARP, tc.Flower{}, pass},
+		// whatever is left is neither IP nor ARP and has no way out
+		{unix.ETH_P_ALL, tc.Flower{}, shot},
+	})
+}
+
+// ipv4Rules drop every IPv4 address a host takes for itself and pass the
+// rest, because IPv4 has no prefix that means the internet.
+func ipv4Rules(wanted family) []rule {
+	return slices.Concat([]rule{
+		{unix.ETH_P_IP, destination(netip.PrefixFrom(wanted.gateway, 32)), shot},
 		// QEMU checks no address, so a frame a run makes itself would reach
 		// the host's loopback
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("127.0.0.0/8")), shot},
@@ -73,77 +73,45 @@ func fenceHost(card int32, wanted settings) error {
 		// nothing routes link local anywhere, and a builder in a cloud holds
 		// its own credentials at 169.254.169.254
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("169.254.0.0/16")), shot},
-	}
-
-	// QEMU hands the nameserver to the resolver of the host it runs on, and
-	// before libslirp 4.3.1 it did so on every port, not port 53 alone,
-	// which put the host's own resolver within reach of a run
-	if wanted.ipv4.nameserver.IsValid() {
-		filters = append(filters,
-			rule{unix.ETH_P_IP, dns(wanted.ipv4.nameserver, unix.IPPROTO_UDP), pass},
-			rule{unix.ETH_P_IP, dns(wanted.ipv4.nameserver, unix.IPPROTO_TCP), pass},
-			rule{unix.ETH_P_IP, destination(netip.PrefixFrom(wanted.ipv4.nameserver, 32)), shot},
-		)
-	}
-
-	filters = append(filters, []rule{
+	}, nameserverRules(unix.ETH_P_IP, wanted.nameserver), []rule{
 		{unix.ETH_P_IP, tc.Flower{}, pass},
-		{unix.ETH_P_ARP, tc.Flower{}, pass},
+	})
+}
+
+// ipv6Rules name what a run may reach instead, because two prefixes there
+// cover the whole internet and every private network.
+func ipv6Rules(wanted family) []rule {
+	return slices.Concat([]rule{
 		// how a run finds the gateway's MAC and asks for its routes in
 		// IPv6, which QEMU answers itself
 		{unix.ETH_P_IPV6, icmpv6(router), pass},
 		{unix.ETH_P_IPV6, icmpv6(solicit), pass},
 		{unix.ETH_P_IPV6, icmpv6(advert), pass},
-	}...)
-
-	// the nameserver sits in the range the next rule drops, so a query has
-	// to pass before it
-	if wanted.ipv6.nameserver.IsValid() {
-		filters = append(filters,
-			rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver, unix.IPPROTO_UDP), pass},
-			rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver, unix.IPPROTO_TCP), pass},
-		)
-	}
-
-	filters = append(filters, []rule{
+	}, nameserverRules(unix.ETH_P_IPV6, wanted.nameserver), []rule{
 		// QEMU takes its whole range to the host's loopback, the gateway and
 		// the run's neighbours with it
-		{unix.ETH_P_IPV6, destination(wanted.ipv6.address.Masked()), shot},
+		{unix.ETH_P_IPV6, destination(wanted.address.Masked()), shot},
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("2000::/3")), pass},
 		// a host's own network, as 192.168 and the like are in IPv4
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("fc00::/7")), pass},
 		// how a host with IPv6 alone reaches what has IPv4 alone
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b::/96")), pass},
-		{unix.ETH_P_ALL, tc.Flower{}, shot},
-	}...)
+	})
+}
 
-	for i, f := range filters {
-		keys := f.keys
-		if f.kind != unix.ETH_P_ALL {
-			kind := f.kind
-			keys.KeyEthType = &kind
-		}
-
-		actions := []*tc.Action{{Kind: "gact", Gact: &tc.Gact{Parms: &tc.GactParms{Action: f.action}}}}
-		keys.Actions = &actions
-		filter := tc.Object{
-			Msg: tc.Msg{
-				Family:  unix.AF_UNSPEC,
-				Ifindex: uint32(card), //nolint:gosec // an index is never negative
-				// named, so a later run replaces this filter instead of the
-				// kernel giving it a handle of its own and keeping both
-				Handle: 1,
-				Parent: egress,
-				Info:   core.FilterInfo(uint16(i+1), f.kind),
-			},
-			Attribute: tc.Attribute{Kind: "flower", Flower: &keys},
-		}
-		// replaced, not added, because the run before this one left its own
-		// filters on the card
-		if err := fence.Filter().Replace(&filter); err != nil {
-			return fmt.Errorf("fence the host off: %w", err)
-		}
+// nameserverRules let a query through to the nameserver and nothing else,
+// and are none at all where the host named no resolver. QEMU hands the
+// nameserver to the resolver of the host it runs on, and before libslirp
+// 4.3.1 it did so on every port, not port 53 alone, which put the host's
+// own resolver within reach of a run.
+func nameserverRules(kind uint16, nameserver netip.Addr) []rule {
+	if !nameserver.IsValid() {
+		return nil
 	}
 
-	return nil
+	return []rule{
+		{kind, dns(nameserver, unix.IPPROTO_UDP), pass},
+		{kind, dns(nameserver, unix.IPPROTO_TCP), pass},
+		{kind, destination(netip.PrefixFrom(nameserver, nameserver.BitLen())), shot},
+	}
 }
