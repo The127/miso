@@ -2,7 +2,6 @@ package builderkernel
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -41,36 +40,4 @@ func says(file io.Reader) (info, error) {
 	}
 
 	return modinfo(bytes.NewReader(module))
-}
-
-// modules is what every module a package holds says about itself.
-func modules(deb io.Reader) ([]info, error) {
-	var found []info
-
-	files, failed := eachFile(deb)
-	for name, file := range files {
-		base := path.Base(name)
-
-		ko, isModule := plain(base)
-		if !isModule {
-			continue
-		}
-
-		if base != ko+modulePacking {
-			return nil, fmt.Errorf("the package holds %s, miso reads %s", base, ko+modulePacking)
-		}
-
-		said, err := says(file)
-		if err != nil {
-			return nil, err
-		}
-
-		found = append(found, said)
-	}
-
-	if err := failed(); err != nil {
-		return nil, err
-	}
-
-	return found, nil
 }
