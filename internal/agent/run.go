@@ -56,11 +56,9 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 
 	// the run's mount points live below every layer, so a layer holds only
 	// what its command wrote
-	floor := filepath.Join(scratch, "floor")
-	for _, dir := range []string{floor, filepath.Join(floor, "proc"), filepath.Join(floor, "sys"), filepath.Join(floor, "dev")} {
-		if err := os.Mkdir(dir, 0o700); err != nil {
-			return 0, err
-		}
+	floor, err := makeFloor(scratch)
+	if err != nil {
+		return 0, err
 	}
 
 	lowers = append(lowers, floor)
