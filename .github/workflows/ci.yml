@@ -28,6 +28,14 @@ jobs:
         with:
           version: v2.13.2
           install-only: true
+      # just test-cli runs the built miso from the outside
+      - uses: bats-core/bats-action@4.0.0
+        with:
+          bats-version: 1.14.0
+          support-install: false
+          assert-install: false
+          detik-install: false
+          file-install: false
       - run: just ci
       - name: upload coverage to codecov
         uses: codecov/codecov-action@v7

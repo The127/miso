@@ -47,6 +47,8 @@ Required tooling:
 - [Go](https://go.dev/) 1.27+.
 - [golangci-lint](https://golangci-lint.run/) v2: linting, configured in
   `.golangci.yml`.
+- [bats](https://bats-core.readthedocs.io/): tests of the built `miso`
+  from the outside, run by `just test-cli`.
 - [just](https://just.systems/): task runner. `just` lists the available
   recipes, `just ci` runs everything that must pass.
 - [lefthook](https://lefthook.dev/): git hooks (lint, prose, doc comment
