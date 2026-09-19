@@ -565,6 +565,25 @@ func TestARunResolvesANameThroughTheNameserverOverIPv6(t *testing.T) {
 	assert.Equal(t, "2001:db8::53\n", out.String())
 }
 
+func TestARunResolvesANameThroughTheNameserverOverTCP(t *testing.T) {
+	// arrange
+	nameserver := os.Getenv("MISO_VMTEST_NAMESERVER6")
+	require.NotEmpty(t, nameserver, "MISO_VMTEST_NAMESERVER6 names no nameserver")
+	worker := mountedBase(t, t.TempDir())
+	// what a resolver falls back to when an answer does not fit a datagram
+	asking := fmt.Sprintf("python3 - %s miso.test AAAA tcp <<'EOF'\n%sEOF", nameserver, query)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: asking}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code, out.String())
+	assert.Equal(t, "2001:db8::53\n", out.String())
+}
+
 //go:embed testdata/syn.py
 var syn string
 

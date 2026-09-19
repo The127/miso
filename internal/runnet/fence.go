@@ -56,7 +56,10 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 	// the nameserver sits in the range the next rule drops, so a query has
 	// to pass before it
 	if wanted.ipv6.nameserver.IsValid() {
-		filters = append(filters, rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver), pass})
+		filters = append(filters,
+			rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver, unix.IPPROTO_UDP), pass},
+			rule{unix.ETH_P_IPV6, dns(wanted.ipv6.nameserver, unix.IPPROTO_TCP), pass},
+		)
 	}
 
 	filters = append(filters, []rule{
