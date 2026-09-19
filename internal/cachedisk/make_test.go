@@ -104,6 +104,18 @@ func TestAFailedCacheDiskSaysWhatMkfsSaid(t *testing.T) {
 	assert.ErrorContains(t, err, "no room for a file system")
 }
 
+func TestACacheDiskWithoutMkfsNamesWhereToGetIt(t *testing.T) {
+	// arrange
+	path := filepath.Join(t.TempDir(), "layers.img")
+	t.Setenv("PATH", t.TempDir())
+
+	// act
+	err := cachedisk.Make(path, 64<<20)
+
+	// assert
+	assert.ErrorContains(t, err, "e2fsprogs")
+}
+
 // fileSystemID reads the UUID of the ext4 at a path, which every mkfs picks
 // anew.
 func fileSystemID(t *testing.T, path string) []byte {

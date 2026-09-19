@@ -29,6 +29,10 @@ func Make(path string, size int64) error {
 	kibibytes := fmt.Sprintf("%dk", size>>10)
 
 	said, err := exec.Command("mkfs.ext4", "-q", temp.Name(), kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
+	if errors.Is(err, exec.ErrNotFound) {
+		return fmt.Errorf("make cache disk %s: %w, it comes with e2fsprogs", path, err)
+	}
+
 	if err != nil {
 		return fmt.Errorf("make cache disk %s: %w: %s", path, err, bytes.TrimSpace(said))
 	}
