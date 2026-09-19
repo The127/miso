@@ -85,5 +85,11 @@ func (w *Work) Finish() error {
 		return os.RemoveAll(w.dir)
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	// the VM is stopped by killing it, which must not take the last layer
+	// of a build with it
+	return syncFileSystem(w.final)
 }

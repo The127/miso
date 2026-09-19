@@ -42,6 +42,22 @@ func TestAFinishedLayerIsWholeAfterACrash(t *testing.T) {
 	assert.Equal(t, len(written), len(got))
 }
 
+func TestAFinishedLayerIsThereAfterACrashRightAfterIt(t *testing.T) {
+	// arrange
+	image := inMemory(t, "miso-test-crash")
+	dir := mounted(t, image)
+	work, err := layer.Open(dir).Begin("abc")
+	require.NoError(t, err)
+
+	// act
+	err = work.Finish()
+
+	// assert
+	require.NoError(t, err)
+	crashed := copied(t, image)
+	assert.DirExists(t, filepath.Join(mounted(t, crashed), "abc"))
+}
+
 // inMemory copies the disk with a serial into a file on the tmpfs, where a
 // copy of it is the disk as a crash would leave it.
 func inMemory(t *testing.T, serial string) string {
