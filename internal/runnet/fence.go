@@ -17,10 +17,15 @@ const (
 	advert  = 136
 )
 
-// fenceHost lets only ARP, IPv4 and IPv6 to the internet or a host's own
-// network leave the builder's card, and nothing for the gateway or a
-// loopback, which QEMU takes to the host's loopback. A run sets up its own
-// card as it likes, so the fence sits where it cannot reach.
+// fenceHost keeps a run away from the host the builder runs on and lets
+// everything else through. What a host takes for itself is dropped, what is
+// somebody else's is passed, and every drop below follows from that: an
+// address QEMU rewrites to the host's loopback, one a host's own kernel
+// resolves to itself, or one a host delivers to its own listeners. IPv6
+// names the pass side instead, because two prefixes there cover the whole
+// internet and every private network, which IPv4 has no equal of. A run
+// sets up its own card as it likes, so the fence sits on the builder's
+// card, where the run cannot reach it.
 func fenceHost(card int32, wanted settings) error {
 	fence, err := tc.Open(&tc.Config{})
 	if err != nil {
@@ -62,6 +67,12 @@ func fenceHost(card int32, wanted settings) error {
 		// and the broadcast address, which QEMU rewrites where it rewrites
 		// the gateway
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("255.255.255.255/32")), shot},
+		// a host delivers multicast to its own listeners, so a run could
+		// speak to whatever the builder runs, avahi and the like
+		{unix.ETH_P_IP, destination(netip.MustParsePrefix("224.0.0.0/4")), shot},
+		// nothing routes link local anywhere, and a builder in a cloud holds
+		// its own credentials at 169.254.169.254
+		{unix.ETH_P_IP, destination(netip.MustParsePrefix("169.254.0.0/16")), shot},
 	}
 
 	// QEMU hands the nameserver to the resolver of the host it runs on, and
