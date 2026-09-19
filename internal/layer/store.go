@@ -7,6 +7,13 @@ import (
 	"path/filepath"
 )
 
+// what is not a finished layer is named with these, and a key is hex, so no
+// key is ever named like them
+const (
+	working = "work-"
+	scratch = "scratch-"
+)
+
 // Store keeps the layers of one cache directory, each under its key.
 type Store struct {
 	dir string
@@ -34,8 +41,7 @@ func (s *Store) Has(key string) (bool, error) {
 
 // Begin starts the layer of a key in a directory of its own.
 func (s *Store) Begin(key string) (*Work, error) {
-	// a key is hex, so no key is ever named like work in progress
-	dir, err := os.MkdirTemp(s.dir, "work-")
+	dir, err := os.MkdirTemp(s.dir, working)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +52,7 @@ func (s *Store) Begin(key string) (*Work, error) {
 // Scratch is a new directory on the file system of the layers, for the
 // caller to remove.
 func (s *Store) Scratch() (string, error) {
-	// a key is hex, so no key is ever named like scratch
-	return os.MkdirTemp(s.dir, "scratch-")
+	return os.MkdirTemp(s.dir, scratch)
 }
 
 // Work is a layer being built.
