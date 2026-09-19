@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -122,4 +123,24 @@ func TestARunsCardHasTheSameMACEveryTime(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, firstOut.String(), secondOut.String())
+}
+
+func TestARunThatFailsToStartGivesItsAddressBack(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	work, err := layer.Open(layers).Begin("bare")
+	require.NoError(t, err)
+	require.NoError(t, work.Finish())
+	failing := protocol.Run{Key: "failing", Layers: []string{"bare"}, Network: online(t), Command: "true"}
+	_, err = worker.Run(context.Background(), failing, io.Discard)
+	require.ErrorContains(t, err, "/bin/sh")
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: "true"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
 }
