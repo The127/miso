@@ -5,7 +5,9 @@ package agent_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,8 +23,12 @@ func online(t *testing.T) *protocol.Network {
 
 	card := os.Getenv("MISO_VMTEST_MAC")
 	require.NotEmpty(t, card, "MISO_VMTEST_MAC names no card")
+	address := os.Getenv("MISO_VMTEST_ADDRESS")
+	require.NotEmpty(t, address, "MISO_VMTEST_ADDRESS names no address")
+	gateway := os.Getenv("MISO_VMTEST_GATEWAY")
+	require.NotEmpty(t, gateway, "MISO_VMTEST_GATEWAY names no gateway")
 
-	return &protocol.Network{Card: card}
+	return &protocol.Network{Card: card, Address: address, Gateway: gateway}
 }
 
 func TestAnOnlineRunHasACardBesidesItsLoopback(t *testing.T) {
@@ -37,4 +43,23 @@ func TestAnOnlineRunHasACardBesidesItsLoopback(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "eth0\nlo\n", out.String())
+}
+
+func TestARunReachesAServiceBeyondTheBuilder(t *testing.T) {
+	// arrange
+	service := os.Getenv("MISO_VMTEST_SERVICE")
+	require.NotEmpty(t, service, "MISO_VMTEST_SERVICE names no service")
+	host, port, _ := strings.Cut(service, ":")
+	worker := mountedBase(t, t.TempDir())
+	// bounded, so a run that cannot connect fails before the test does
+	connect := fmt.Sprintf("timeout 5 bash -c 'exec 3<>/dev/tcp/%s/%s && cat <&3'", host, port)
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: connect}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "miso\n", out.String())
 }

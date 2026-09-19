@@ -8,7 +8,9 @@
 # digest, which the test finds in MISO_VMTEST_BASE_DIGEST. Small btrfs disks
 # of each shape that btrfs-test-disk.sh knows are always attached with the
 # serial miso-test-<shape>. A network card on QEMU's user network has the
-# MAC the test finds in MISO_VMTEST_MAC.
+# MAC the test finds in MISO_VMTEST_MAC, with the address and gateway for a
+# run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, and a service that
+# answers miso at MISO_VMTEST_SERVICE.
 set -euo pipefail
 
 kernel=${MISO_VMTEST_KERNEL:-/lib/modules/$(uname -r)/vmlinuz}
@@ -46,8 +48,11 @@ fi
 # a network card with the MAC the test finds in MISO_VMTEST_MAC, the way a
 # build hands the agent the MAC of its card
 mac=52:54:00:6d:69:73
-nic=(-netdev user,id=net -device "virtio-net-pci,netdev=net,mac=$mac")
-environment+=("MISO_VMTEST_MAC=$mac")
+nic=(-netdev "user,id=net,net=10.0.2.0/24,host=10.0.2.2,dns=10.0.2.3,guestfwd=tcp:10.0.2.100:7-cmd:echo miso"
+    -device "virtio-net-pci,netdev=net,mac=$mac")
+environment+=("MISO_VMTEST_MAC=$mac" "MISO_VMTEST_ADDRESS=10.0.2.15/24" "MISO_VMTEST_GATEWAY=10.0.2.2")
+# a service beyond the builder that needs no internet, QEMU answers it
+environment+=("MISO_VMTEST_SERVICE=10.0.2.100:7")
 
 # the modules the tests need that the kernel has not built in, each after
 # what it depends on. Unpacked here, because kernels differ in how their

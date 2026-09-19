@@ -56,7 +56,7 @@ func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer)
 	}
 
 	if run.Network != nil {
-		if err := addCard(cmd.Process.Pid); err != nil {
+		if err := addCard(cmd.Process.Pid, run.Network); err != nil {
 			// a gate closed unopened stops the helper before its shell
 			_ = open.Close()
 			_ = cmd.Wait()
