@@ -44,6 +44,20 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		// and the broadcast address, which QEMU rewrites where it rewrites
 		// the gateway
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("255.255.255.255/32")), shot},
+	}
+
+	// QEMU hands the nameserver to the resolver of the host it runs on, and
+	// before libslirp 4.3.1 it did so on every port, not port 53 alone,
+	// which put the host's own resolver within reach of a run
+	if wanted.ipv4.nameserver.IsValid() {
+		filters = append(filters,
+			rule{unix.ETH_P_IP, dns(wanted.ipv4.nameserver, unix.IPPROTO_UDP), pass},
+			rule{unix.ETH_P_IP, dns(wanted.ipv4.nameserver, unix.IPPROTO_TCP), pass},
+			rule{unix.ETH_P_IP, destination(netip.PrefixFrom(wanted.ipv4.nameserver, 32)), shot},
+		)
+	}
+
+	filters = append(filters, []rule{
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
 		// how a run finds the gateway's MAC and asks for its routes in
@@ -51,7 +65,7 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		{unix.ETH_P_IPV6, icmpv6(router), pass},
 		{unix.ETH_P_IPV6, icmpv6(solicit), pass},
 		{unix.ETH_P_IPV6, icmpv6(advert), pass},
-	}
+	}...)
 
 	// the nameserver sits in the range the next rule drops, so a query has
 	// to pass before it
