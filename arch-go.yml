@@ -189,8 +189,11 @@ dependenciesRules:
         - os/exec
         - net
   # the runnet gives a run its network through link, as the protocol hands
-  # it. It never opens a connection or starts a process. net/netip holds
-  # only addresses as values, so the rule names net alone
+  # it, and fences the builder's card off through go-tc. It never opens a
+  # connection or starts a process. net is not banned here, unlike in its
+  # neighbours, because go-tc names a flower key's address as net.IP, so
+  # the package carries net for its types and the rule can no longer say
+  # that it cannot dial
   - package: '**.internal.runnet$'
     shouldOnlyDependsOn:
       internal:
@@ -199,7 +202,6 @@ dependenciesRules:
     shouldNotDependsOn:
       standard:
         - os/exec
-        - '^net$'
   # the sandbox runs the command of a run in a root of its own, as the
   # protocol hands it, and gives it its network through runnet. It touches
   # the kernel and starts the commands of a build, and never opens a
