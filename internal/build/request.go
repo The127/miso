@@ -36,7 +36,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]protocol.Message, 
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 			if run, isRun := step.Instruction.(imagefile.Run); isRun {
-				request := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command, Offline: run.Offline}
+				request := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command}
 				if !run.Offline {
 					request.Network = &network
 				}

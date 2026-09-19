@@ -13,7 +13,6 @@ type Run struct {
 	// host's environment reaches a build
 	Env     []string
 	Command string
-	Offline bool
 
 	// nil for a run without network
 	Network *Network
