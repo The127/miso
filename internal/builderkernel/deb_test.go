@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -68,4 +69,15 @@ func TestAPackageWhoseDataIsPackedOtherwiseIsRefusedNamingIt(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "data.tar.zst")
 	assert.ErrorContains(t, err, "data.tar.xz")
+}
+
+func TestSomethingThatIsNoPackageIsRefused(t *testing.T) {
+	// arrange
+	notADeb := strings.NewReader("<html>404 not found</html>")
+
+	// act
+	_, err := builderkernel.Data(notADeb)
+
+	// assert
+	assert.ErrorContains(t, err, "not a Debian package")
 }
