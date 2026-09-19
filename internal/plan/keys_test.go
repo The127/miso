@@ -19,6 +19,19 @@ func TestAChangedRunCommandChangesItsKey(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
 
+func TestAnOfflineRunAndAnOnlineRunOfTheSameCommandGetDifferentKeys(t *testing.T) {
+	// arrange
+	online := parse(t, "FROM scratch\nRUN make test\n")
+	offline := parse(t, "FROM scratch\nRUN --network=none make test\n")
+
+	// act
+	onlineKeys := keys(t, online, anyAgent, noFiles, noImages)
+	offlineKeys := keys(t, offline, anyAgent, noFiles, noImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, onlineKeys), lastKey(t, offlineKeys))
+}
+
 func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	// arrange
 	run := parse(t, "FROM scratch\nOUTPUT disk os.img\nRUN true\n")
