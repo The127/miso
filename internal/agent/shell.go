@@ -38,12 +38,37 @@ func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer)
 
 	defer func() { _ = setup.Close() }()
 
-	cmd.ExtraFiles = []*os.File{failed}
-	err = cmd.Start()
-	_ = failed.Close()
+	// the helper waits here before it becomes the shell, so the shell never
+	// runs before its network is ready
+	gate, open, err := os.Pipe()
 	if err != nil {
 		return 0, err
 	}
+
+	defer func() { _ = open.Close() }()
+
+	cmd.ExtraFiles = []*os.File{failed, gate}
+	err = cmd.Start()
+	_ = failed.Close()
+	_ = gate.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	if run.Network != nil {
+		if err := addCard(cmd.Process.Pid); err != nil {
+			// a gate closed unopened stops the helper before its shell
+			_ = open.Close()
+			_ = cmd.Wait()
+
+			return 0, err
+		}
+	}
+
+	// a helper that failed before the gate is not there to read, and says
+	// why below
+	_, _ = open.Write([]byte{1})
+	_ = open.Close()
 
 	// the helper's end closes when the shell starts, so a run that starts
 	// reads nothing here

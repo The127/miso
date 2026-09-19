@@ -14,6 +14,9 @@ type Run struct {
 	Env     []string
 	Command string
 	Offline bool
+
+	// nil for a run without network
+	Network *Network
 }
 
 func (r Run) into(e *envelope) { e.Run = &r }
