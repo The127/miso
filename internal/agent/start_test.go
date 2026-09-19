@@ -48,8 +48,7 @@ func TestAnAgentStartsOnACacheDiskThatHoldsNoLayersYet(t *testing.T) {
 
 func TestAStartedAgentKeepsAnImportedBaseOnTheCacheDisk(t *testing.T) {
 	// arrange
-	digest := os.Getenv("MISO_VMTEST_BASE_DIGEST")
-	require.NotEmpty(t, digest, "MISO_VMTEST_BASE names no base image")
+	digest := baseDigest(t)
 	dir := t.TempDir()
 	worker, err := agent.Start("miso-cache", dir)
 	require.NoError(t, err)

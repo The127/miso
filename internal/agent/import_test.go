@@ -18,10 +18,22 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-func TestAnImportedBaseIsALayerHoldingItsRoot(t *testing.T) {
-	// arrange
+// nowhere is the digest of a base disk the VM does not have.
+var nowhere = "sha256:" + strings.Repeat("0", 64)
+
+// baseDigest is the digest of the base disk the VM has.
+func baseDigest(t *testing.T) string {
+	t.Helper()
+
 	digest := os.Getenv("MISO_VMTEST_BASE_DIGEST")
 	require.NotEmpty(t, digest, "MISO_VMTEST_BASE names no base image")
+
+	return digest
+}
+
+func TestAnImportedBaseIsALayerHoldingItsRoot(t *testing.T) {
+	// arrange
+	digest := baseDigest(t)
 	layers := t.TempDir()
 	worker := agent.New(layers, t.TempDir())
 
@@ -42,7 +54,6 @@ func TestAFailedImportLeavesNoWork(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
 	worker := agent.New(layers, t.TempDir())
-	nowhere := "sha256:" + strings.Repeat("0", 64)
 
 	// act
 	err := worker.Import(context.Background(), protocol.Import{Key: "abc", Digest: nowhere}, io.Discard)
@@ -61,7 +72,6 @@ func TestABaseWhoseLayerIsThereIsNotImportedAgain(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, work.Finish())
 	worker := agent.New(layers, t.TempDir())
-	nowhere := "sha256:" + strings.Repeat("0", 64)
 
 	// act
 	err = worker.Import(context.Background(), protocol.Import{Key: "abc", Digest: nowhere}, io.Discard)

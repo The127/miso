@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +35,6 @@ func TestAnAgentOnTheCacheDiskServesAsAStartedOne(t *testing.T) {
 	runner := agent.Serving("miso-cache", dir)
 	unmountAtEnd(t, dir)
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "layers", "served"), 0o700))
-	nowhere := "sha256:" + strings.Repeat("0", 64)
 
 	// act
 	err := runner.Import(context.Background(), protocol.Import{Key: "served", Digest: nowhere}, io.Discard)
