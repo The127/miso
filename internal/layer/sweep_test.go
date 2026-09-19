@@ -36,3 +36,17 @@ func TestASweepKeepsAFinishedLayer(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, has)
 }
+
+func TestASweepRemovesAScratchLeftBehind(t *testing.T) {
+	// arrange
+	store := layer.Open(t.TempDir())
+	scratch, err := store.Scratch()
+	require.NoError(t, err)
+
+	// act
+	err = store.Sweep()
+
+	// assert
+	require.NoError(t, err)
+	assert.NoDirExists(t, scratch)
+}

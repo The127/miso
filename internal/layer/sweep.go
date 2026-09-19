@@ -15,7 +15,7 @@ func (s *Store) Sweep() error {
 	}
 
 	for _, entry := range entries {
-		if !strings.HasPrefix(entry.Name(), "work-") {
+		if !strings.HasPrefix(entry.Name(), working) && !strings.HasPrefix(entry.Name(), scratch) {
 			continue
 		}
 
