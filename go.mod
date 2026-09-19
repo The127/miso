@@ -5,7 +5,7 @@ go 1.27
 tool github.com/arch-go/arch-go
 
 require (
-	github.com/florianl/go-tc v0.0.0-00010101000000-000000000000
+	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v3 v3.9.0
 	golang.org/x/sys v0.46.0
@@ -50,5 +50,3 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/florianl/go-tc => github.com/The127/go-tc v0.0.0-20260919165013-057ceb02a2f0
