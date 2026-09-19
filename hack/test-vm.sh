@@ -10,7 +10,8 @@
 # of each shape that btrfs-test-disk.sh knows are always attached with the
 # serial miso-test-<shape>. A cache disk made by hack/cachedisk is attached
 # writable with the serial miso-cache, and a disk with no file system with
-# the serial miso-test-blank. A network card on QEMU's user network has the
+# the serial miso-test-blank, and a small cache disk read-only with the
+# serial miso-test-crash. A network card on QEMU's user network has the
 # MAC the test finds in MISO_VMTEST_MAC, with the address and gateway for a
 # run in MISO_VMTEST_ADDRESS and MISO_VMTEST_GATEWAY, their IPv6 twins in
 # MISO_VMTEST_ADDRESS6 and MISO_VMTEST_GATEWAY6, a service that
@@ -106,6 +107,11 @@ for shape in flat subvolumes default twins missing escape; do
         -device "virtio-blk-pci,drive=$shape,serial=miso-test-$shape")
 done
 
+# a small cache disk the tests copy into memory, to crash a copy of it
+go run ./hack/cachedisk "$work/crash.img" $((32 << 20))
+disks+=(-drive "file=$work/crash.img,format=raw,if=none,readonly=on,id=crash"
+    -device virtio-blk-pci,drive=crash,serial=miso-test-crash)
+
 environment=()
 if [ -n "${MISO_VMTEST_BASE:-}" ]; then
     disks+=(-drive "file=$MISO_VMTEST_BASE,format=qcow2,if=none,readonly=on,id=base"
@@ -149,7 +155,7 @@ environment+=("MISO_VMTEST_HOST=10.0.2.2:$port")
 # the VM loads them in order
 mkdir -p "$work/root/modules"
 loaded=()
-for name in virtio_blk virtio_net macvlan btrfs overlay sch_ingress cls_flower act_gact; do
+for name in virtio_blk virtio_net macvlan btrfs overlay sch_ingress cls_flower act_gact loop; do
     if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
         continue
     fi
