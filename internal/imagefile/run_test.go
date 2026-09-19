@@ -49,6 +49,18 @@ func TestRunWithAnUnknownFlagIsRejected(t *testing.T) {
 	assert.ErrorContains(t, err, "--netwrk")
 }
 
+func TestRunWithANetworkOtherThanNoneIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --network=host make test\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--network=host")
+}
+
 func TestRunWithoutACommandIsRejected(t *testing.T) {
 	// arrange
 	source := "FROM debian:sid\nRUN\n"
