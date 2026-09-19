@@ -354,3 +354,17 @@ func TestARunCannotReachAnotherRun(t *testing.T) {
 	assert.NotContains(t, out.String(), "reached")
 	assert.NotContains(t, heard.String(), "accepted")
 }
+
+func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "ls /sys/class/net"}
+	var out bytes.Buffer
+
+	// act
+	_, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "lo\n", out.String())
+}
