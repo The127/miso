@@ -28,6 +28,21 @@ func plain(file string) (string, bool) {
 	return name, strings.HasSuffix(name, moduleExt)
 }
 
+// says is what the module in a packed file says about itself.
+func says(file io.Reader) (info, error) {
+	packed, err := xz.NewReader(file)
+	if err != nil {
+		return info{}, err
+	}
+
+	module, err := io.ReadAll(packed)
+	if err != nil {
+		return info{}, err
+	}
+
+	return modinfo(bytes.NewReader(module))
+}
+
 // modules is what every module a package holds says about itself.
 func modules(deb io.Reader) ([]info, error) {
 	var found []info
@@ -45,17 +60,7 @@ func modules(deb io.Reader) ([]info, error) {
 			return nil, fmt.Errorf("the package holds %s, miso reads %s", base, ko+modulePacking)
 		}
 
-		packed, err := xz.NewReader(file)
-		if err != nil {
-			return nil, err
-		}
-
-		module, err := io.ReadAll(packed)
-		if err != nil {
-			return nil, err
-		}
-
-		said, err := modinfo(bytes.NewReader(module))
+		said, err := says(file)
 		if err != nil {
 			return nil, err
 		}
