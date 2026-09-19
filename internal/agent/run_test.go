@@ -258,10 +258,6 @@ func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	layers := t.TempDir()
 	work, err := layer.Open(layers).Begin("bare")
 	require.NoError(t, err)
-	for _, dir := range []string{"proc", "sys", "dev"} {
-		require.NoError(t, os.Mkdir(filepath.Join(work.Dir(), dir), 0o700))
-	}
-
 	require.NoError(t, work.Finish())
 	worker := agent.New(layers, t.TempDir())
 	run := protocol.Run{Key: "run", Layers: []string{"bare"}, Command: "true"}
