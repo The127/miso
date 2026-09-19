@@ -15,20 +15,37 @@ import (
 	"github.com/The127/miso/internal/layer"
 )
 
-func TestALayerOnTheCacheIsThereAfterTheCacheIsMountedAgain(t *testing.T) {
-	// arrange
+// onCache is a directory the cache disk was mounted on, as change left it
+// before it was unmounted again.
+func onCache(t *testing.T, change func(dir string)) string {
+	t.Helper()
+
 	dir := t.TempDir()
 	require.NoError(t, agent.MountCache("miso-cache", dir))
-	store := layer.Open(dir)
-	work, err := store.Begin("abc")
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "hello"), []byte("hi"), 0o600))
-	require.NoError(t, work.Finish())
+	change(dir)
 	require.NoError(t, syscall.Unmount(dir, 0))
 
-	// act
-	err = agent.MountCache("miso-cache", dir)
+	return dir
+}
+
+func unmountAtEnd(t *testing.T, dir string) {
+	t.Helper()
+
 	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+}
+
+func TestALayerOnTheCacheIsThereAfterTheCacheIsMountedAgain(t *testing.T) {
+	// arrange
+	dir := onCache(t, func(dir string) {
+		work, err := layer.Open(dir).Begin("abc")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "hello"), []byte("hi"), 0o600))
+		require.NoError(t, work.Finish())
+	})
+
+	// act
+	err := agent.MountCache("miso-cache", dir)
+	unmountAtEnd(t, dir)
 
 	// assert
 	require.NoError(t, err)

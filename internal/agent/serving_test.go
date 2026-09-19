@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +34,7 @@ func TestAnAgentOnTheCacheDiskServesAsAStartedOne(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
 	runner := agent.Serving("miso-cache", dir)
-	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+	unmountAtEnd(t, dir)
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "layers", "served"), 0o700))
 	nowhere := "sha256:" + strings.Repeat("0", 64)
 

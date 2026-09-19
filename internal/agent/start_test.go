@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,14 +18,13 @@ import (
 
 func TestAStartedAgentHasSweptWhatAStoppedOneLeft(t *testing.T) {
 	// arrange
-	dir := t.TempDir()
-	require.NoError(t, agent.MountCache("miso-cache", dir))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "layers", "work-left"), 0o700))
-	require.NoError(t, syscall.Unmount(dir, 0))
+	dir := onCache(t, func(dir string) {
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "layers", "work-left"), 0o700))
+	})
 
 	// act
 	_, err := agent.Start("miso-cache", dir)
-	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+	unmountAtEnd(t, dir)
 
 	// assert
 	require.NoError(t, err)
@@ -35,14 +33,13 @@ func TestAStartedAgentHasSweptWhatAStoppedOneLeft(t *testing.T) {
 
 func TestAnAgentStartsOnACacheDiskThatHoldsNoLayersYet(t *testing.T) {
 	// arrange
-	dir := t.TempDir()
-	require.NoError(t, agent.MountCache("miso-cache", dir))
-	require.NoError(t, os.RemoveAll(filepath.Join(dir, "layers")))
-	require.NoError(t, syscall.Unmount(dir, 0))
+	dir := onCache(t, func(dir string) {
+		require.NoError(t, os.RemoveAll(filepath.Join(dir, "layers")))
+	})
 
 	// act
 	_, err := agent.Start("miso-cache", dir)
-	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+	unmountAtEnd(t, dir)
 
 	// assert
 	require.NoError(t, err)
@@ -56,7 +53,7 @@ func TestAStartedAgentKeepsAnImportedBaseOnTheCacheDisk(t *testing.T) {
 	dir := t.TempDir()
 	worker, err := agent.Start("miso-cache", dir)
 	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+	unmountAtEnd(t, dir)
 	require.NotNil(t, worker)
 
 	// act
