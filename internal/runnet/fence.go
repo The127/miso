@@ -24,6 +24,7 @@ const (
 	flowerDst6    = 16
 	flowerDst6Msk = 17
 	flowerICMPv6  = 55
+	router        = 133
 	solicit       = 135
 	advert        = 136
 	actKind       = 1
@@ -57,8 +58,9 @@ func fenceHost(builder *link.Conn, card int32, gateway netip.Addr) error {
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("127.0.0.0/8")), shot},
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
-		// how a run finds the gateway's MAC in IPv6, which QEMU answers
-		// itself
+		// how a run finds the gateway's MAC and asks for its routes in
+		// IPv6, which QEMU answers itself
+		{unix.ETH_P_IPV6, icmpv6(router), pass},
 		{unix.ETH_P_IPV6, icmpv6(solicit), pass},
 		{unix.ETH_P_IPV6, icmpv6(advert), pass},
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("2000::/3")), pass},

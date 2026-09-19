@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -38,7 +39,7 @@ func createCard(builder *link.Conn, parent int32, namespace *os.File, name strin
 // configureCard makes the card that arrived under a name in a run the
 // run's eth0, with the address and the route of the settings. It answers
 // the card's index, also when it failed half way, so the card can go.
-func configureCard(run *link.Conn, arriving string, wanted settings) (int32, error) {
+func configureCard(run *link.Conn, namespace *os.File, arriving string, wanted settings) (int32, error) {
 	cards, err := run.Ask(unix.RTM_GETLINK, unix.NLM_F_DUMP, link.CardHeader(0, 0, 0))
 	if err != nil {
 		return 0, fmt.Errorf("find card: %w", err)
@@ -52,6 +53,26 @@ func configureCard(run *link.Conn, arriving string, wanted settings) (int32, err
 		index := link.Index(card)
 		if _, err := run.Ask(unix.RTM_SETLINK, 0, link.CardHeader(index, 0, 0), link.Attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
 			return index, fmt.Errorf("name card: %w", err)
+		}
+
+		// QEMU hands out routes and addresses of its own when asked, and on a
+		// timer, and a run has only what the host gave. No netlink request
+		// sets it, so a thread in the run's network writes the setting
+		refused := make(chan error)
+		go func() {
+			// never unlocked, so the thread that moved ends with this goroutine
+			runtime.LockOSThread()
+			if err := unix.Setns(int(namespace.Fd()), unix.CLONE_NEWNET); err != nil {
+				refused <- err
+
+				return
+			}
+
+			refused <- os.WriteFile("/proc/sys/net/ipv6/conf/eth0/accept_ra", []byte("0"), 0o600)
+		}()
+
+		if err := <-refused; err != nil {
+			return index, fmt.Errorf("refuse QEMU's routes: %w", err)
 		}
 
 		// the address before the route, which the kernel only takes to a
