@@ -48,6 +48,8 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("2000::/3")), pass},
 		// a host's own network, as 192.168 and the like are in IPv4
 		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("fc00::/7")), pass},
+		// how a host with IPv6 alone reaches what has IPv4 alone
+		{unix.ETH_P_IPV6, destination(netip.MustParsePrefix("64:ff9b::/96")), pass},
 		{unix.ETH_P_ALL, nil, shot},
 	}
 	for i, f := range filters {
