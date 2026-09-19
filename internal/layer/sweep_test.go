@@ -21,3 +21,18 @@ func TestASweepRemovesALayerLeftUnfinished(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoDirExists(t, left.Dir())
 }
+
+func TestASweepKeepsAFinishedLayer(t *testing.T) {
+	// arrange
+	store := layer.Open(t.TempDir())
+	require.NoError(t, begun(t, store, "abc", "hi").Finish())
+
+	// act
+	err := store.Sweep()
+
+	// assert
+	require.NoError(t, err)
+	has, err := store.Has("abc")
+	require.NoError(t, err)
+	assert.True(t, has)
+}
