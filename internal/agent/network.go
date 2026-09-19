@@ -111,12 +111,20 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 	}
 
 	// kept open on success, it holds the run's network until the card is
-	// gone
+	// gone. A card that failed half way is gone at once, or it holds the
+	// MAC and address until the kernel removes the run's network
 	kept := false
+	var index int32
 	defer func() {
-		if !kept {
-			_ = unix.Close(run)
+		if kept {
+			return
 		}
+
+		if index != 0 {
+			_, _ = ask(run, unix.RTM_DELLINK, 0, link(index, 0, 0))
+		}
+
+		_ = unix.Close(run)
 	}()
 
 	cards, err := ask(run, unix.RTM_GETLINK, unix.NLM_F_DUMP, link(0, 0, 0))
@@ -130,7 +138,7 @@ func addCard(pid int, network *protocol.Network) (func(), error) {
 		}
 
 		// the index of the card in the answer's interface header
-		index := int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
+		index = int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
 		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, 0, 0), attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
 			return nil, fmt.Errorf("name card: %w", err)
 		}

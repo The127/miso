@@ -144,3 +144,22 @@ func TestARunThatFailsToStartGivesItsAddressBack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, code)
 }
+
+func TestARunWhoseNetworkFailsGivesItsAddressBack(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	unreachable := online(t)
+	// outside the run's network, so the card is made and the route fails
+	unreachable.Gateway = "192.0.2.1"
+	failing := protocol.Run{Key: "failing", Layers: []string{"base"}, Network: unreachable, Command: "true"}
+	_, err := worker.Run(context.Background(), failing, io.Discard)
+	require.ErrorContains(t, err, "192.0.2.1")
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: "true"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
