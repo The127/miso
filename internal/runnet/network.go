@@ -1,4 +1,4 @@
-package agent
+package runnet
 
 import (
 	"fmt"
@@ -10,10 +10,10 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-// addCard gives the run of a process a network card of its own on top of
+// AddCard gives the run of a process a network card of its own on top of
 // the builder's, with the address and gateway of the network, and answers
 // how to remove it once the run has ended.
-func addCard(pid int, network *protocol.Network) (func(), error) {
+func AddCard(pid int, network *protocol.Network) (func(), error) {
 	wanted, err := readSettings(network)
 	if err != nil {
 		return nil, err

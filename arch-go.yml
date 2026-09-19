@@ -188,12 +188,23 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the runnet gives a run its network through link, as the protocol hands
+  # it. It never opens a connection or starts a process. net/netip holds
+  # only addresses as values, so the rule names net alone
+  - package: '**.internal.runnet$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.protocol$'
+        - '**.internal.link$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - '^net$'
   # the agent is the builder VM's side of a build. It does what the host asks
   # through the protocol, mounts base disks through basemount, copies them
-  # through tree, keeps layers through layer and sets up the network of a
-  # run through link. It touches the kernel and starts the commands of a
-  # build, and never opens a connection itself. net/netip holds only
-  # addresses as values, so the rule names net alone
+  # through tree, keeps layers through layer and gives a run its network
+  # through runnet. It touches the kernel and starts the commands of a
+  # build, and never opens a connection itself
   - package: '**.internal.agent$'
     shouldOnlyDependsOn:
       internal:
@@ -201,10 +212,10 @@ dependenciesRules:
         - '**.internal.basemount$'
         - '**.internal.tree$'
         - '**.internal.layer$'
-        - '**.internal.link$'
+        - '**.internal.runnet$'
     shouldNotDependsOn:
       standard:
-        - '^net$'
+        - net
   # a command only wires, what it needs of ours lives under internal
   - package: '**.cmd.**'
     shouldOnlyDependsOn:

@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/The127/miso/internal/protocol"
+	"github.com/The127/miso/internal/runnet"
 )
 
 // runShell runs the command of a run in a root and answers its exit code.
@@ -56,7 +57,7 @@ func runShell(ctx context.Context, root string, run protocol.Run, out io.Writer)
 	}
 
 	if run.Network != nil {
-		removeCard, err := addCard(cmd.Process.Pid, run.Network)
+		removeCard, err := runnet.AddCard(cmd.Process.Pid, run.Network)
 		if err != nil {
 			// a gate closed unopened stops the helper before its shell
 			_ = open.Close()

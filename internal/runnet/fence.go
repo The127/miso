@@ -1,4 +1,4 @@
-package agent
+package runnet
 
 import (
 	"encoding/binary"
