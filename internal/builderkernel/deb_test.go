@@ -57,3 +57,15 @@ func TestTheDataOfAPackageComesFromItsDataTarXz(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "the data", read(t, data))
 }
+
+func TestAPackageWhoseDataIsPackedOtherwiseIsRefusedNamingIt(t *testing.T) {
+	// arrange
+	deb := archive(t, member{"debian-binary", "2.0\n"}, member{"data.tar.zst", "the data"})
+
+	// act
+	_, err := builderkernel.Data(bytes.NewReader(deb))
+
+	// assert
+	assert.ErrorContains(t, err, "data.tar.zst")
+	assert.ErrorContains(t, err, "data.tar.xz")
+}

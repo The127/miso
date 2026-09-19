@@ -1,6 +1,7 @@
 package builderkernel
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -30,6 +31,10 @@ func data(deb io.Reader) (io.Reader, error) {
 
 		if name == dataMember {
 			return io.LimitReader(deb, size), nil
+		}
+
+		if strings.HasPrefix(name, "data.tar.") {
+			return nil, fmt.Errorf("the package holds %s, miso reads %s", name, dataMember)
 		}
 
 		// a member is padded to an even length
