@@ -378,6 +378,33 @@ func TestARunCannotReachTheHostsLoopback(t *testing.T) {
 	assert.NotContains(t, out.String(), "loopback")
 }
 
+func TestARunThatSetsUpIPv6ItselfCannotReachTheHostsLoopback(t *testing.T) {
+	// arrange
+	loopback := os.Getenv("MISO_VMTEST_HOST")
+	require.NotEmpty(t, loopback, "MISO_VMTEST_HOST names no service")
+	_, port, _ := strings.Cut(loopback, ":")
+	worker := mountedBase(t, t.TempDir())
+	// a run may configure its own card, and QEMU maps its IPv6 gateway to
+	// the host's loopback as it does in IPv4
+	connect := strings.Join([]string{
+		"set -e",
+		"ip -6 addr add fec0::15/64 dev eth0 nodad",
+		// replace, QEMU may have handed out a route already
+		"ip -6 route replace default via fec0::2",
+		fmt.Sprintf("timeout 3 bash -c 'exec 3<>/dev/tcp/fec0::2/%s && cat <&3' || true", port),
+	}, "\n")
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: online(t), Command: connect}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code, out.String())
+	assert.NotContains(t, out.String(), "loopback")
+}
+
 func TestAnOfflineRunHasOnlyItsLoopback(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
