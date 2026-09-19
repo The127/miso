@@ -29,3 +29,19 @@ func TestAStartedAgentHasSweptWhatAStoppedOneLeft(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoDirExists(t, filepath.Join(dir, "layers", "work-left"))
 }
+
+func TestAnAgentStartsOnACacheDiskThatHoldsNoLayersYet(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	require.NoError(t, agent.MountCache("miso-cache", dir))
+	require.NoError(t, os.RemoveAll(filepath.Join(dir, "layers")))
+	require.NoError(t, syscall.Unmount(dir, 0))
+
+	// act
+	_, err := agent.Start("miso-cache", dir)
+	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(dir, 0)) })
+
+	// assert
+	require.NoError(t, err)
+	assert.DirExists(t, filepath.Join(dir, "layers"))
+}
