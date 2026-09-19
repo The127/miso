@@ -24,3 +24,8 @@ func Modinfo(ko io.ReaderAt) (Info, error) {
 func Order(have []Info, builtin []string, want ...string) ([]string, error) {
 	return order(have, builtin, want...)
 }
+
+// Modules is what every module a package holds says about itself.
+func Modules(deb io.Reader) ([]Info, error) {
+	return modules(deb)
+}
