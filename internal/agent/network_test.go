@@ -309,3 +309,48 @@ func TestARunWaitsUntilItsMACIsFree(t *testing.T) {
 	assert.Equal(t, 0, code)
 	require.NoError(t, <-held)
 }
+
+func TestARunCannotReachAnotherRun(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	listening := protocol.Run{
+		Key: "listening", Layers: []string{"base"}, Network: online(t),
+		Command: `perl -MIO::Socket::INET -e '$| = 1; alarm 4; $s = IO::Socket::INET->new(LocalPort => 9, Listen => 1, ReuseAddr => 1) or die $!; print "listening\n"; $s->accept and print "accepted\n"'`,
+	}
+	reader, writer := io.Pipe()
+	var heard bytes.Buffer
+	listened := make(chan error, 1)
+	go func() {
+		_, err := worker.Run(context.Background(), listening, writer)
+		_ = writer.Close()
+		listened <- err
+	}()
+
+	lines := bufio.NewReader(reader)
+	line, err := lines.ReadString('\n')
+	require.NoError(t, err)
+	require.Equal(t, "listening\n", line)
+	copied := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(&heard, lines)
+		close(copied)
+	}()
+
+	other := online(t)
+	other.Address = "10.0.2.16/24"
+	connecting := protocol.Run{
+		Key: "connecting", Layers: []string{"base"}, Network: other,
+		Command: "timeout 3 bash -c 'exec 3<>/dev/tcp/10.0.2.15/9 && echo reached'",
+	}
+	var out bytes.Buffer
+
+	// act
+	_, err = worker.Run(context.Background(), connecting, &out)
+
+	// assert
+	require.NoError(t, err)
+	require.NoError(t, <-listened)
+	<-copied
+	assert.NotContains(t, out.String(), "reached")
+	assert.NotContains(t, heard.String(), "accepted")
+}
