@@ -3,6 +3,7 @@ package layer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Sweep removes what a builder stopped halfway left behind. Only while
@@ -14,6 +15,10 @@ func (s *Store) Sweep() error {
 	}
 
 	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), "work-") {
+			continue
+		}
+
 		if err := os.RemoveAll(filepath.Join(s.dir, entry.Name())); err != nil {
 			return err
 		}
