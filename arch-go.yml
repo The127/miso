@@ -68,16 +68,27 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
-  # the base image fetches what a FROM names from the network into miso's
-  # cache and hashes it. It knows nothing of ours, never starts a process
+  # the download fetches bytes into miso's cache and keeps them under the
+  # digest of what arrived. It knows nothing of ours, never starts a process
   # and never touches the kernel. It is the one package that may use net
-  - package: '**.internal.baseimage$'
+  - package: '**.internal.download$'
     shouldNotDependsOn:
       internal:
         - '**.internal.**'
         - '**.cmd.**'
       standard:
         - os/exec
+        - syscall
+  # the base image knows what a FROM names and has the download fetch it. It
+  # never opens a connection itself, starts a process or touches the kernel
+  - package: '**.internal.baseimage$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.download$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
         - syscall
   # the protocol is what miso and its agent say to each other. It knows
   # nothing of ours and works on the reader and writer it is handed, so

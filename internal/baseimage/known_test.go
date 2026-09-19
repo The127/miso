@@ -8,11 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/baseimage"
+	"github.com/The127/miso/internal/download"
 )
 
 func TestMisoKnowsTheDebianCloudImages(t *testing.T) {
 	// arrange
-	cache := baseimage.Open(t.TempDir(), http.DefaultClient, baseimage.Known)
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), http.DefaultClient), baseimage.Known)
 
 	// act
 	digest, err := cache.Digest("debian:sid")

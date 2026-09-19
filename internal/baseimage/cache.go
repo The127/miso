@@ -3,9 +3,10 @@ package baseimage
 import (
 	"errors"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/The127/miso/internal/download"
 )
 
 // ErrUnknownBase is a name no source is known for. It does not say which,
@@ -15,14 +16,14 @@ var ErrUnknownBase = errors.New("unknown base image")
 // Cache holds fetched images under one directory on the host.
 type Cache struct {
 	dir     string
-	client  *http.Client
+	blobs   *download.Store
 	sources map[string]string
 }
 
-// Open takes the directory the images live in, the client that fetches
-// them, and where each name comes from. It touches nothing yet.
-func Open(dir string, client *http.Client, sources map[string]string) *Cache {
-	return &Cache{dir: dir, client: client, sources: sources}
+// Open takes the directory the images live in and where each name comes
+// from. The images themselves live in the store. It touches nothing yet.
+func Open(dir string, blobs *download.Store, sources map[string]string) *Cache {
+	return &Cache{dir: dir, blobs: blobs, sources: sources}
 }
 
 // Digest is that of the image a name stands for, or empty for one that is
@@ -43,7 +44,8 @@ func (c *Cache) Digest(name string) (string, error) {
 
 	// a name is only worth what it points at, and a build fetches again
 	// what somebody cleaned away
-	if _, err := os.Stat(c.blob(string(digest))); errors.Is(err, fs.ErrNotExist) {
+	//nolint:gosec // the digest is what remember wrote, nothing a user names
+	if _, err := os.Stat(c.blobs.Path(string(digest))); errors.Is(err, fs.ErrNotExist) {
 		return "", nil
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/buildcontext"
+	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/listing"
 	"github.com/The127/miso/internal/plan"
@@ -46,7 +47,8 @@ func listPlan(_ context.Context, command *cli.Command) error {
 		return err
 	}
 
-	bases := baseimage.Open(filepath.Join(cache, "bases"), http.DefaultClient, baseimage.Known)
+	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
+	bases := baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known)
 
 	planned, err := plan.New(stages, "miso "+built(), files, bases)
 	if err != nil {
