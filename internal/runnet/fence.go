@@ -41,6 +41,9 @@ func fenceHost(builder *link.Conn, card int32, wanted settings) error {
 		// address itself does, but nothing routes the rest of the range
 		// anywhere either
 		{unix.ETH_P_IP, destination(netip.MustParsePrefix("0.0.0.0/8")), shot},
+		// and the broadcast address, which QEMU rewrites where it rewrites
+		// the gateway
+		{unix.ETH_P_IP, destination(netip.MustParsePrefix("255.255.255.255/32")), shot},
 		{unix.ETH_P_IP, nil, pass},
 		{unix.ETH_P_ARP, nil, pass},
 		// how a run finds the gateway's MAC and asks for its routes in
