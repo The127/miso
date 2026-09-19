@@ -35,11 +35,11 @@ fmt:
 
 # check the package dependency rules in arch-go.yml
 arch:
-    go tool arch-go
+    go tool -modfile=hack/tools/go.mod arch-go
 
 # describe the package dependency rules in prose
 arch-describe:
-    go tool arch-go describe
+    go tool -modfile=hack/tools/go.mod arch-go describe
 
 # check that package doc comments live in doc.go
 doccheck:

@@ -55,7 +55,8 @@ Required tooling:
 
 The package dependency rules in `arch-go.yml` are checked by
 [arch-go](https://github.com/arch-go/arch-go), which the Go toolchain
-fetches on its own (`go tool`).
+fetches on its own (`go tool`). It is pinned in a module of its own,
+`hack/tools/go.mod`, so its dependencies stay out of miso's.
 
 After cloning, run the one-time setup. It activates the git hooks:
 
