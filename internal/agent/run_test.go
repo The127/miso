@@ -204,6 +204,23 @@ func TestARunCannotLeaveItsRoot(t *testing.T) {
 	assert.NotContains(t, out.String(), "escaped")
 }
 
+func TestARunCanChangeItsRootItself(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	// what container tools inside a build do
+	pivot := "unshare -m sh -c 'mkdir /new && mount -t tmpfs none /new && mkdir /new/old && pivot_root /new /new/old && echo pivoted'"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: pivot}
+	var out bytes.Buffer
+
+	// act
+	code, err := worker.Run(context.Background(), run, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code, out.String())
+	assert.Equal(t, "pivoted\n", out.String())
+}
+
 func TestADeviceOneRunRemovesIsThereForTheNext(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
