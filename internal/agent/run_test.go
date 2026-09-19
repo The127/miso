@@ -307,6 +307,27 @@ func TestARunCannotRenameTheBuilder(t *testing.T) {
 	assert.Equal(t, was, name)
 }
 
+func TestARunCannotChangeTheBuildersNetwork(t *testing.T) {
+	// arrange
+	flags := "/sys/class/net/lo/flags"
+	was, err := os.ReadFile(flags)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, os.WriteFile(flags, was, 0o600)) }) //nolint:gosec // the test names the setting
+	worker := mountedBase(t, t.TempDir())
+	flip := "if ip link show lo | grep -q ,UP; then ip link set lo down; else ip link set lo up; fi"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: flip}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	is, err := os.ReadFile(flags)
+	require.NoError(t, err)
+	assert.Equal(t, string(was), string(is))
+}
+
 func TestARunIsCalledLocalhost(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())
