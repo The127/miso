@@ -32,16 +32,10 @@ func helper(root, command string) error {
 		return err
 	}
 
-	if err := mountProc(); err != nil {
-		return err
-	}
-
-	if err := mountSys(); err != nil {
-		return err
-	}
-
-	if err := mountDev(); err != nil {
-		return err
+	for _, m := range mounts {
+		if err := m.mount(); err != nil {
+			return err
+		}
 	}
 
 	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
