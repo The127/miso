@@ -24,6 +24,7 @@ func Serve(listener Listener, agent string, runner Runner) error {
 
 		serving.Go(func() {
 			_ = New(agent, conn, conn).Serve(runner)
+			_ = conn.Close()
 		})
 	}
 }

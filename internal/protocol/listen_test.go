@@ -34,17 +34,22 @@ func (l *listener) Accept() (io.ReadWriteCloser, error) {
 type conn struct {
 	io.Reader
 	io.Writer
+	closed bool
 }
 
-func (conn) Close() error { return nil }
+func (c *conn) Close() error {
+	c.closed = true
 
-func asking(t *testing.T, request protocol.Message) (*protocol.Conn, conn) {
+	return nil
+}
+
+func asking(t *testing.T, request protocol.Message) (*protocol.Conn, *conn) {
 	t.Helper()
 	var requests, replies bytes.Buffer
 	host := protocol.New("miso 1.2.0", &replies, &requests)
 	require.NoError(t, host.Send(request))
 
-	return host, conn{&requests, &replies}
+	return host, &conn{Reader: &requests, Writer: &replies}
 }
 
 func TestEachConnectionGetsItsAnswer(t *testing.T) {
@@ -105,4 +110,17 @@ func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {
 
 	close(runner.release)
 	assert.ErrorIs(t, <-served, errClosed)
+}
+
+func TestAConnectionIsClosedOnceAnswered(t *testing.T) {
+	// arrange
+	_, answered := asking(t, protocol.Run{Command: "true"})
+	listener := &listener{conns: []io.ReadWriteCloser{answered}}
+
+	// act
+	err := protocol.Serve(listener, "miso 1.2.0", runner{})
+
+	// assert
+	require.ErrorIs(t, err, errClosed)
+	assert.True(t, answered.closed)
 }
