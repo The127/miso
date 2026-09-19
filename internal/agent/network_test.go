@@ -92,3 +92,17 @@ func TestARunWithAGatewayThatIsNotIPv4FailsNamingIt(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "fec0::2")
 }
+
+func TestARunWhoseCardTheBuilderLacksFailsNamingIt(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	network.Card = "52:54:00:00:00:99"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "52:54:00:00:00:99")
+}
