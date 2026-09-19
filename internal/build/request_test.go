@@ -78,7 +78,7 @@ func TestAnOfflineRunBecomesAnOfflineRequest(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.Len(t, runsOf(requests), 1)
-	assert.True(t, runsOf(requests)[0].Offline)
+	assert.Nil(t, runsOf(requests)[0].Network)
 }
 
 func TestARequestCarriesTheKeyOfItsStep(t *testing.T) {
