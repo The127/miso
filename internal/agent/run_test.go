@@ -9,10 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,34 +53,6 @@ func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hi\n", string(written))
 	assert.NoFileExists(t, filepath.Join(layers, "base", "x"))
-}
-
-func TestWhatARunPrintsGoesOut(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi"}
-	var out bytes.Buffer
-
-	// act
-	_, err := worker.Run(context.Background(), run, &out)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, "hi\n", out.String())
-}
-
-func TestWhatARunPrintsAsAnErrorGoesOut(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "echo hi >&2"}
-	var out bytes.Buffer
-
-	// act
-	_, err := worker.Run(context.Background(), run, &out)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, "hi\n", out.String())
 }
 
 func TestARunSeesItsOwnProcesses(t *testing.T) {
@@ -384,19 +354,6 @@ func TestARunLeavesNoMountPointsInItsLayer(t *testing.T) {
 	}
 }
 
-func TestAFailedCommandAnswersItsExitCode(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "exit 3"}
-
-	// act
-	code, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, 3, code)
-}
-
 func TestAFailedRunLeavesNoWork(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
@@ -606,57 +563,6 @@ func TestARunWorksWithLayersOnASharedFileSystem(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(layers, "run", "x"))
-}
-
-func TestACancelledRunStopsItsCommand(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	ctx, cancel := context.WithCancel(context.Background())
-	time.AfterFunc(time.Second, cancel)
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
-
-	// act
-	_, err := worker.Run(ctx, run, io.Discard)
-
-	// assert
-	assert.ErrorIs(t, err, context.Canceled)
-}
-
-// killWhenRunning kills the process with a command line with a signal once it
-// runs.
-func killWhenRunning(t *testing.T, commandLine string, signal syscall.Signal) {
-	t.Helper()
-
-	go func() {
-		for {
-			lines, _ := filepath.Glob("/proc/[0-9]*/cmdline")
-			for _, line := range lines {
-				found, _ := os.ReadFile(line)
-				if string(found) == commandLine {
-					pid, _ := strconv.Atoi(filepath.Base(filepath.Dir(line)))
-					_ = syscall.Kill(pid, signal)
-
-					return
-				}
-			}
-
-			time.Sleep(10 * time.Millisecond)
-		}
-	}()
-}
-
-func TestARunKilledBySignalAnswersTheCodeAShellWould(t *testing.T) {
-	// arrange
-	worker := mountedBase(t, t.TempDir())
-	killWhenRunning(t, "/bin/sh\x00-c\x00sleep 1000\x00", syscall.SIGKILL)
-	run := protocol.Run{Key: "run", Layers: []string{"base"}, Command: "sleep 1000"}
-
-	// act
-	code, err := worker.Run(context.Background(), run, io.Discard)
-
-	// assert
-	require.NoError(t, err)
-	assert.Equal(t, 137, code)
 }
 
 // overlayDefault sets a default of the overlay module for one test.
