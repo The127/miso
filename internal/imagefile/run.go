@@ -29,9 +29,13 @@ func readRun(line int, arguments string) ([]Instruction, error) {
 		return nil, err
 	}
 
-	for name := range options {
+	for name, value := range options {
 		if name != "network" {
 			return nil, fmt.Errorf("does not know --%s", name)
+		}
+
+		if value != "none" {
+			return nil, fmt.Errorf("does not know --network=%s", value)
 		}
 	}
 
