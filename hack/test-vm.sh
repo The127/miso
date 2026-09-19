@@ -94,20 +94,32 @@ for path in "${loaded[@]}"; do
     esac
 done
 
-failed=0
+# every package in a VM of its own, all at once, each with its own files
 for pkg in $packages; do
-    echo "== $pkg"
-    CGO_ENABLED=0 go test -c -tags vmtest -o "$work/root/init" "./$pkg"
-    (cd "$work/root" && find init modules | cpio --quiet -o -H newc) > "$work/initrd"
+    dir=$work/vm/$pkg
+    mkdir -p "$dir/root"
+    cp -r "$work/root/modules" "$dir/root/"
+    CGO_ENABLED=0 go test -c -tags vmtest -o "$dir/root/init" "./$pkg"
+    (cd "$dir/root" && find init modules | cpio --quiet -o -H newc) > "$dir/initrd"
+done
 
+for pkg in $packages; do
+    dir=$work/vm/$pkg
     # the test binary stops a hanging test, the outer timeout a hanging VM.
     # Unbuffered, so the log of a killed run shows how far it got
     timeout 3m qemu-system-x86_64 -enable-kvm -cpu host -m 4G -nographic -no-reboot \
-        -kernel "$kernel" -initrd "$work/initrd" "${disks[@]}" "${nic[@]}" \
+        -kernel "$kernel" -initrd "$dir/initrd" "${disks[@]}" "${nic[@]}" \
         -append "console=ttyS0 panic=-1 quiet ${environment[*]} -- -test.v -test.timeout=2m $*" \
-        | sed -u 's/\r$//' | tee "$work/log"
+        < /dev/null 2>&1 | sed -u 's/\r$//' > "$dir/log" &
+done
 
-    if ! grep -qx 'miso-vmtest: exit 0' "$work/log"; then
+wait
+
+failed=0
+for pkg in $packages; do
+    echo "== $pkg on $kernel"
+    cat "$work/vm/$pkg/log"
+    if ! grep -qx 'miso-vmtest: exit 0' "$work/vm/$pkg/log"; then
         failed=1
     fi
 done
