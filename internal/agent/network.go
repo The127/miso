@@ -17,24 +17,25 @@ import (
 )
 
 // addCard gives the run of a process a network card of its own on top of
-// the builder's, with the address and gateway of the network.
-func addCard(pid int, network *protocol.Network) error {
+// the builder's, with the address and gateway of the network, and answers
+// how to remove it once the run has ended.
+func addCard(pid int, network *protocol.Network) (func(), error) {
 	address, err := netip.ParsePrefix(network.Address)
 	if err != nil {
-		return fmt.Errorf("address of the run: %w", err)
+		return nil, fmt.Errorf("address of the run: %w", err)
 	}
 
 	if !address.Addr().Is4() {
-		return fmt.Errorf("address of the run: %s is not IPv4", address)
+		return nil, fmt.Errorf("address of the run: %s is not IPv4", address)
 	}
 
 	gateway, err := netip.ParseAddr(network.Gateway)
 	if err != nil {
-		return fmt.Errorf("gateway of the run: %w", err)
+		return nil, fmt.Errorf("gateway of the run: %w", err)
 	}
 
 	if !gateway.Is4() {
-		return fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
+		return nil, fmt.Errorf("gateway of the run: %s is not IPv4", gateway)
 	}
 
 	// the card is known by the MAC the host gave it, its name and place
@@ -43,7 +44,7 @@ func addCard(pid int, network *protocol.Network) error {
 	for _, part := range strings.Split(network.Card, ":") {
 		octet, err := strconv.ParseUint(part, 16, 8)
 		if err != nil {
-			return fmt.Errorf("card of the run %s: %w", network.Card, err)
+			return nil, fmt.Errorf("card of the run %s: %w", network.Card, err)
 		}
 
 		mac = append(mac, byte(octet))
@@ -51,21 +52,21 @@ func addCard(pid int, network *protocol.Network) error {
 
 	namespace, err := os.Open(fmt.Sprintf("/proc/%d/ns/net", pid))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer func() { _ = namespace.Close() }()
 
 	builder, err := routeSocket(nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer func() { _ = unix.Close(builder) }()
 
 	builderCards, err := ask(builder, unix.RTM_GETLINK, unix.NLM_F_DUMP, link(0, 0, 0))
 	if err != nil {
-		return fmt.Errorf("find the builder's card: %w", err)
+		return nil, fmt.Errorf("find the builder's card: %w", err)
 	}
 
 	var parent int32
@@ -76,38 +77,51 @@ func addCard(pid int, network *protocol.Network) error {
 	}
 
 	if parent == 0 {
-		return fmt.Errorf("the builder has no card %s", network.Card)
+		return nil, fmt.Errorf("the builder has no card %s", network.Card)
 	}
 
 	// nothing else in the builder brings its card up, and a card on a card
 	// that is down never has a carrier
 	if _, err := ask(builder, unix.RTM_SETLINK, 0, link(parent, unix.IFF_UP, unix.IFF_UP)); err != nil {
-		return fmt.Errorf("bring up the builder's card: %w", err)
+		return nil, fmt.Errorf("bring up the builder's card: %w", err)
 	}
 
 	// some kernels look for the name among the builder's cards, where eth0
 	// is taken, so the card arrives under a name of its own and is renamed
 	arriving := fmt.Sprintf("run%d", pid)
+	// the MAC follows from the address, so a run sees the same one every
+	// time, and two runs on one address collide loudly instead of taking
+	// turns in the gateway's table. 02 is a MAC of our own making
+	local := address.Addr().As4()
+	own := append([]byte{0x02, 0x00}, local[:]...)
 	_, err = ask(builder, unix.RTM_NEWLINK, unix.NLM_F_CREATE|unix.NLM_F_EXCL, link(0, 0, 0),
 		attribute(unix.IFLA_IFNAME, []byte(arriving+"\x00")),
+		attribute(unix.IFLA_ADDRESS, own),
 		attribute(unix.IFLA_LINK, binary.NativeEndian.AppendUint32(nil, uint32(parent))),
 		attribute(unix.IFLA_NET_NS_FD, binary.NativeEndian.AppendUint32(nil, uint32(namespace.Fd()))), //nolint:gosec // a file descriptor fits in 32 bits
 		attribute(unix.IFLA_LINKINFO, attribute(unix.IFLA_INFO_KIND, []byte("macvlan"))),
 	)
 	if err != nil {
-		return fmt.Errorf("create card: %w", err)
+		return nil, fmt.Errorf("create card: %w", err)
 	}
 
 	run, err := routeSocket(namespace)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	defer func() { _ = unix.Close(run) }()
+	// kept open on success, it holds the run's network until the card is
+	// gone
+	kept := false
+	defer func() {
+		if !kept {
+			_ = unix.Close(run)
+		}
+	}()
 
 	cards, err := ask(run, unix.RTM_GETLINK, unix.NLM_F_DUMP, link(0, 0, 0))
 	if err != nil {
-		return fmt.Errorf("find card: %w", err)
+		return nil, fmt.Errorf("find card: %w", err)
 	}
 
 	for _, card := range cards {
@@ -118,10 +132,9 @@ func addCard(pid int, network *protocol.Network) error {
 		// the index of the card in the answer's interface header
 		index := int32(binary.NativeEndian.Uint32(card.Data[4:])) //nolint:gosec // the kernel writes an int32 there
 		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, 0, 0), attribute(unix.IFLA_IFNAME, []byte("eth0\x00"))); err != nil {
-			return fmt.Errorf("name card: %w", err)
+			return nil, fmt.Errorf("name card: %w", err)
 		}
 
-		local := address.Addr().As4()
 		// the address before the route, which the kernel only takes to a
 		// gateway it can reach
 		_, err = ask(run, unix.RTM_NEWADDR, unix.NLM_F_CREATE|unix.NLM_F_EXCL, addressHeader(index, address.Bits()),
@@ -129,11 +142,11 @@ func addCard(pid int, network *protocol.Network) error {
 			attribute(unix.IFA_ADDRESS, local[:]),
 		)
 		if err != nil {
-			return fmt.Errorf("address card %s: %w", address, err)
+			return nil, fmt.Errorf("address card %s: %w", address, err)
 		}
 
 		if _, err := ask(run, unix.RTM_SETLINK, 0, link(index, unix.IFF_UP, unix.IFF_UP)); err != nil {
-			return fmt.Errorf("bring up card: %w", err)
+			return nil, fmt.Errorf("bring up card: %w", err)
 		}
 
 		via := gateway.As4()
@@ -142,13 +155,20 @@ func addCard(pid int, network *protocol.Network) error {
 			attribute(unix.RTA_OIF, binary.NativeEndian.AppendUint32(nil, uint32(index))), //nolint:gosec // an index is positive
 		)
 		if err != nil {
-			return fmt.Errorf("route via %s: %w", gateway, err)
+			return nil, fmt.Errorf("route via %s: %w", gateway, err)
 		}
 
-		return nil
+		kept = true
+		// the kernel removes the network of a run some time after it ended,
+		// and until then its card holds the MAC and address the next run
+		// needs
+		return func() {
+			_, _ = ask(run, unix.RTM_DELLINK, 0, link(index, 0, 0))
+			_ = unix.Close(run)
+		}, nil
 	}
 
-	return fmt.Errorf("find card: %s is not in the run", arriving)
+	return nil, fmt.Errorf("find card: %s is not in the run", arriving)
 }
 
 // routeSocket opens a route netlink socket in a network namespace, or in

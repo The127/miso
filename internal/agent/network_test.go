@@ -106,3 +106,20 @@ func TestARunWhoseCardTheBuilderLacksFailsNamingIt(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "52:54:00:00:00:99")
 }
+
+func TestARunsCardHasTheSameMACEveryTime(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	first := protocol.Run{Key: "first", Layers: []string{"base"}, Network: online(t), Command: "cat /sys/class/net/eth0/address"}
+	second := protocol.Run{Key: "second", Layers: []string{"base"}, Network: online(t), Command: "cat /sys/class/net/eth0/address"}
+	var firstOut, secondOut bytes.Buffer
+	_, err := worker.Run(context.Background(), first, &firstOut)
+	require.NoError(t, err)
+
+	// act
+	_, err = worker.Run(context.Background(), second, &secondOut)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, firstOut.String(), secondOut.String())
+}
