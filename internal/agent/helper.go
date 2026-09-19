@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 )
@@ -20,14 +21,17 @@ func Helper() {
 	// the shell closes it
 	failed := os.NewFile(3, "failed")
 	syscall.CloseOnExec(3)
+	// the agent opens it once the run's network is ready
+	gate := os.NewFile(4, "gate")
+	syscall.CloseOnExec(4)
 	root, command := os.Args[1], os.Args[2]
 	// returns only when the shell did not start
-	err := helper(root, command)
+	err := helper(root, command, gate)
 	_, _ = fmt.Fprint(failed, err)
 	os.Exit(1)
 }
 
-func helper(root, command string) error {
+func helper(root, command string, gate io.Reader) error {
 	if err := enterRoot(root); err != nil {
 		return err
 	}
@@ -44,6 +48,10 @@ func helper(root, command string) error {
 
 	if err := nameRun(); err != nil {
 		return err
+	}
+
+	if _, err := io.ReadFull(gate, make([]byte, 1)); err != nil {
+		return fmt.Errorf("wait for the network: %w", err)
 	}
 
 	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is

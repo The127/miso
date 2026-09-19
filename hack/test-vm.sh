@@ -55,7 +55,7 @@ environment+=("MISO_VMTEST_MAC=$mac")
 # the VM loads them in order
 mkdir -p "$work/root/modules"
 loaded=()
-for name in virtio_blk virtio_net btrfs overlay; do
+for name in virtio_blk virtio_net macvlan btrfs overlay; do
     if grep -qE "/$name\.ko(\.[a-z]+)?$" "$modules/modules.builtin"; then
         continue
     fi
