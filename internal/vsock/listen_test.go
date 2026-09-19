@@ -5,8 +5,13 @@ package vsock_test
 import (
 	"io"
 	"os"
+	"slices"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
 
+	mdvsock "github.com/mdlayher/vsock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
@@ -16,7 +21,7 @@ import (
 
 // dialing is a listener on a port of this machine with a connection made
 // to it that is not accepted yet.
-func dialing(t *testing.T, port uint32) (*vsock.Listener, *os.File) {
+func dialing(t *testing.T, port uint32) (*vsock.Listener, *mdvsock.Conn) {
 	t.Helper()
 	listener, err := vsock.Listen(port)
 	require.NoError(t, err)
@@ -55,18 +60,61 @@ func TestAnAcceptedConnectionIsNotInheritedByAProcess(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, accepted.Close()) })
-	flags, err := unix.FcntlInt(accepted.(*os.File).Fd(), unix.F_GETFD, 0)
+	assert.True(t, closedOnExec(t, accepted.(syscall.Conn)))
+}
+
+func TestAListenerIsNotInheritedByAProcess(t *testing.T) {
+	// arrange
+	before := sockets(t)
+
+	// act
+	_, err := vsock.Listen(1026)
+
+	// assert
+	require.NoError(t, err)
+	var added []int
+	for _, fd := range sockets(t) {
+		if !slices.Contains(before, fd) {
+			added = append(added, fd)
+		}
+	}
+
+	require.Len(t, added, 1)
+	flags, err := unix.FcntlInt(uintptr(added[0]), unix.F_GETFD, 0)
 	require.NoError(t, err)
 	assert.NotZero(t, flags&unix.FD_CLOEXEC)
 }
 
-func TestAListenerIsNotInheritedByAProcess(t *testing.T) {
-	// act
-	listener, err := vsock.Listen(1026)
+// sockets are the file descriptors of this process that are sockets. A
+// listener hides its own, so a test finds it among them.
+func sockets(t *testing.T) []int {
+	t.Helper()
+	entries, err := os.ReadDir("/proc/self/fd")
+	require.NoError(t, err)
+	var fds []int
+	for _, entry := range entries {
+		target, err := os.Readlink("/proc/self/fd/" + entry.Name())
+		if err != nil || !strings.HasPrefix(target, "socket:") {
+			continue
+		}
 
-	// assert
+		fd, err := strconv.Atoi(entry.Name())
+		require.NoError(t, err)
+		fds = append(fds, fd)
+	}
+
+	return fds
+}
+
+func closedOnExec(t *testing.T, conn syscall.Conn) bool {
+	t.Helper()
+	raw, err := conn.SyscallConn()
 	require.NoError(t, err)
-	flags, err := unix.FcntlInt(uintptr(vsock.FD(listener)), unix.F_GETFD, 0)
+	var flags int
+	require.NoError(t, raw.Control(func(fd uintptr) {
+		flags, err = unix.FcntlInt(fd, unix.F_GETFD, 0)
+	}))
 	require.NoError(t, err)
-	assert.NotZero(t, flags&unix.FD_CLOEXEC)
+
+	return flags&unix.FD_CLOEXEC != 0
 }

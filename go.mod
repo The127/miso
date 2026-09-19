@@ -6,6 +6,7 @@ tool github.com/arch-go/arch-go
 
 require (
 	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
+	github.com/mdlayher/vsock v1.3.0
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v3 v3.9.0
 	golang.org/x/sys v0.46.0
@@ -15,7 +16,7 @@ require (
 	github.com/arch-go/arch-go v1.7.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.6.4 // indirect
@@ -25,7 +26,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mdlayher/netlink v1.7.1 // indirect
-	github.com/mdlayher/socket v0.4.0 // indirect
+	github.com/mdlayher/socket v0.6.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
