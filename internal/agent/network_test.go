@@ -158,6 +158,20 @@ func TestARunWithAGatewayThatIsNotIPv4FailsNamingIt(t *testing.T) {
 	assert.ErrorContains(t, err, "fec0::2")
 }
 
+func TestARunWithAnIPv6AddressThatIsNotIPv6FailsNamingIt(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	network := online(t)
+	network.IPv6.Address = "10.0.2.99/24"
+	run := protocol.Run{Key: "run", Layers: []string{"base"}, Network: network, Command: "true"}
+
+	// act
+	_, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "10.0.2.99/24")
+}
+
 func TestARunWhoseCardTheBuilderLacksFailsNamingIt(t *testing.T) {
 	// arrange
 	worker := mountedBase(t, t.TempDir())

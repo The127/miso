@@ -44,6 +44,11 @@ func readSettings(network *protocol.Network) (settings, error) {
 		return settings{}, fmt.Errorf("IPv6 address of the run: %w", err)
 	}
 
+	// an IPv4 one would pass as IPv4-mapped, which the kernel takes
+	if !address6.Addr().Is6() {
+		return settings{}, fmt.Errorf("IPv6 address of the run: %s is not IPv6", address6)
+	}
+
 	var card []byte
 	for _, part := range strings.Split(network.Card, ":") {
 		octet, err := strconv.ParseUint(part, 16, 8)
