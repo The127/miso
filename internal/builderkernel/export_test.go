@@ -1,8 +1,10 @@
 package builderkernel
 
 import (
+	"context"
 	"io"
 
+	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/initramfs"
 )
 
@@ -35,4 +37,9 @@ func Order(have []Info, builtin []string, want ...string) ([]string, error) {
 // Unpack gives the wanted modules unpacked and in the order they load.
 func Unpack(held Contents, want ...string) ([]initramfs.Module, error) {
 	return unpack(held, want...)
+}
+
+// ReadyFrom takes the package a pin names apart into what a VM boots.
+func ReadyFrom(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
+	return ready(ctx, store, url, digest, want...)
 }

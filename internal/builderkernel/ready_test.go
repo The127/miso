@@ -40,7 +40,7 @@ func TestTheBuilderKernelIsReadiedFromThePinnedPackage(t *testing.T) {
 	store := download.Open(dir, http.DefaultClient)
 
 	// act
-	booting, err := builderkernel.Ready(context.Background(), store, "https://snapshot.invalid/linux-image.deb", digest, "btrfs")
+	booting, err := builderkernel.ReadyFrom(context.Background(), store, "https://snapshot.invalid/linux-image.deb", digest, "btrfs")
 
 	// assert
 	require.NoError(t, err)

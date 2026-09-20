@@ -16,9 +16,14 @@ type Kernel struct {
 	Modules []initramfs.Module
 }
 
-// Ready fetches the pinned kernel package, through the store, and takes it
-// apart into what the builder VM boots.
-func Ready(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
+// Ready fetches miso's pinned kernel package, through the store, and takes
+// it apart into what the builder VM boots.
+func Ready(ctx context.Context, store *download.Store) (Kernel, error) {
+	return ready(ctx, store, pinURL, pinDigest, needs...)
+}
+
+// ready takes the package a pin names apart into what a VM boots.
+func ready(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
 	path, err := store.Pinned(ctx, url, digest)
 	if err != nil {
 		return Kernel{}, err
