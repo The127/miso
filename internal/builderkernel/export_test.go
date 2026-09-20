@@ -1,6 +1,10 @@
 package builderkernel
 
-import "io"
+import (
+	"io"
+
+	"github.com/The127/miso/internal/initramfs"
+)
 
 // Data is the data of a package, which holds the kernel and its modules.
 func Data(deb io.Reader) (io.Reader, error) {
@@ -26,4 +30,9 @@ func Modinfo(ko io.ReaderAt) (Info, error) {
 // Order is the order to load the wanted modules in.
 func Order(have []Info, builtin []string, want ...string) ([]string, error) {
 	return order(have, builtin, want...)
+}
+
+// Unpack gives the wanted modules unpacked and in the order they load.
+func Unpack(held Contents, want ...string) ([]initramfs.Module, error) {
+	return unpack(held, want...)
 }
