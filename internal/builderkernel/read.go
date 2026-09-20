@@ -1,6 +1,7 @@
 package builderkernel
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -64,11 +65,18 @@ func read(deb io.Reader) (contents, error) {
 				return contents{}, fmt.Errorf("the package holds %s, miso reads %s", base, ko+modulePacking)
 			}
 
-			said, err := says(file)
+			// the bytes are kept packed, only the wanted modules are unpacked
+			packed, err := io.ReadAll(file)
 			if err != nil {
 				return contents{}, err
 			}
 
+			said, err := says(bytes.NewReader(packed))
+			if err != nil {
+				return contents{}, err
+			}
+
+			said.Packed = packed
 			held.Modules = append(held.Modules, said)
 		}
 	}

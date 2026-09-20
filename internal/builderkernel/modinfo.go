@@ -8,10 +8,12 @@ import (
 	"strings"
 )
 
-// info is what a module says about itself.
+// info is what a module says about itself, together with the module as the
+// package holds it.
 type info struct {
 	Name    string
 	Depends []string
+	Packed  []byte
 }
 
 // modinfo reads what a module says about itself from its .modinfo section,

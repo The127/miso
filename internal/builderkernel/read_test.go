@@ -167,3 +167,19 @@ func TestAPackageWithNoModulesBuiltinIsRefused(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "modules.builtin")
 }
+
+func TestAPackageCarriesTheBytesOfEachModule(t *testing.T) {
+	// arrange
+	packed := packedModule(t, "name=btrfs")
+	deb := wholePackage(t, map[string]string{
+		"./lib/modules/" + testRelease + "/kernel/fs/btrfs/btrfs.ko.xz": packed,
+	})
+
+	// act
+	held, err := builderkernel.Read(bytes.NewReader(deb))
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, held.Modules, 1)
+	assert.Equal(t, packed, string(held.Modules[0].Packed))
+}
