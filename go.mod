@@ -8,7 +8,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/u-root/u-root v0.16.0
 	github.com/ulikunitz/xz v0.5.17
-	github.com/urfave/cli/v3 v3.12.0
+	github.com/urfave/cli/v3 v3.13.0
 	golang.org/x/sys v0.48.0
 )
 
