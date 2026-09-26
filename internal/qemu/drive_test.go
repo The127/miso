@@ -30,3 +30,14 @@ func TestAWritableDiskKeepsTheGuestsFlushes(t *testing.T) {
 	// assert
 	assert.Equal(t, "file=/c/cache.img,format=raw,if=none,id=disk0,cache=writeback", valueOf(t, args, "-drive"))
 }
+
+func TestACommaInADisksPathStaysPartOfThePath(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/a,readonly=off.img", Format: "raw", Serial: "base", ReadOnly: true}}}
+
+	// act
+	args := qemu.Arguments(machine)
+
+	// assert
+	assert.Equal(t, "file=/c/a,,readonly=off.img,format=raw,if=none,id=disk0,readonly=on", valueOf(t, args, "-drive"))
+}

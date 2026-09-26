@@ -1,6 +1,9 @@
 package qemu
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // drives attaches each disk as a virtio disk, because only a virtio disk
 // shows the agent its serial.
@@ -9,7 +12,7 @@ func drives(machine Machine) []string {
 	for i, disk := range machine.Disks {
 		id := fmt.Sprintf("disk%d", i)
 		args = append(args,
-			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", disk.Path, disk.Format, id, access(disk)),
+			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", escaped(disk.Path), disk.Format, id, access(disk)),
 			"-device", fmt.Sprintf("virtio-blk-pci,drive=%s,serial=%s", id, disk.Serial))
 	}
 
@@ -25,4 +28,10 @@ func access(disk Disk) string {
 	}
 
 	return "cache=writeback"
+}
+
+// escaped keeps a comma in a value from starting the next option, QEMU
+// reads a doubled comma as one.
+func escaped(value string) string {
+	return strings.ReplaceAll(value, ",", ",,")
 }
