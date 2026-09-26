@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ulikunitz/xz"
+	"github.com/therootcompany/xz"
 )
 
 const (
@@ -29,7 +29,7 @@ func plain(file string) (string, bool) {
 
 // says is what the module in a packed file says about itself.
 func says(file io.Reader) (info, error) {
-	packed, err := xz.NewReader(file)
+	packed, err := xz.NewReader(file, xz.DefaultDictMax)
 	if err != nil {
 		return info{}, err
 	}

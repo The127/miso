@@ -7,7 +7,7 @@ import (
 	"iter"
 	"path"
 
-	"github.com/ulikunitz/xz"
+	"github.com/therootcompany/xz"
 )
 
 // eachFile reads through the files of a package's data, giving the name of
@@ -53,7 +53,7 @@ func unpacked(deb io.Reader) (*tar.Reader, error) {
 		return nil, err
 	}
 
-	files, err := xz.NewReader(packed)
+	files, err := xz.NewReader(packed, xz.DefaultDictMax)
 	if err != nil {
 		return nil, err
 	}

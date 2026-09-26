@@ -6,6 +6,7 @@ require (
 	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
 	github.com/mdlayher/vsock v1.3.0
 	github.com/stretchr/testify v1.12.1
+	github.com/therootcompany/xz v1.0.1
 	github.com/u-root/u-root v0.16.0
 	github.com/ulikunitz/xz v0.5.17
 	github.com/urfave/cli/v3 v3.13.0

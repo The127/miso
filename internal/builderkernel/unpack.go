@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/ulikunitz/xz"
+	"github.com/therootcompany/xz"
 
 	"github.com/The127/miso/internal/initramfs"
 )
@@ -24,7 +24,7 @@ func unpack(held contents, want ...string) ([]initramfs.Module, error) {
 
 	modules := make([]initramfs.Module, 0, len(load))
 	for _, name := range load {
-		file, err := xz.NewReader(bytes.NewReader(packed[name]))
+		file, err := xz.NewReader(bytes.NewReader(packed[name]), xz.DefaultDictMax)
 		if err != nil {
 			return nil, err
 		}
