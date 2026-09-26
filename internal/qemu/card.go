@@ -1,9 +1,19 @@
 package qemu
 
+import "fmt"
+
 // Card is the machine's network card on QEMU's user network. The agent finds
 // it by its MAC.
 type Card struct {
-	MAC string
+	MAC  string
+	IPv4 Family
+}
+
+// Family is how QEMU lays out one address family of its user network.
+type Family struct {
+	Prefix     string
+	Gateway    string
+	Nameserver string
 }
 
 // network puts the card on QEMU's user network, so the machine needs
@@ -13,8 +23,10 @@ func network(machine Machine) []string {
 		return nil
 	}
 
+	ipv4 := machine.Card.IPv4
+
 	return []string{
-		"-netdev", "user,id=card",
+		"-netdev", fmt.Sprintf("user,id=card,net=%s,host=%s,dns=%s", ipv4.Prefix, ipv4.Gateway, ipv4.Nameserver),
 		"-device", "virtio-net-pci,netdev=card,mac=" + machine.Card.MAC,
 	}
 }
