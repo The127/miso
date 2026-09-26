@@ -16,5 +16,7 @@ func TestAMachineBootsItsKernelDirectly(t *testing.T) {
 	args := qemu.Arguments(machine)
 
 	// assert
-	assert.Equal(t, []string{"-kernel", "/k/vmlinuz", "-initrd", "/k/initrd", "-append", "console=ttyS0 -- agent"}, args)
+	assert.Equal(t, "/k/vmlinuz", valueOf(t, args, "-kernel"))
+	assert.Equal(t, "/k/initrd", valueOf(t, args, "-initrd"))
+	assert.Equal(t, "console=ttyS0 -- agent", valueOf(t, args, "-append"))
 }
