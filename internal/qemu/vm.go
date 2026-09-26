@@ -44,7 +44,7 @@ func run(command *exec.Cmd, cid uint32) (*VM, error) {
 		started <- nil
 
 		if err := command.Wait(); err != nil {
-			vm.err = fmt.Errorf("QEMU stopped: %w: %s", err, strings.TrimSpace(refusal.String()))
+			vm.err = stopped(err, refusal.String())
 		}
 
 		close(vm.done)
@@ -55,6 +55,15 @@ func run(command *exec.Cmd, cid uint32) (*VM, error) {
 	}
 
 	return vm, nil
+}
+
+func stopped(err error, said string) error {
+	said = strings.TrimSpace(said)
+	if said == "" {
+		return fmt.Errorf("QEMU stopped: %w", err)
+	}
+
+	return fmt.Errorf("QEMU stopped: %w: %s", err, said)
 }
 
 // CID is where the host reaches the VM over vsock.

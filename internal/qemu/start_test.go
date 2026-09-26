@@ -96,3 +96,19 @@ func TestAMachineQEMUFailsToRunSaysWhy(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, vm.Err(), "Could not access KVM kernel module")
 }
+
+func TestAMachineQEMUStoppedWithoutAWordSaysOnlyHow(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
+	ctx, cancel := context.WithCancel(t.Context())
+	vm, err := driver.Start(ctx, qemu.Machine{})
+	require.NoError(t, err)
+
+	// act
+	cancel()
+	<-vm.Done()
+
+	// assert
+	assert.EqualError(t, vm.Err(), "QEMU stopped: signal: killed")
+}
