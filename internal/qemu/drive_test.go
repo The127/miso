@@ -41,3 +41,14 @@ func TestACommaInADisksPathStaysPartOfThePath(t *testing.T) {
 	// assert
 	assert.Equal(t, "file=/c/a,,readonly=off.img,format=raw,if=none,id=disk0,readonly=on", valueOf(t, args, "-drive"))
 }
+
+func TestACommaInADisksSerialStaysPartOfTheSerial(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "a,drive=b", ReadOnly: true}}}
+
+	// act
+	args := qemu.Arguments(machine)
+
+	// assert
+	assert.Equal(t, "virtio-blk-pci,drive=disk0,serial=a,,drive=b", valueOf(t, args, "-device"))
+}

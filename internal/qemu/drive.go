@@ -13,7 +13,7 @@ func drives(machine Machine) []string {
 		id := fmt.Sprintf("disk%d", i)
 		args = append(args,
 			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", escaped(disk.Path), disk.Format, id, access(disk)),
-			"-device", fmt.Sprintf("virtio-blk-pci,drive=%s,serial=%s", id, disk.Serial))
+			"-device", fmt.Sprintf("virtio-blk-pci,drive=%s,serial=%s", id, escaped(disk.Serial)))
 	}
 
 	return args
