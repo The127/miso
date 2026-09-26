@@ -7,4 +7,5 @@ type Machine struct {
 	CommandLine string
 	MemoryMiB   int
 	CPUs        int
+	Disks       []Disk
 }
