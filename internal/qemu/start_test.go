@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,11 +17,7 @@ import (
 
 func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	// arrange
-	recorded := filepath.Join(t.TempDir(), "arguments")
-	t.Setenv("MISO_FAKE_QEMU", recorded)
-	self, err := os.Executable()
-	require.NoError(t, err)
-	driver := qemu.Driver{Binary: self}
+	driver, recorded := fakeDriver(t)
 	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1}
 
 	// act
@@ -40,12 +35,10 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 
 func TestACancelledMachineIsStopped(t *testing.T) {
 	// arrange
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
-	self, err := os.Executable()
-	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
-	vm, err := qemu.Driver{Binary: self}.Start(ctx, qemu.Machine{})
+	vm, err := driver.Start(ctx, qemu.Machine{})
 	require.NoError(t, err)
 
 	// act
@@ -61,11 +54,9 @@ func TestACancelledMachineIsStopped(t *testing.T) {
 
 func TestAMachinesCIDStaysHeldWhileQEMURuns(t *testing.T) {
 	// arrange
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
-	self, err := os.Executable()
-	require.NoError(t, err)
-	vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 	other, err := qemu.OpenVsock("/dev/vhost-vsock")
 	require.NoError(t, err)
@@ -80,13 +71,11 @@ func TestAMachinesCIDStaysHeldWhileQEMURuns(t *testing.T) {
 
 func TestAMachinesConsoleReachesTheWriterItNames(t *testing.T) {
 	// arrange
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
-	self, err := os.Executable()
-	require.NoError(t, err)
+	driver, _ := fakeDriver(t)
 	var console bytes.Buffer
 
 	// act
-	vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{Console: &console})
+	vm, err := driver.Start(t.Context(), qemu.Machine{Console: &console})
 	require.NoError(t, err)
 	<-vm.Done()
 
@@ -96,13 +85,11 @@ func TestAMachinesConsoleReachesTheWriterItNames(t *testing.T) {
 
 func TestAMachineQEMUFailsToRunSaysWhy(t *testing.T) {
 	// arrange
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_FAIL", "Could not access KVM kernel module")
-	self, err := os.Executable()
-	require.NoError(t, err)
 
 	// act
-	vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 	<-vm.Done()
 

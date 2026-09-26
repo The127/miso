@@ -21,13 +21,11 @@ func TestQEMUDiesWithMiso(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
 	pidFile := filepath.Join(dir, "pid")
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(dir, "arguments"))
+	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
 	t.Setenv("MISO_FAKE_QEMU_PID", pidFile)
 	t.Setenv("MISO_FAKE_MISO", "1")
-	self, err := os.Executable()
-	require.NoError(t, err)
-	miso := exec.Command(self) //nolint:gosec // this test binary stands in for miso
+	miso := exec.Command(driver.Binary) //nolint:gosec // this test binary stands in for miso
 	require.NoError(t, miso.Start())
 	var qemu int
 	require.Eventually(t, func() bool {
@@ -47,10 +45,8 @@ func TestQEMUDiesWithMiso(t *testing.T) {
 
 func TestQEMUOutlivesTheThreadThatStartedIt(t *testing.T) {
 	// arrange
-	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
-	self, err := os.Executable()
-	require.NoError(t, err)
 	type start struct {
 		vm  *qemu.VM
 		err error
@@ -62,7 +58,7 @@ func TestQEMUOutlivesTheThreadThatStartedIt(t *testing.T) {
 		// a goroutine that ends locked takes its thread with it
 		runtime.LockOSThread()
 
-		vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+		vm, err := driver.Start(t.Context(), qemu.Machine{})
 		started <- start{vm, err}
 	}()
 	result := <-started

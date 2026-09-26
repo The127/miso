@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/qemu"
 )
@@ -40,6 +43,19 @@ func TestMain(m *testing.M) {
 	// miss a thread that ends under it
 	runtime.LockOSThread()
 	os.Exit(m.Run())
+}
+
+// fakeDriver runs this test binary as its QEMU, which writes the arguments it
+// was given to the file whose path comes back.
+func fakeDriver(t *testing.T) (qemu.Driver, string) {
+	t.Helper()
+
+	recorded := filepath.Join(t.TempDir(), "arguments")
+	t.Setenv("MISO_FAKE_QEMU", recorded)
+	self, err := os.Executable()
+	require.NoError(t, err)
+
+	return qemu.Driver{Binary: self}, recorded
 }
 
 func fakeQEMU(recorded string) {
