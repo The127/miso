@@ -13,7 +13,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/boot"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/vsock"
 )
 
 // TestMain stands in for QEMU when a test starts this binary as one, and
@@ -26,7 +28,17 @@ import (
 //
 // With MISO_FAKE_MISO it stands in for miso instead, starting a fake QEMU
 // and hanging for a while.
+//
+// With MISO_GUEST, which the kernel hands its init from the command line,
+// it answers the host over vsock as the init of a VM instead. Being process
+// 1 would say that too, but a container's entrypoint is process 1 as well.
 func TestMain(m *testing.M) {
+	if os.Getenv("MISO_GUEST") != "" {
+		guest()
+
+		return
+	}
+
 	if os.Getenv("MISO_FAKE_MISO") != "" {
 		fakeMiso()
 
@@ -43,6 +55,38 @@ func TestMain(m *testing.M) {
 	// miss a thread that ends under it
 	runtime.LockOSThread()
 	os.Exit(m.Run())
+}
+
+// guestPort is where the guest answers the host.
+const guestPort = 1024
+
+// guest readies the VM it is the init of, answers one connection from the
+// host over vsock with miso, and powers the VM off.
+func guest() {
+	defer boot.PowerOff()
+
+	if err := boot.Boot(); err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	listener, err := vsock.Listen(guestPort)
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	conn, err := listener.Accept()
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	_, _ = fmt.Fprintln(conn, "miso")
+	_ = conn.Close()
 }
 
 // fakeDriver runs this test binary as its QEMU, which writes the arguments it

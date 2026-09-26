@@ -1,9 +1,10 @@
 version: "2"
 
 run:
-  # the tests that only run inside a vm are linted like the rest
+  # the tests that only run inside a vm or need one are linted like the rest
   build-tags:
     - vmtest
+    - kvm
 
 linters:
   default: standard

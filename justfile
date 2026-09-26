@@ -21,6 +21,12 @@ test-vm *args:
 test-vm-one package *args:
     MISO_VMTEST_PACKAGES={{package}} bash hack/test-vm.sh -test.timeout=20s -test.failfast {{args}}
 
+# boot the builder kernel in a real VM through the qemu driver, with the
+# static test binary as the VM's init. Needs /dev/kvm, /dev/vhost-vsock,
+# qemu-system-x86_64 and, the first time, the network for the kernel
+test-kvm *args:
+    CGO_ENABLED=0 go test -tags kvm -count=1 ./internal/qemu/ -run 'BuilderKernel' {{args}}
+
 # test the miso binary from the outside, as a user runs it
 test-cli: build
     MISO={{justfile_directory()}}/bin/miso bats test
