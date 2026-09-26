@@ -14,8 +14,9 @@ type Driver struct {
 	Binary string
 }
 
-// Start boots the machine.
-func (d Driver) Start(_ context.Context, machine Machine) (*VM, error) {
+// Start boots the machine, which is killed when ctx is done. Killing is
+// safe, the cache disk is written to survive a crash of the machine.
+func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	args, err := arguments(machine)
 	if err != nil {
 		return nil, err
@@ -34,7 +35,7 @@ func (d Driver) Start(_ context.Context, machine Machine) (*VM, error) {
 	}
 
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
-	command := exec.Command(d.Binary, append(args, vsock(cid, 3)...)...)
+	command := exec.CommandContext(ctx, d.Binary, append(args, vsock(cid, 3)...)...)
 	if err := command.Start(); err != nil {
 		return nil, err
 	}
