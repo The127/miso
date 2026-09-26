@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/qemu"
 )
@@ -13,8 +14,9 @@ func TestAMachineThatStopsIsNotStartedAgain(t *testing.T) {
 	machine := qemu.Machine{}
 
 	// act
-	args := qemu.Arguments(machine)
+	args, err := qemu.Arguments(machine)
 
 	// assert
+	require.NoError(t, err)
 	assert.Contains(t, args, "-no-reboot")
 }
