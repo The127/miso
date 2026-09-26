@@ -4,4 +4,5 @@ var (
 	Arguments = arguments
 	Vsock     = vsock
 	Claim     = claim
+	OpenVsock = openVsock
 )
