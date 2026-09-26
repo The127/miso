@@ -67,3 +67,28 @@ func TestAMachineThatFindsNoFreeCIDGivesUpAfterTenTries(t *testing.T) {
 	assert.ErrorIs(t, err, unix.EADDRINUSE)
 	assert.ErrorContains(t, err, "after 10 tries")
 }
+
+func TestAMachineIsNeverGivenACIDThatMeansSomethingElse(t *testing.T) {
+	// arrange
+	var tried []uint32
+	take := func(cid uint32) error {
+		tried = append(tried, cid)
+
+		return nil
+	}
+	candidates := []uint32{unix.VMADDR_CID_HYPERVISOR, unix.VMADDR_CID_LOCAL, unix.VMADDR_CID_HOST, unix.VMADDR_CID_ANY, 7}
+	random := func() uint32 {
+		next := candidates[0]
+		candidates = candidates[1:]
+
+		return next
+	}
+
+	// act
+	cid, err := qemu.Claim(take, random)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, uint32(7), cid)
+	assert.Equal(t, []uint32{7}, tried)
+}

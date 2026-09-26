@@ -15,7 +15,7 @@ const tries = 10
 func claim(take func(cid uint32) error, random func() uint32) (uint32, error) {
 	var err error
 	for range tries {
-		cid := random()
+		cid := draw(random)
 
 		err = take(cid)
 		if errors.Is(err, unix.EADDRINUSE) {
@@ -26,4 +26,15 @@ func claim(take func(cid uint32) error, random func() uint32) (uint32, error) {
 	}
 
 	return 0, fmt.Errorf("no free CID after %d tries: %w", tries, err)
+}
+
+// draw is a random CID a machine may have: above the host's and never the
+// one that means any, which the kernel refuses.
+func draw(random func() uint32) uint32 {
+	for {
+		cid := random()
+		if cid > unix.VMADDR_CID_HOST && cid != unix.VMADDR_CID_ANY {
+			return cid
+		}
+	}
 }
