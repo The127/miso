@@ -5,4 +5,5 @@ var (
 	Vsock     = vsock
 	Claim     = claim
 	OpenVsock = openVsock
+	TakeCID   = takeCID
 )
