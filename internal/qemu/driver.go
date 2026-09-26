@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 // vhostVsock is the host's device on which a machine's CID is claimed.
@@ -48,6 +49,9 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	// go once QEMU runs
 	command.ExtraFiles = []*os.File{device}
 	command.Stdout = machine.Console
+	// a QEMU left behind by a miso that was killed would hold its CID and
+	// its cache disk for good
+	command.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 
 	// QEMU says on its standard error why it cannot run a machine
 	var refusal bytes.Buffer
