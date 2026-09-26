@@ -1,5 +1,7 @@
 package qemu
 
+import "io"
+
 // Machine is what a builder VM boots.
 type Machine struct {
 	Kernel      string
@@ -9,4 +11,5 @@ type Machine struct {
 	CPUs        int
 	Disks       []Disk
 	Card        *Card
+	Console     io.Writer
 }

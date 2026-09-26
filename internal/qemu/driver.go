@@ -44,6 +44,7 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	// QEMU keeps the device open, and with it the CID, which the host lets
 	// go once QEMU runs
 	command.ExtraFiles = []*os.File{device}
+	command.Stdout = machine.Console
 	if err := command.Start(); err != nil {
 		return nil, err
 	}
