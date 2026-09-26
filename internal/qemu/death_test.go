@@ -75,6 +75,30 @@ func TestQEMUOutlivesTheThreadThatStartedIt(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestACtrlCInMisosTerminalReachesOnlyMiso(t *testing.T) {
+	// arrange
+	pidFile := filepath.Join(t.TempDir(), "pid")
+	driver, _ := fakeDriver(t)
+	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
+	t.Setenv("MISO_FAKE_QEMU_PID", pidFile)
+
+	// act
+	_, err := driver.Start(t.Context(), qemu.Machine{})
+	require.NoError(t, err)
+
+	// assert
+	var pid int
+	require.Eventually(t, func() bool {
+		pid = pidIn(pidFile)
+
+		return pid != 0
+	}, 10*time.Second, 10*time.Millisecond)
+	group, err := syscall.Getpgid(pid)
+	require.NoError(t, err)
+	// the terminal sends Ctrl-C to its foreground process group
+	assert.NotEqual(t, syscall.Getpgrp(), group)
+}
+
 // pidIn is the process ID written to the file, or 0 while there is none.
 func pidIn(path string) int {
 	written, err := os.ReadFile(path)

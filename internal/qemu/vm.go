@@ -19,8 +19,9 @@ type VM struct {
 // run starts QEMU and gives the VM that lasts as long as it does.
 func run(command *exec.Cmd, cid uint32) (*VM, error) {
 	// a QEMU left behind by a miso that was killed would hold its CID and
-	// its cache disk for good
-	command.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
+	// its cache disk for good. In a process group of its own it never sees
+	// a Ctrl-C meant for miso, which stops it by its context instead
+	command.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL, Setpgid: true}
 
 	// QEMU says on its standard error why it cannot run a machine
 	var refusal bytes.Buffer
