@@ -3,11 +3,16 @@ package qemu
 import (
 	"context"
 	"math/rand/v2"
+	"os"
 	"os/exec"
 )
 
 // vhostVsock is the host's device on which a machine's CID is claimed.
 const vhostVsock = "/dev/vhost-vsock"
+
+// deviceFD is where QEMU finds the device, the first of a process's extra
+// files after standard input, output and error.
+const deviceFD = 3
 
 // Driver starts builder VMs with the QEMU binary it names.
 type Driver struct {
@@ -35,7 +40,10 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	}
 
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
-	command := exec.CommandContext(ctx, d.Binary, append(args, vsock(cid, 3)...)...)
+	command := exec.CommandContext(ctx, d.Binary, append(args, vsock(cid, deviceFD)...)...)
+	// QEMU keeps the device open, and with it the CID, which the host lets
+	// go once QEMU runs
+	command.ExtraFiles = []*os.File{device}
 	if err := command.Start(); err != nil {
 		return nil, err
 	}

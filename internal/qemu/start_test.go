@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/qemu"
 )
@@ -55,4 +56,23 @@ func TestACancelledMachineIsStopped(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		assert.Fail(t, "still running after cancel")
 	}
+}
+
+func TestAMachinesCIDStaysHeldWhileQEMURuns(t *testing.T) {
+	// arrange
+	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
+	self, err := os.Executable()
+	require.NoError(t, err)
+	vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+	require.NoError(t, err)
+	other, err := qemu.OpenVsock("/dev/vhost-vsock")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = other.Close() })
+
+	// act
+	err = qemu.TakeCID(other, vm.CID())
+
+	// assert
+	assert.ErrorIs(t, err, unix.EADDRINUSE)
 }
