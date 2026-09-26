@@ -7,6 +7,7 @@ import "fmt"
 type Card struct {
 	MAC  string
 	IPv4 Family
+	IPv6 Family
 }
 
 // Family is how QEMU lays out one address family of its user network.
@@ -23,10 +24,11 @@ func network(machine Machine) []string {
 		return nil
 	}
 
-	ipv4 := machine.Card.IPv4
+	ipv4, ipv6 := machine.Card.IPv4, machine.Card.IPv6
 
 	return []string{
-		"-netdev", fmt.Sprintf("user,id=card,net=%s,host=%s,dns=%s", ipv4.Prefix, ipv4.Gateway, ipv4.Nameserver),
+		"-netdev", fmt.Sprintf("user,id=card,net=%s,host=%s,dns=%s,ipv6-net=%s,ipv6-host=%s,ipv6-dns=%s",
+			ipv4.Prefix, ipv4.Gateway, ipv4.Nameserver, ipv6.Prefix, ipv6.Gateway, ipv6.Nameserver),
 		"-device", "virtio-net-pci,netdev=card,mac=" + machine.Card.MAC,
 	}
 }

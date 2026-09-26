@@ -40,3 +40,19 @@ func TestACardsIPv4NetworkHasTheLayoutItAsksFor(t *testing.T) {
 	assert.Contains(t, options, "host=10.0.2.2")
 	assert.Contains(t, options, "dns=10.0.2.3")
 }
+
+func TestACardsIPv6NetworkHasTheLayoutItAsksFor(t *testing.T) {
+	// arrange
+	ipv6 := qemu.Family{Prefix: "fd6d:6973:6f00::/64", Gateway: "fd6d:6973:6f00::2", Nameserver: "fd6d:6973:6f00::3"}
+	machine := qemu.Machine{Card: &qemu.Card{MAC: "52:54:00:6d:69:73", IPv6: ipv6}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	options := strings.Split(valueOf(t, args, "-netdev"), ",")
+	assert.Contains(t, options, "ipv6-net=fd6d:6973:6f00::/64")
+	assert.Contains(t, options, "ipv6-host=fd6d:6973:6f00::2")
+	assert.Contains(t, options, "ipv6-dns=fd6d:6973:6f00::3")
+}
