@@ -232,6 +232,15 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the qemu starts the builder VM as a process on the host. It knows nothing
+  # of ours and never touches the network itself, the VM's card is QEMU's
+  - package: '**.internal.qemu$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - net
   # the link speaks route netlink with the kernel about cards, addresses and
   # routes. It knows nothing of ours and never opens a connection or starts
   # a process. net/netip holds only addresses as values, so the rule names
