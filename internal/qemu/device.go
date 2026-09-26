@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"unsafe"
 
@@ -21,6 +22,24 @@ func openVsock(path string) (*os.File, error) {
 	}
 
 	return device, nil
+}
+
+// holdCID opens the device and claims a CID on it, held for as long as the
+// device stays open.
+func holdCID(path string) (*os.File, uint32, error) {
+	device, err := openVsock(path)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	cid, err := claim(func(cid uint32) error { return takeCID(device, cid) }, rand.Uint32)
+	if err != nil {
+		_ = device.Close()
+
+		return nil, 0, err
+	}
+
+	return device, cid, nil
 }
 
 // takeCID holds the CID on the open device for as long as the device stays

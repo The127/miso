@@ -1,15 +1,9 @@
 package qemu
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"math/rand/v2"
 	"os"
 	"os/exec"
-	"runtime"
-	"strings"
-	"syscall"
 )
 
 // vhostVsock is the host's device on which a machine's CID is claimed.
@@ -32,17 +26,12 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 		return nil, err
 	}
 
-	device, err := openVsock(vhostVsock)
+	device, cid, err := holdCID(vhostVsock)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() { _ = device.Close() }()
-
-	cid, err := claim(func(cid uint32) error { return takeCID(device, cid) }, rand.Uint32)
-	if err != nil {
-		return nil, err
-	}
 
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
 	command := exec.CommandContext(ctx, d.Binary, append(args, vsock(cid, deviceFD)...)...)
@@ -50,40 +39,6 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	// go once QEMU runs
 	command.ExtraFiles = []*os.File{device}
 	command.Stdout = machine.Console
-	// a QEMU left behind by a miso that was killed would hold its CID and
-	// its cache disk for good
-	command.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 
-	// QEMU says on its standard error why it cannot run a machine
-	var refusal bytes.Buffer
-	command.Stderr = &refusal
-
-	vm := &VM{cid: cid, done: make(chan struct{})}
-	started := make(chan error)
-
-	go func() {
-		// the kernel sends the death signal when the thread that started QEMU
-		// ends, not the process, so that thread is held until QEMU is gone
-		runtime.LockOSThread()
-
-		if err := command.Start(); err != nil {
-			started <- err
-
-			return
-		}
-
-		started <- nil
-
-		if err := command.Wait(); err != nil {
-			vm.err = fmt.Errorf("QEMU stopped: %w: %s", err, strings.TrimSpace(refusal.String()))
-		}
-
-		close(vm.done)
-	}()
-
-	if err := <-started; err != nil {
-		return nil, err
-	}
-
-	return vm, nil
+	return run(command, cid)
 }
