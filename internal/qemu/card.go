@@ -18,10 +18,11 @@ type Family struct {
 }
 
 // network puts the card on QEMU's user network, so the machine needs
-// nothing of the host's network set up.
+// nothing of the host's network set up. A machine with no card gets none of
+// QEMU's own either, which no fence of the agent's would guard.
 func network(machine Machine) []string {
 	if machine.Card == nil {
-		return nil
+		return []string{"-nic", "none"}
 	}
 
 	ipv4, ipv6 := machine.Card.IPv4, machine.Card.IPv6

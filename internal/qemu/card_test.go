@@ -56,3 +56,16 @@ func TestACardsIPv6NetworkHasTheLayoutItAsksFor(t *testing.T) {
 	assert.Contains(t, options, "ipv6-host=fd6d:6973:6f00::2")
 	assert.Contains(t, options, "ipv6-dns=fd6d:6973:6f00::3")
 }
+
+func TestAMachineWithNoCardHasNoNetwork(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "none", valueOf(t, args, "-nic"))
+	assert.NotContains(t, args, "-netdev")
+}
