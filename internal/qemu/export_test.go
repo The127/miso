@@ -1,3 +1,6 @@
 package qemu
 
-var Arguments = arguments
+var (
+	Arguments = arguments
+	Vsock     = vsock
+)
