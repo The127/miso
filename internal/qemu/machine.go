@@ -8,4 +8,5 @@ type Machine struct {
 	MemoryMiB   int
 	CPUs        int
 	Disks       []Disk
+	Card        *Card
 }
