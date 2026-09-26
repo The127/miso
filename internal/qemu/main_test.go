@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,6 +36,9 @@ func TestMain(m *testing.M) {
 		return
 	}
 
+	// the main thread is the one Go never ends, so no test may run there and
+	// miss a thread that ends under it
+	runtime.LockOSThread()
 	os.Exit(m.Run())
 }
 

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/qemu"
 )
 
 func TestQEMUDiesWithMiso(t *testing.T) {
@@ -40,6 +43,40 @@ func TestQEMUDiesWithMiso(t *testing.T) {
 
 	// assert
 	assert.Eventually(t, func() bool { return !running(qemu) }, 5*time.Second, 10*time.Millisecond)
+}
+
+func TestQEMUOutlivesTheThreadThatStartedIt(t *testing.T) {
+	// arrange
+	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
+	self, err := os.Executable()
+	require.NoError(t, err)
+	type start struct {
+		vm  *qemu.VM
+		err error
+	}
+	started := make(chan start)
+
+	// act
+	go func() {
+		// a goroutine that ends locked takes its thread with it
+		runtime.LockOSThread()
+
+		vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+		started <- start{vm, err}
+	}()
+	result := <-started
+	require.NoError(t, result.err)
+
+	// assert
+	assert.Never(t, func() bool {
+		select {
+		case <-result.vm.Done():
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
 }
 
 // pidIn is the process ID written to the file, or 0 while there is none.
