@@ -1,10 +1,13 @@
 package qemu
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"math/rand/v2"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // vhostVsock is the host's device on which a machine's CID is claimed.
@@ -45,6 +48,10 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	// go once QEMU runs
 	command.ExtraFiles = []*os.File{device}
 	command.Stdout = machine.Console
+
+	// QEMU says on its standard error why it cannot run a machine
+	var refusal bytes.Buffer
+	command.Stderr = &refusal
 	if err := command.Start(); err != nil {
 		return nil, err
 	}
@@ -52,7 +59,9 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	vm := &VM{cid: cid, done: make(chan struct{})}
 
 	go func() {
-		_ = command.Wait()
+		if err := command.Wait(); err != nil {
+			vm.err = fmt.Errorf("QEMU stopped: %w: %s", err, strings.TrimSpace(refusal.String()))
+		}
 
 		close(vm.done)
 	}()

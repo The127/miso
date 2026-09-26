@@ -93,3 +93,19 @@ func TestAMachinesConsoleReachesTheWriterItNames(t *testing.T) {
 	// assert
 	assert.Equal(t, "fake QEMU console\n", console.String())
 }
+
+func TestAMachineQEMUFailsToRunSaysWhy(t *testing.T) {
+	// arrange
+	t.Setenv("MISO_FAKE_QEMU", filepath.Join(t.TempDir(), "arguments"))
+	t.Setenv("MISO_FAKE_QEMU_FAIL", "Could not access KVM kernel module")
+	self, err := os.Executable()
+	require.NoError(t, err)
+
+	// act
+	vm, err := qemu.Driver{Binary: self}.Start(t.Context(), qemu.Machine{})
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.ErrorContains(t, vm.Err(), "Could not access KVM kernel module")
+}
