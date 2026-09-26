@@ -48,3 +48,22 @@ func TestACIDAnotherMachineHoldsIsPassedOver(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint32(9), cid)
 }
+
+func TestAMachineThatFindsNoFreeCIDGivesUpAfterTenTries(t *testing.T) {
+	// arrange
+	tries := 0
+	take := func(uint32) error {
+		tries++
+
+		return unix.EADDRINUSE
+	}
+	random := func() uint32 { return 7 }
+
+	// act
+	_, err := qemu.Claim(take, random)
+
+	// assert
+	assert.Equal(t, 10, tries)
+	assert.ErrorIs(t, err, unix.EADDRINUSE)
+	assert.ErrorContains(t, err, "after 10 tries")
+}
