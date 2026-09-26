@@ -19,3 +19,14 @@ func TestAReadOnlyDiskIsFoundByItsSerial(t *testing.T) {
 	assert.Equal(t, "file=/c/base.qcow2,format=qcow2,if=none,id=disk0,readonly=on", valueOf(t, args, "-drive"))
 	assert.Equal(t, "virtio-blk-pci,drive=disk0,serial=base", valueOf(t, args, "-device"))
 }
+
+func TestAWritableDiskKeepsTheGuestsFlushes(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/cache.img", Format: "raw", Serial: "miso-cache"}}}
+
+	// act
+	args := qemu.Arguments(machine)
+
+	// assert
+	assert.Equal(t, "file=/c/cache.img,format=raw,if=none,id=disk0,cache=writeback", valueOf(t, args, "-drive"))
+}
