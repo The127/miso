@@ -20,3 +20,15 @@ func TestAMachinesConsoleIsItsSerialPortOnQEMUsStandardOutput(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "stdio", valueOf(t, args, "-serial"))
 }
+
+func TestAMachineOpensNoWindow(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "none", valueOf(t, args, "-display"))
+}
