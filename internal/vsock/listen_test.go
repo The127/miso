@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"testing"
 
-	mdvsock "github.com/mdlayher/vsock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
@@ -21,7 +20,7 @@ import (
 
 // dialing is a listener on a port of this machine with a connection made
 // to it that is not accepted yet.
-func dialing(t *testing.T, port uint32) (*vsock.Listener, *mdvsock.Conn) {
+func dialing(t *testing.T, port uint32) (*vsock.Listener, io.ReadWriteCloser) {
 	t.Helper()
 	listener, err := vsock.Listen(port)
 	require.NoError(t, err)
