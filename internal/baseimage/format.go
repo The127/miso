@@ -56,13 +56,15 @@ func (c *Cache) check(digest, format string) error {
 
 	defer func() { _ = image.Close() }()
 
+	// an image shorter than the magic starts with none
 	magic := make([]byte, 4)
-	if _, err := io.ReadFull(image, magic); err != nil {
+	read, err := io.ReadFull(image, magic)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return err
 	}
 
 	// a raw image starting like qcow2 is a qcow2 image declared wrong
-	if (string(magic) == "QFI\xfb") != (format == "qcow2") {
+	if (string(magic[:read]) == "QFI\xfb") != (format == "qcow2") {
 		return ErrFormat
 	}
 
