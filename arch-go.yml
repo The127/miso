@@ -195,6 +195,17 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the builder talks to the agent through connections it is handed. It
+  # never starts a process, dials or touches the network itself
+  - package: '**.internal.builder$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.protocol$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
+        - syscall
   # the kvmtest readies the builder VM of the kvm tests. It never starts a
   # process itself, the tests start QEMU through the qemu driver
   - package: '**.internal.kvmtest$'
