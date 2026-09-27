@@ -203,6 +203,7 @@ dependenciesRules:
       internal:
         - '**.internal.protocol$'
         - '**.internal.qemu$'
+        - '**.internal.builderkernel$'
     shouldNotDependsOn:
       standard:
         - os/exec
