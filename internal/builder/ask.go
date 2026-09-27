@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -14,12 +15,16 @@ const redial = 100 * time.Millisecond
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out. It dials until the agent listens, which it does
-// only once its VM has booted.
-func Ask(dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
+// only once its VM has booted, or until the VM stops.
+func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
 	for _, request := range requests {
 		conn, err := dial()
 		for err != nil {
-			time.Sleep(redial)
+			select {
+			case <-vm.Done():
+				return fmt.Errorf("the builder VM stopped before its agent listened: %w", vm.Err())
+			case <-time.After(redial):
+			}
 
 			conn, err = dial()
 		}

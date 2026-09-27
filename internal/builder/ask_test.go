@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
 	"net"
 	"sync"
 	"testing"
@@ -28,7 +29,7 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	}
 
 	// act
-	err := builder.Ask(dial, agentName, requests, io.Discard)
+	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -46,7 +47,7 @@ func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := builder.Ask(dial, agentName, requests, &out)
+	err := builder.Ask(running{}, dial, agentName, requests, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -60,12 +61,46 @@ func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
 
 	// act
-	err := builder.Ask(booting(2, dial), agentName, requests, io.Discard)
+	err := builder.Ask(running{}, booting(2, dial), agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, requests, agent.asked)
 }
+
+func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
+	// arrange
+	reason := errors.New("QEMU stopped: exit status 1: could not open kernel")
+	dial, _ := dialling(&recording{})
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+
+	// act
+	err := builder.Ask(stopped{reason}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, reason)
+}
+
+// running is a VM that keeps running.
+type running struct{}
+
+func (running) Done() <-chan struct{} { return nil }
+
+func (running) Err() error { return nil }
+
+// stopped is a VM that has stopped for a reason.
+type stopped struct {
+	reason error
+}
+
+func (s stopped) Done() <-chan struct{} {
+	done := make(chan struct{})
+	close(done)
+
+	return done
+}
+
+func (s stopped) Err() error { return s.reason }
 
 // booting fails the first dials, the way dialling a VM fails before its
 // agent listens, and dials after that.
