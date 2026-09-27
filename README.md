@@ -7,38 +7,11 @@ discoverable disk images and the files systemd-sysupdate consumes. Every
 image is booted and checked before it leaves the build.
 
 miso builds images. What happens on the machine afterwards (applying
-updates, configuration, first boot logic) is out of scope. miso provides
-the data, you do it your way.
+updates, configuration, first boot logic) is out of scope. miso emits
+standard systemd formats and leaves the rest to whoever runs the machine.
 
-> **Status: early development.** Nothing here is usable yet.
-
-## Usage
-
-Not yet. The interface will be documented here once it exists.
-
-## Contributing
-
-Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). In
-short: commits follow plain Conventional Commits (`type: description`, no
-scopes) and must be DCO signed off (`git commit -s`). Both rules are
-enforced by git hooks.
-
-## AI-assisted contributions
-
-AI-assisted contributions need to follow these rules:
-
-- **Disclose it.** Commits with AI-generated code carry a co-author
-  trailer, e.g. `Co-Authored-By: Claude <noreply@anthropic.com>`.
-- **You are the author.** The contributor is fully responsible for
-  AI-generated code: its correctness, its license compatibility, and the
-  DCO sign-off certifying the right to submit it. "The AI wrote it" is
-  never an excuse.
-- **Review it yourself, before pushing.** Submit only code you have read,
-  understood, and could explain and defend in review as your own.
-
-## Security
-
-Please report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
+> **Status: early development.** Nothing here is usable yet. Usage will be
+> documented here once the interface exists.
 
 ## Development setup
 
@@ -65,6 +38,30 @@ After cloning, run the one-time setup. It activates the git hooks:
 ```bash
 just setup
 ```
+
+## Contributing
+
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). In
+short: commits follow plain Conventional Commits (`type: description`, no
+scopes) and must be DCO signed off (`git commit -s`). Both rules are
+enforced by git hooks.
+
+## AI-assisted contributions
+
+AI-assisted contributions need to follow these rules:
+
+- **Disclose it.** Commits with AI-generated code carry a co-author
+  trailer, e.g. `Co-Authored-By: Claude <noreply@anthropic.com>`.
+- **You are the author.** The contributor is fully responsible for
+  AI-generated code: its correctness, its license compatibility, and the
+  DCO sign-off certifying the right to submit it. "The AI wrote it" is
+  never an excuse.
+- **Review it yourself, before pushing.** Submit only code you have read,
+  understood, and could explain and defend in review as your own.
+
+## Security
+
+Please report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
 ## License
 
