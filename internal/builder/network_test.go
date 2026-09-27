@@ -12,7 +12,7 @@ import (
 
 func TestTheRunsLookForTheMACOfTheBuildersCard(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	require.NotEmpty(t, card.MAC)
@@ -21,7 +21,7 @@ func TestTheRunsLookForTheMACOfTheBuildersCard(t *testing.T) {
 
 func TestARunGetsAnIPv4AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
@@ -37,7 +37,7 @@ func TestARunGetsAnIPv4AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 
 func TestARunGoesOutThroughTheIPv4GatewayOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
@@ -50,7 +50,7 @@ func TestARunGoesOutThroughTheIPv4GatewayOfTheCardsNetwork(t *testing.T) {
 
 func TestARunResolvesThroughTheIPv4NameserverOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
@@ -63,7 +63,7 @@ func TestARunResolvesThroughTheIPv4NameserverOfTheCardsNetwork(t *testing.T) {
 
 func TestARunGetsAnIPv6AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
@@ -79,7 +79,7 @@ func TestARunGetsAnIPv6AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 
 func TestARunGoesOutThroughTheIPv6GatewayOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
@@ -92,7 +92,7 @@ func TestARunGoesOutThroughTheIPv6GatewayOfTheCardsNetwork(t *testing.T) {
 
 func TestARunResolvesThroughTheIPv6NameserverOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network()
+	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
 
 	// assert
 	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
@@ -101,4 +101,14 @@ func TestARunResolvesThroughTheIPv6NameserverOfTheCardsNetwork(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, prefix.Contains(nameserver))
 	assert.Equal(t, card.IPv6.Nameserver, network.IPv6.Nameserver)
+}
+
+func TestARunOnAHostThatResolvesOnlyOverIPv4GetsNoIPv6Nameserver(t *testing.T) {
+	// act
+	card, network := builder.Network(builder.Resolving{IPv4: true})
+
+	// assert
+	assert.NotEmpty(t, card.IPv6.Nameserver)
+	assert.Empty(t, network.IPv6.Nameserver)
+	assert.Equal(t, card.IPv4.Nameserver, network.IPv4.Nameserver)
 }
