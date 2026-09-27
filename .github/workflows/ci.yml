@@ -36,6 +36,12 @@ jobs:
           assert-install: false
           detik-install: false
           file-install: false
+      # the qemu tests claim a CID on the host's real vsock device, which the
+      # runner neither loads nor opens to its user
+      - name: open the vsock device
+        run: |
+          sudo modprobe vhost_vsock
+          sudo chmod o+rw /dev/vhost-vsock
       - run: just ci
       - name: upload coverage to codecov
         uses: codecov/codecov-action@v7
