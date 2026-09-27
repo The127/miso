@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -59,7 +58,7 @@ func planOf(command *cli.Command, bases plan.Bases) (plan.Plan, error) {
 
 	planned, err := plan.New(stages, agentName(), files, bases)
 	if err != nil {
-		return plan.Plan{}, fmt.Errorf("%s: %w", file, err)
+		return plan.Plan{}, imagefile.InFile(file, err)
 	}
 
 	return planned, nil
@@ -91,7 +90,7 @@ func parsed(file string) ([]imagefile.Stage, error) {
 
 	stages, err := imagefile.Parse(string(source))
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, imagefile.InFile(file, err)
 	}
 
 	return stages, nil

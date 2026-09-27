@@ -41,6 +41,19 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
+// InFile names the file of the line an error is at.
+func InFile(file string, err error) error {
+	var located *Error
+	if !errors.As(err, &located) {
+		return err
+	}
+
+	named := *located
+	named.File = file
+
+	return &named
+}
+
 // argumentsError is what a reader objects to, said after its keyword.
 type argumentsError struct {
 	keyword   string
