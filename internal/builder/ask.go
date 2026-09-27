@@ -40,7 +40,8 @@ func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests 
 
 		err = protocol.New(agent, conn, conn).Ask(request, out)
 		_ = conn.Close()
-		if errors.Is(err, protocol.ErrCommandFailed) {
+		// the agent answered, so the VM still runs
+		if errors.Is(err, protocol.ErrCommandFailed) || errors.Is(err, protocol.ErrAgentFailed) {
 			return err
 		}
 

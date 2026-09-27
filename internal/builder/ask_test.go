@@ -121,6 +121,20 @@ func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	assert.Less(t, time.Since(start), 500*time.Millisecond)
 }
 
+func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
+	// arrange
+	dial, _ := dialling(failing{errors.New("no space left on device")})
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	start := time.Now()
+
+	// act
+	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, protocol.ErrAgentFailed)
+	assert.Less(t, time.Since(start), 500*time.Millisecond)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 
@@ -253,4 +267,17 @@ func (e exiting) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 
 func (e exiting) Import(context.Context, protocol.Import, io.Writer) error {
 	return nil
+}
+
+// failing is an agent that fails at its own work.
+type failing struct {
+	err error
+}
+
+func (f failing) Run(context.Context, protocol.Run, io.Writer) (int, error) {
+	return 0, f.err
+}
+
+func (f failing) Import(context.Context, protocol.Import, io.Writer) error {
+	return f.err
 }
