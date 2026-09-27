@@ -1,36 +1,34 @@
-package listing
+package imagefile
 
 import (
 	"maps"
 	"slices"
 	"strings"
-
-	"github.com/The127/miso/internal/imagefile"
 )
 
-// describe is an instruction as its author wrote it, and where.
-func describe(instruction imagefile.Instruction) (int, string) {
+// Written is an instruction as its author wrote it, and where.
+func Written(instruction Instruction) (int, string) {
 	switch step := instruction.(type) {
-	case imagefile.Run:
+	case Run:
 		if step.Offline {
 			return step.Line, "RUN --network=none " + step.Command
 		}
 
 		return step.Line, "RUN " + step.Command
-	case imagefile.Env:
+	case Env:
 		return step.Line, "ENV " + step.Key + "=" + step.Value
-	case imagefile.Copy:
+	case Copy:
 		return step.Line, copyText(step)
-	case imagefile.Output:
+	case Output:
 		return step.Line, outputText(step)
-	case imagefile.Check:
+	case Check:
 		return step.Line, "CHECK " + step.Command
 	}
 
 	return 0, ""
 }
 
-func copyText(step imagefile.Copy) string {
+func copyText(step Copy) string {
 	words := []string{"COPY"}
 	if step.From != "" {
 		words = append(words, "--from="+step.From)
@@ -42,7 +40,7 @@ func copyText(step imagefile.Copy) string {
 }
 
 // outputText puts the options in one order, a map has none of its own.
-func outputText(step imagefile.Output) string {
+func outputText(step Output) string {
 	words := []string{"OUTPUT", step.Kind, step.Name}
 	for _, name := range slices.Sorted(maps.Keys(step.Options)) {
 		word := "--" + name

@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
 )
 
@@ -46,7 +47,7 @@ func (l *lines) print(format string, args ...any) {
 }
 
 func (l *lines) step(step plan.Step) {
-	line, text := describe(step.Instruction)
+	line, text := imagefile.Written(step.Instruction)
 	l.print("%4d  %s  %s", line, short(step.Key), text)
 
 	for _, file := range step.Files {
