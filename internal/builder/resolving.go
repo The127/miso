@@ -26,9 +26,12 @@ func HostResolving(conf io.Reader) Resolving {
 		}
 
 		address, err := netip.ParseAddr(named)
-		if err == nil && address.Is4() {
-			resolving.IPv4 = true
+		if err != nil {
+			continue
 		}
+
+		resolving.IPv4 = resolving.IPv4 || address.Is4()
+		resolving.IPv6 = resolving.IPv6 || address.Is6()
 	}
 
 	return resolving

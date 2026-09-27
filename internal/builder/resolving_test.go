@@ -16,3 +16,11 @@ func TestAHostWithAnIPv4NameserverResolvesOverIPv4(t *testing.T) {
 	// assert
 	assert.Equal(t, builder.Resolving{IPv4: true}, resolving)
 }
+
+func TestAHostWithAnIPv6NameserverResolvesOverIPv6(t *testing.T) {
+	// act
+	resolving := builder.HostResolving(strings.NewReader("nameserver ::1\n"))
+
+	// assert
+	assert.Equal(t, builder.Resolving{IPv6: true}, resolving)
+}
