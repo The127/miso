@@ -22,7 +22,7 @@ const settle = time.Second
 // writes goes to out. Once ctx is done the running step is cancelled.
 func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
 	for _, request := range requests {
-		conn, err := connect(vm, dial)
+		conn, err := connect(ctx, vm, dial)
 		if err != nil {
 			return err
 		}
@@ -45,8 +45,8 @@ func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), ag
 }
 
 // connect dials until the agent listens, which it does only once its VM has
-// booted, or until the VM stops.
-func connect(vm VM, dial func() (io.ReadWriteCloser, error)) (io.ReadWriteCloser, error) {
+// booted, or until the VM stops or ctx is done.
+func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error)) (io.ReadWriteCloser, error) {
 	for {
 		conn, err := dial()
 		if err == nil {
@@ -54,6 +54,8 @@ func connect(vm VM, dial func() (io.ReadWriteCloser, error)) (io.ReadWriteCloser
 		}
 
 		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		case <-vm.Done():
 			return nil, stopped(vm, "before its agent listened")
 		case <-time.After(redial):

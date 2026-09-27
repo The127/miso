@@ -145,6 +145,20 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestACancelledBuildStopsWaitingForTheAgent(t *testing.T) {
+	// arrange
+	ctx, cancel := context.WithCancel(t.Context())
+	dial, _ := dialling(&recording{})
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	time.AfterFunc(50*time.Millisecond, cancel)
+
+	// act
+	err := builder.Ask(ctx, running{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
 	dial, _ := dialling(exiting{code: 1})
