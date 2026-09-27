@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net/netip"
 	"strings"
@@ -16,7 +17,7 @@ type Resolving struct {
 
 // HostResolving is which families the host resolves names in, read from
 // its resolv.conf the way QEMU reads it.
-func HostResolving(conf io.Reader) Resolving {
+func HostResolving(conf io.Reader) (Resolving, error) {
 	var resolving Resolving
 	lines := bufio.NewScanner(conf)
 	for lines.Scan() {
@@ -45,5 +46,9 @@ func HostResolving(conf io.Reader) Resolving {
 		resolving.IPv6 = resolving.IPv6 || address.Is6()
 	}
 
-	return resolving
+	if err := lines.Err(); err != nil {
+		return Resolving{}, fmt.Errorf("read the host's resolv.conf: %w", err)
+	}
+
+	return resolving, nil
 }
