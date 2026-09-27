@@ -25,7 +25,7 @@ var patience = time.Minute
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out. Once ctx is done the running step is cancelled.
-func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
+func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []protocol.Message, out io.Writer) error {
 	booted := time.After(patience)
 	for _, request := range requests {
 		conn, err := connect(ctx, vm, dial, booted)
@@ -36,11 +36,7 @@ func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), ag
 		// once the agent listened, a step may take as long as it takes
 		booted = nil
 
-		// the agent cancels a step whose connection closes
-		closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
-		err = protocol.New(agent, conn, conn).Ask(request, out)
-		closeOnCancel()
-		_ = conn.Close()
+		err = ask(ctx, conn, agent, request, out)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -53,9 +49,20 @@ func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), ag
 	return nil
 }
 
+// ask asks the agent one request on a connection and closes it. Once ctx is
+// done the connection closes early, which cancels the step in the agent.
+func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request protocol.Message, out io.Writer) error {
+	closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	err := protocol.New(agent, conn, conn).Ask(request, out)
+	closeOnCancel()
+	_ = conn.Close()
+
+	return err
+}
+
 // connect dials until the agent listens, which it does only once its VM has
 // booted, or until the VM stops, ctx is done or the VM took too long to boot.
-func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), booted <-chan time.Time) (io.ReadWriteCloser, error) {
+func connect(ctx context.Context, vm VM, dial Dial, booted <-chan time.Time) (io.ReadWriteCloser, error) {
 	for {
 		conn, err := dial()
 		if err == nil {
