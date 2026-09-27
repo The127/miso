@@ -13,6 +13,10 @@ import (
 // listen yet.
 const redial = 100 * time.Millisecond
 
+// settle is how long Ask waits for the VM to count as stopped after a step
+// failed, so the error can say why the VM stopped.
+const settle = time.Second
+
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out. It dials until the agent listens, which it does
@@ -37,7 +41,14 @@ func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests 
 		err = protocol.New(agent, conn, conn).Ask(request, out)
 		_ = conn.Close()
 		if err != nil {
-			return err
+			// a killed QEMU breaks the connection a moment before it counts
+			// as stopped
+			select {
+			case <-vm.Done():
+				return fmt.Errorf("the builder VM stopped during a step: %w", vm.Err())
+			case <-time.After(settle):
+				return err
+			}
 		}
 	}
 

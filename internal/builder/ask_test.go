@@ -1,6 +1,7 @@
 package builder_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,6 +95,18 @@ func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.
 	assert.EqualError(t, err, "the builder VM stopped before its agent listened")
 }
 
+func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
+	// arrange
+	vm := &dying{done: make(chan struct{}), reason: errors.New("QEMU stopped: signal: killed")}
+	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
+
+	// act
+	err := builder.Ask(vm, vm.dial, agentName, requests, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, vm.reason)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 
@@ -113,6 +127,30 @@ func (s stopped) Done() <-chan struct{} {
 }
 
 func (s stopped) Err() error { return s.reason }
+
+// dying is a VM that dies while its agent works on a request. Its
+// connection breaks first and the VM counts as stopped a moment later, as
+// when QEMU is killed.
+type dying struct {
+	done   chan struct{}
+	reason error
+}
+
+func (d *dying) Done() <-chan struct{} { return d.done }
+
+func (d *dying) Err() error { return d.reason }
+
+func (d *dying) dial() (io.ReadWriteCloser, error) {
+	host, agent := net.Pipe()
+	go func() {
+		_, _ = bufio.NewReader(agent).ReadString('\n')
+		_ = agent.Close()
+		time.Sleep(50 * time.Millisecond)
+		close(d.done)
+	}()
+
+	return host, nil
+}
 
 // booting fails the first dials, the way dialling a VM fails before its
 // agent listens, and dials after that.
