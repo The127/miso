@@ -59,3 +59,11 @@ func TestTheBuilderBootsMisoAsItsAgent(t *testing.T) {
 	assert.Equal(t, "/boot/initramfs", machine.Initramfs)
 	assert.Equal(t, "console=ttyS0 panic=-1 -- agent", machine.CommandLine)
 }
+
+func TestTheBuilderHasFourGibibytesOfMemory(t *testing.T) {
+	// act
+	machine := builder.Build{}.Machine()
+
+	// assert
+	assert.Equal(t, 4096, machine.MemoryMiB)
+}

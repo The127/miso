@@ -39,7 +39,9 @@ func (b Build) Machine() qemu.Machine {
 		Initramfs: b.Boot.Initramfs,
 		// the kernel hands init what follows --, and init is miso
 		CommandLine: "console=ttyS0 panic=-1 -- agent",
-		Disks:       disks,
-		Card:        &b.Card,
+		// room for a package manager's run, the proof of concept built with it
+		MemoryMiB: 4096,
+		Disks:     disks,
+		Card:      &b.Card,
 	}
 }
