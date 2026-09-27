@@ -13,7 +13,7 @@ import (
 
 func TestTheBuildersCacheDiskIsWritableUnderTheCacheSerial(t *testing.T) {
 	// act
-	machine := builder.Machine("/cache/disk.img", nil, nil, qemu.Card{})
+	machine := builder.Machine(builder.Boot{}, "/cache/disk.img", nil, nil, qemu.Card{})
 
 	// assert
 	assert.Equal(t, []qemu.Disk{{Path: "/cache/disk.img", Format: "raw", Serial: protocol.CacheSerial}}, machine.Disks)
@@ -29,7 +29,7 @@ func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 	blob := func(digest string) string { return "/bases/" + digest }
 
 	// act
-	machine := builder.Machine("/cache/disk.img", requests, blob, qemu.Card{})
+	machine := builder.Machine(builder.Boot{}, "/cache/disk.img", requests, blob, qemu.Card{})
 
 	// assert
 	require.Len(t, machine.Disks, 2)
@@ -41,8 +41,21 @@ func TestTheBuilderHasTheCardItIsGiven(t *testing.T) {
 	card, _ := builder.Network(builder.Resolving{IPv4: true})
 
 	// act
-	machine := builder.Machine("/cache/disk.img", nil, nil, card)
+	machine := builder.Machine(builder.Boot{}, "/cache/disk.img", nil, nil, card)
 
 	// assert
 	assert.Equal(t, &card, machine.Card)
+}
+
+func TestTheBuilderBootsMisoAsItsAgent(t *testing.T) {
+	// arrange
+	boot := builder.Boot{Kernel: "/boot/vmlinuz", Initramfs: "/boot/initramfs"}
+
+	// act
+	machine := builder.Machine(boot, "/cache/disk.img", nil, nil, qemu.Card{})
+
+	// assert
+	assert.Equal(t, "/boot/vmlinuz", machine.Kernel)
+	assert.Equal(t, "/boot/initramfs", machine.Initramfs)
+	assert.Equal(t, "console=ttyS0 panic=-1 -- agent", machine.CommandLine)
 }
