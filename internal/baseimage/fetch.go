@@ -15,5 +15,12 @@ func (c *Cache) Fetch(ctx context.Context, name string) (string, error) {
 		return "", err
 	}
 
+	c.formats[digest] = source.Format
+
 	return digest, c.remember(name, digest)
+}
+
+// Format is that of the image with a digest, as its source declared it.
+func (c *Cache) Format(digest string) (string, error) {
+	return c.formats[digest], nil
 }

@@ -18,17 +18,20 @@ type Cache struct {
 	dir     string
 	blobs   *download.Store
 	sources map[string]Source
+	formats map[string]string
 }
 
-// Source is where a name comes from.
+// Source is where a name comes from and the disk format of what is there,
+// as QEMU names it.
 type Source struct {
-	URL string
+	URL    string
+	Format string
 }
 
 // Open takes the directory the images live in and where each name comes
 // from. The images themselves live in the store. It touches nothing yet.
 func Open(dir string, blobs *download.Store, sources map[string]Source) *Cache {
-	return &Cache{dir: dir, blobs: blobs, sources: sources}
+	return &Cache{dir: dir, blobs: blobs, sources: sources, formats: map[string]string{}}
 }
 
 // Digest is that of the image a name stands for, or empty for one that is

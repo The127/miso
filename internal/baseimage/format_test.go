@@ -1,0 +1,35 @@
+package baseimage_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/baseimage"
+	"github.com/The127/miso/internal/download"
+)
+
+func TestEachFetchedImageHasTheFormatItsSourceDeclares(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/a.img": "one image", "/b.qcow2": "another image"})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{
+		"a": {URL: server.URL + "/a.img", Format: "raw"},
+		"b": {URL: server.URL + "/b.qcow2", Format: "qcow2"},
+	})
+	a, err := cache.Fetch(context.Background(), "a")
+	require.NoError(t, err)
+	b, err := cache.Fetch(context.Background(), "b")
+	require.NoError(t, err)
+
+	// act
+	formatOfA, errOfA := cache.Format(a)
+	formatOfB, errOfB := cache.Format(b)
+
+	// assert
+	require.NoError(t, errOfA)
+	require.NoError(t, errOfB)
+	assert.Equal(t, "raw", formatOfA)
+	assert.Equal(t, "qcow2", formatOfB)
+}
