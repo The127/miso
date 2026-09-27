@@ -26,8 +26,11 @@ func HostResolving(conf io.Reader) Resolving {
 			continue
 		}
 
-		// QEMU reads only the word after the keyword
-		named, _, _ = strings.Cut(named, " ")
+		// QEMU reads only the word after the keyword, which ends where C's
+		// whitespace does
+		if end := strings.IndexAny(named, " \t\n\v\f\r"); end >= 0 {
+			named = named[:end]
+		}
 
 		// QEMU drops the interface after a % from any address, not only an
 		// IPv6 one

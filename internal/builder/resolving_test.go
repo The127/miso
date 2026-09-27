@@ -48,3 +48,11 @@ func TestWhatFollowsTheNameserversAddressIsIgnored(t *testing.T) {
 	// assert
 	assert.Equal(t, builder.Resolving{IPv4: true}, resolving)
 }
+
+func TestTheNameserversAddressEndsAtATab(t *testing.T) {
+	// act
+	resolving := builder.HostResolving(strings.NewReader("nameserver 1.1.1.1\t# home router\n"))
+
+	// assert
+	assert.Equal(t, builder.Resolving{IPv4: true}, resolving)
+}
