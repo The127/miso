@@ -40,6 +40,10 @@ func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests 
 
 		err = protocol.New(agent, conn, conn).Ask(request, out)
 		_ = conn.Close()
+		if errors.Is(err, protocol.ErrCommandFailed) {
+			return err
+		}
+
 		if err != nil {
 			// a killed QEMU breaks the connection a moment before it counts
 			// as stopped

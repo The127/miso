@@ -107,6 +107,20 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 	assert.ErrorIs(t, err, vm.reason)
 }
 
+func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
+	// arrange
+	dial, _ := dialling(exiting{code: 1})
+	requests := []protocol.Message{protocol.Run{Key: "step", Command: "false"}}
+	start := time.Now()
+
+	// act
+	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, protocol.ErrCommandFailed)
+	assert.Less(t, time.Since(start), 500*time.Millisecond)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 
@@ -226,4 +240,17 @@ func (s saying) Import(_ context.Context, _ protocol.Import, out io.Writer) erro
 	_, err := io.WriteString(out, s.words)
 
 	return err
+}
+
+// exiting is an agent whose commands exit with a code.
+type exiting struct {
+	code int
+}
+
+func (e exiting) Run(context.Context, protocol.Run, io.Writer) (int, error) {
+	return e.code, nil
+}
+
+func (e exiting) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
 }
