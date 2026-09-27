@@ -3,6 +3,7 @@ package builder_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -50,6 +51,34 @@ func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "unpacking\nunpacking\n", out.String())
+}
+
+func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
+	// arrange
+	agent := &recording{}
+	dial, _ := dialling(agent)
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+
+	// act
+	err := builder.Ask(booting(2, dial), agentName, requests, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, requests, agent.asked)
+}
+
+// booting fails the first dials, the way dialling a VM fails before its
+// agent listens, and dials after that.
+func booting(fails int, dial func() (io.ReadWriteCloser, error)) func() (io.ReadWriteCloser, error) {
+	return func() (io.ReadWriteCloser, error) {
+		if fails > 0 {
+			fails--
+
+			return nil, errors.New("connection reset by peer")
+		}
+
+		return dial()
+	}
 }
 
 // dialling hands out connections to an agent that does its work with the
