@@ -139,6 +139,19 @@ func TestAPlannedStageKeepsItsNameAndItsBase(t *testing.T) {
 	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
 }
 
+func TestAPlannedStageKeepsTheLineOfItsFrom(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid AS build\nRUN make\n\nFROM build\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	assert.Equal(t, 4, planned.Stages[1].Line)
+}
+
 func TestAPlanKeepsTheAgentItWasKeyedWith(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch\n")

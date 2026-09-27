@@ -13,6 +13,8 @@ type Plan struct {
 
 // Stage is a stage of a plan.
 type Stage struct {
+	// the line of its FROM
+	Line       int
 	Name       string
 	Base       string
 	BaseDigest string
