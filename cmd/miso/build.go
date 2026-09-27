@@ -12,6 +12,7 @@ import (
 	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
+	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsock"
@@ -75,7 +76,9 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), func(vm *qemu.VM) error {
 		dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }
 
-		return builder.Ask(ctx, vm, dial, agentName(), requests, command.Root().Writer)
+		_, file := located(command)
+
+		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, command.Root().Writer))
 	})
 }
 
