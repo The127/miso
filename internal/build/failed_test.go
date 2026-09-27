@@ -32,3 +32,22 @@ func TestAFailedRunNamesItsLineAndHowItWasWritten(t *testing.T) {
 	assert.EqualError(t, failed, "line 2: RUN false: command failed")
 	assert.ErrorIs(t, failed, protocol.ErrCommandFailed)
 }
+
+func TestAFailedImportNamesTheLineOfItsFrom(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Line:       3,
+		Base:       "debian:13",
+		BaseDigest: "sha256:image",
+		BaseKey:    "base",
+	}}}
+	requests, err := build.Requests(planned, network)
+	require.NoError(t, err)
+	require.Len(t, requests, 1)
+
+	// act
+	failed := requests[0].Failed(protocol.ErrAgentFailed)
+
+	// assert
+	assert.EqualError(t, failed, "line 3: FROM debian:13: agent failed")
+}

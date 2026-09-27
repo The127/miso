@@ -37,7 +37,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 		_, seen := roots[stage.BaseKey]
 		if !seen && stage.BaseDigest != "" {
 			roots[stage.BaseKey] = rootfs{layers: []string{stage.BaseKey}}
-			requests = append(requests, Request{Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
+			requests = append(requests, Request{Line: stage.Line, Written: "FROM " + stage.Base, Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
 		}
 
 		for _, step := range stage.Steps {
