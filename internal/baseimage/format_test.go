@@ -155,3 +155,14 @@ func TestAQcow2ImageThatNamesABackingFileIsNotFetched(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrExternalFile)
 }
+
+func TestAQcow2ImageWhoseHeaderEndsEarlyIsNotFetched(t *testing.T) {
+	// arrange
+	cache := declaring(t, qcow2()[:10], "qcow2")
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrFormat)
+}

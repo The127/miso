@@ -44,7 +44,7 @@ func (c *Cache) check(digest, format string) error {
 func fits(start, format string) bool {
 	switch format {
 	case "qcow2":
-		return strings.HasPrefix(start, qcow2Magic)
+		return len(start) == qcow2Header && strings.HasPrefix(start, qcow2Magic)
 	case "raw":
 		// a raw image starting like qcow2 is a qcow2 image declared wrong
 		return start != "" && !strings.HasPrefix(start, qcow2Magic)
