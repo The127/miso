@@ -1,6 +1,7 @@
 package builder_test
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net"
@@ -26,12 +27,29 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	}
 
 	// act
-	err := builder.Ask(dial, agentName, requests)
+	err := builder.Ask(dial, agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, requests, agent.asked)
 	assert.Equal(t, 2, *dials)
+}
+
+func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
+	// arrange
+	dial, _ := dialling(saying{"unpacking\n"})
+	requests := []protocol.Message{
+		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
+		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
+	}
+	var out bytes.Buffer
+
+	// act
+	err := builder.Ask(dial, agentName, requests, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "unpacking\nunpacking\n", out.String())
 }
 
 // dialling hands out connections to an agent that does its work with the
@@ -76,4 +94,22 @@ func (r *recording) note(request protocol.Message) {
 	defer r.mu.Unlock()
 
 	r.asked = append(r.asked, request)
+}
+
+// saying is an agent whose work succeeds and writes the same words each
+// time.
+type saying struct {
+	words string
+}
+
+func (s saying) Run(_ context.Context, _ protocol.Run, out io.Writer) (int, error) {
+	_, err := io.WriteString(out, s.words)
+
+	return 0, err
+}
+
+func (s saying) Import(_ context.Context, _ protocol.Import, out io.Writer) error {
+	_, err := io.WriteString(out, s.words)
+
+	return err
 }
