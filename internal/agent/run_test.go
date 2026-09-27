@@ -55,6 +55,28 @@ func TestWhatARunWritesIsTheLayerOfItsKey(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(layers, "base", "x"))
 }
 
+func TestARunWhoseLayerIsThereAlreadyDoesNotRunAgain(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	store := layer.Open(layers)
+	for _, key := range []string{"bare", "run"} {
+		work, err := store.Begin(key)
+		require.NoError(t, err)
+		require.NoError(t, work.Finish())
+	}
+
+	worker := agent.New(layers, t.TempDir())
+	// bare has no shell, so a run on it would fail
+	run := protocol.Run{Key: "run", Layers: []string{"bare"}, Command: "true"}
+
+	// act
+	code, err := worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+}
+
 func TestARunOnARootWithoutAShellFailsNamingIt(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
