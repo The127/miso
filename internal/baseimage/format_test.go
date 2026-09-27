@@ -63,15 +63,24 @@ func TestADigestNoFetchBroughtHasNoFormat(t *testing.T) {
 	assert.ErrorIs(t, err, baseimage.ErrNotFetched)
 }
 
-// qcow2 is the start of an image in qcow2, all the header a check reads.
+// declaring is a cache that knows debian:sid as an image of some bytes, whose
+// source declares a format.
+func declaring(t *testing.T, image, format string) *baseimage.Cache {
+	t.Helper()
+
+	server := serving(t, map[string]string{"/image": image})
+
+	return baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/image", Format: format}})
+}
+
+// qcow2 is the start of an image in qcow2, more than its magic.
 func qcow2() string {
 	return "QFI\xfb" + strings.Repeat("\x00", 12)
 }
 
 func TestAnImageThatIsNotTheQcow2ItsSourceDeclaresIsNotFetched(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "qcow2"}})
+	cache := declaring(t, "the image", "qcow2")
 
 	// act
 	_, err := cache.Fetch(context.Background(), "debian:sid")
@@ -85,8 +94,7 @@ func TestAnImageThatIsNotTheQcow2ItsSourceDeclaresIsNotFetched(t *testing.T) {
 
 func TestAnImageDeclaredRawThatStartsLikeQcow2IsNotFetched(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/sid.img": qcow2()})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.img", Format: "raw"}})
+	cache := declaring(t, qcow2(), "raw")
 
 	// act
 	_, err := cache.Fetch(context.Background(), "debian:sid")
@@ -97,8 +105,7 @@ func TestAnImageDeclaredRawThatStartsLikeQcow2IsNotFetched(t *testing.T) {
 
 func TestAnImageOfAFormatMisoCannotCheckIsNotFetched(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/sid.vmdk": "the image"})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.vmdk", Format: "vmdk"}})
+	cache := declaring(t, "the image", "vmdk")
 
 	// act
 	_, err := cache.Fetch(context.Background(), "debian:sid")
@@ -109,8 +116,7 @@ func TestAnImageOfAFormatMisoCannotCheckIsNotFetched(t *testing.T) {
 
 func TestAnImageDeclaredQcow2ThatEndsBeforeItsMagicIsNotFetched(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/sid.qcow2": "QF"})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "qcow2"}})
+	cache := declaring(t, "QF", "qcow2")
 
 	// act
 	_, err := cache.Fetch(context.Background(), "debian:sid")
@@ -121,8 +127,7 @@ func TestAnImageDeclaredQcow2ThatEndsBeforeItsMagicIsNotFetched(t *testing.T) {
 
 func TestAnEmptyImageIsNotFetched(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/sid.img": ""})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.img", Format: "raw"}})
+	cache := declaring(t, "", "raw")
 
 	// act
 	_, err := cache.Fetch(context.Background(), "debian:sid")
