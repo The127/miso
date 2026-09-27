@@ -118,3 +118,15 @@ func TestAnImageDeclaredQcow2ThatEndsBeforeItsMagicIsNotFetched(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrFormat)
 }
+
+func TestAnEmptyImageIsNotFetched(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/sid.img": ""})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.img", Format: "raw"}})
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrFormat)
+}

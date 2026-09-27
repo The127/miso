@@ -59,6 +59,10 @@ func (c *Cache) check(digest, format string) error {
 	// an image shorter than the magic starts with none
 	magic := make([]byte, 4)
 	read, err := io.ReadFull(image, magic)
+	if errors.Is(err, io.EOF) {
+		return ErrFormat
+	}
+
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return err
 	}
