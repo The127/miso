@@ -195,12 +195,14 @@ dependenciesRules:
       standard:
         - os/exec
         - net
-  # the builder talks to the agent through connections it is handed. It
-  # never starts a process, dials or touches the network itself
+  # the builder talks to the agent through connections it is handed and
+  # describes its VM to the qemu driver. It never starts a process, dials
+  # or touches the network itself
   - package: '**.internal.builder$'
     shouldOnlyDependsOn:
       internal:
         - '**.internal.protocol$'
+        - '**.internal.qemu$'
     shouldNotDependsOn:
       standard:
         - os/exec
