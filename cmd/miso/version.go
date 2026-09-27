@@ -32,3 +32,10 @@ func built() string {
 
 	return version.Of(info)
 }
+
+// agentName is how this miso names itself to its agent, and the agent to
+// the host. The two must match, because a key names a layer as one version
+// of miso builds it.
+func agentName() string {
+	return "miso " + built()
+}

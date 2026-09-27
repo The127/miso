@@ -88,7 +88,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), func(vm *qemu.VM) error {
 		dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }
 
-		return builder.Ask(ctx, vm, dial, "miso "+built(), requests, command.Root().Writer)
+		return builder.Ask(ctx, vm, dial, agentName(), requests, command.Root().Writer)
 	})
 }
 
@@ -134,7 +134,7 @@ func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, 
 
 	defer func() { _ = files.Close() }()
 
-	planning, err := plan.New(stages, "miso "+built(), files, bases)
+	planning, err := plan.New(stages, agentName(), files, bases)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", file, err)
 	}
@@ -146,7 +146,7 @@ func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, 
 			}
 		}
 
-		planning, err = plan.New(stages, "miso "+built(), files, bases)
+		planning, err = plan.New(stages, agentName(), files, bases)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", file, err)
 		}

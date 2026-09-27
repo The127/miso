@@ -50,7 +50,7 @@ func listPlan(_ context.Context, command *cli.Command) error {
 	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
 	bases := baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known)
 
-	planned, err := plan.New(stages, "miso "+built(), files, bases)
+	planned, err := plan.New(stages, agentName(), files, bases)
 	if err != nil {
 		return fmt.Errorf("%s: %w", file, err)
 	}
