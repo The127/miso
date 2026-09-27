@@ -19,9 +19,9 @@ var ErrNoTable = errors.New("no GPT")
 // ErrNoRoot is a disk without a root partition.
 var ErrNoRoot = errors.New("no root partition")
 
-// rootX86_64 is the partition type of an x86-64 root file system in the
+// rootx8664 is the partition type of an x86-64 root file system in the
 // order its bytes are on disk.
-var rootX86_64 = []byte{
+var rootx8664 = []byte{
 	0xe3, 0xbc, 0x68, 0x4f,
 	0xcd, 0xe8,
 	0xb1, 0x4d,
@@ -64,7 +64,7 @@ func Root(r io.ReaderAt) (Partition, error) {
 			return Partition{}, err
 		}
 
-		if bytes.Equal(entry[:16], rootX86_64) {
+		if bytes.Equal(entry[:16], rootx8664) {
 			first, err := lba(entry[32:])
 			if err != nil {
 				return Partition{}, err

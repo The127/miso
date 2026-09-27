@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	esp        = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
-	rootX86_64 = "4f68bce3-e8cd-4db1-96e7-fbcaf984b709"
+	esp       = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+	rootx8664 = "4f68bce3-e8cd-4db1-96e7-fbcaf984b709"
 )
 
 func TestTheRootPartitionIsFoundByItsType(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: esp, first: 34, last: 99}, entry{kind: rootX86_64, first: 100, last: 199})
+	image := gpt(t, entry{kind: esp, first: 34, last: 99}, entry{kind: rootx8664, first: 100, last: 199})
 
 	// act
 	root, err := disk.Root(bytes.NewReader(image))
@@ -32,7 +32,7 @@ func TestTheRootPartitionIsFoundByItsType(t *testing.T) {
 
 func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: rootX86_64, first: 1 << 62, last: 1<<62 + 99})
+	image := gpt(t, entry{kind: rootx8664, first: 1 << 62, last: 1<<62 + 99})
 
 	// act
 	_, err := disk.Root(bytes.NewReader(image))
@@ -43,7 +43,7 @@ func TestAPartitionPastAnyDiskIsABrokenTable(t *testing.T) {
 
 func TestAPartitionEndingPastAnyDiskIsABrokenTable(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 1 << 62})
+	image := gpt(t, entry{kind: rootx8664, first: 100, last: 1 << 62})
 
 	// act
 	_, err := disk.Root(bytes.NewReader(image))
@@ -54,7 +54,7 @@ func TestAPartitionEndingPastAnyDiskIsABrokenTable(t *testing.T) {
 
 func TestEntriesPastAnyDiskAreABrokenTable(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 199})
+	image := gpt(t, entry{kind: rootx8664, first: 100, last: 199})
 	binary.LittleEndian.PutUint64(image[512+72:], 1<<62)
 
 	// act
@@ -66,7 +66,7 @@ func TestEntriesPastAnyDiskAreABrokenTable(t *testing.T) {
 
 func TestAnEntryTooSmallForAPartitionIsABrokenTable(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: rootX86_64, first: 100, last: 199})
+	image := gpt(t, entry{kind: rootx8664, first: 100, last: 199})
 	binary.LittleEndian.PutUint32(image[512+84:], 0)
 
 	// act
@@ -78,7 +78,7 @@ func TestAnEntryTooSmallForAPartitionIsABrokenTable(t *testing.T) {
 
 func TestAPartitionThatEndsBeforeItStartsIsABrokenTable(t *testing.T) {
 	// arrange
-	image := gpt(t, entry{kind: rootX86_64, first: 199, last: 100})
+	image := gpt(t, entry{kind: rootx8664, first: 199, last: 100})
 
 	// act
 	_, err := disk.Root(bytes.NewReader(image))
