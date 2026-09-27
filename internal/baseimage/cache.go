@@ -18,7 +18,6 @@ type Cache struct {
 	dir     string
 	blobs   *download.Store
 	sources map[string]Source
-	formats map[string]string
 }
 
 // Source is where a name comes from and the disk format of what is there,
@@ -31,7 +30,7 @@ type Source struct {
 // Open takes the directory the images live in and where each name comes
 // from. The images themselves live in the store. It touches nothing yet.
 func Open(dir string, blobs *download.Store, sources map[string]Source) *Cache {
-	return &Cache{dir: dir, blobs: blobs, sources: sources, formats: map[string]string{}}
+	return &Cache{dir: dir, blobs: blobs, sources: sources}
 }
 
 // Digest is that of the image a name stands for, or empty for one that is

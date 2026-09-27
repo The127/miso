@@ -33,3 +33,19 @@ func TestEachFetchedImageHasTheFormatItsSourceDeclares(t *testing.T) {
 	assert.Equal(t, "raw", formatOfA)
 	assert.Equal(t, "qcow2", formatOfB)
 }
+
+func TestAFetchedImagesFormatIsKnownToACacheOpenedLaterOnTheSameDirectory(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/sid.img": "the image"})
+	sources := map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.img", Format: "raw"}}
+	dir := t.TempDir()
+	digest, err := baseimage.Open(dir, download.Open(dir, server.Client()), sources).Fetch(context.Background(), "debian:sid")
+	require.NoError(t, err)
+
+	// act
+	format, err := baseimage.Open(dir, download.Open(dir, server.Client()), sources).Format(digest)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "raw", format)
+}
