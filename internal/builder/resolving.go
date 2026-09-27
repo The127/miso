@@ -25,6 +25,10 @@ func HostResolving(conf io.Reader) Resolving {
 			continue
 		}
 
+		// QEMU drops the interface after a % from any address, not only an
+		// IPv6 one
+		named, _, _ = strings.Cut(named, "%")
+
 		address, err := netip.ParseAddr(named)
 		if err != nil {
 			continue
