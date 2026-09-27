@@ -1,14 +1,23 @@
 package baseimage
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+// ErrNotFetched is a digest of no image this cache fetched.
+var ErrNotFetched = errors.New("no image fetched with that digest")
+
 // Format is that of the image with a digest, as its source declared it.
 func (c *Cache) Format(digest string) (string, error) {
 	format, err := os.ReadFile(c.formatOf(digest))
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ErrNotFetched
+	}
+
 	if err != nil {
 		return "", err
 	}

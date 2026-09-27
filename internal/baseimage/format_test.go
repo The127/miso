@@ -2,6 +2,8 @@ package baseimage_test
 
 import (
 	"context"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,4 +50,15 @@ func TestAFetchedImagesFormatIsKnownToACacheOpenedLaterOnTheSameDirectory(t *tes
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "raw", format)
+}
+
+func TestADigestNoFetchBroughtHasNoFormat(t *testing.T) {
+	// arrange
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), http.DefaultClient), map[string]baseimage.Source{})
+
+	// act
+	_, err := cache.Format("sha256:" + strings.Repeat("0", 64))
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrNotFetched)
 }
