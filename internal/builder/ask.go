@@ -43,7 +43,7 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 		}
 
 		if err != nil {
-			return failed(vm, err)
+			return request.Failed(failed(vm, err))
 		}
 	}
 

@@ -108,13 +108,13 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 func TestAVMThatDiesDuringAStepWithoutAReasonSaysOnlyThat(t *testing.T) {
 	// arrange
 	vm := &dying{done: make(chan struct{})}
-	requests := requested(protocol.Run{Key: "step", Command: "true"})
+	requests := []build.Request{{Line: 2, Written: "RUN true", Message: protocol.Run{Key: "step", Command: "true"}}}
 
 	// act
 	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
 
 	// assert
-	assert.EqualError(t, err, "the builder VM stopped during a step")
+	assert.EqualError(t, err, "line 2: RUN true: the builder VM stopped during a step")
 }
 
 func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
@@ -196,6 +196,18 @@ func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// assert
 	require.ErrorIs(t, err, protocol.ErrCommandFailed)
 	assert.Less(t, time.Since(start), 500*time.Millisecond)
+}
+
+func TestAFailedStepIsNamedAfterItsLineOfTheBuildFile(t *testing.T) {
+	// arrange
+	dial := dialling(exiting{code: 1})
+	requests := []build.Request{{Line: 2, Written: "RUN false", Message: protocol.Run{Key: "step", Command: "false"}}}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "line 2: RUN false: command failed: exit code 1")
 }
 
 func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
