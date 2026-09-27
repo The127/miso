@@ -89,3 +89,16 @@ func TestARunGoesOutThroughTheIPv6GatewayOfTheCardsNetwork(t *testing.T) {
 	assert.True(t, prefix.Contains(gateway))
 	assert.Equal(t, card.IPv6.Gateway, network.IPv6.Gateway)
 }
+
+func TestARunResolvesThroughTheIPv6NameserverOfTheCardsNetwork(t *testing.T) {
+	// act
+	card, network := builder.Network()
+
+	// assert
+	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
+	require.NoError(t, err)
+	nameserver, err := netip.ParseAddr(card.IPv6.Nameserver)
+	require.NoError(t, err)
+	assert.True(t, prefix.Contains(nameserver))
+	assert.Equal(t, card.IPv6.Nameserver, network.IPv6.Nameserver)
+}

@@ -14,12 +14,12 @@ func Network() (qemu.Card, protocol.Network) {
 	card := qemu.Card{
 		MAC:  mac,
 		IPv4: qemu.Family{Prefix: "10.0.2.0/24", Gateway: "10.0.2.2", Nameserver: "10.0.2.3"},
-		IPv6: qemu.Family{Prefix: "fd6d:6973:6f00::/64", Gateway: "fd6d:6973:6f00::2"},
+		IPv6: qemu.Family{Prefix: "fd6d:6973:6f00::/64", Gateway: "fd6d:6973:6f00::2", Nameserver: "fd6d:6973:6f00::3"},
 	}
 	network := protocol.Network{
 		Card: mac,
 		IPv4: protocol.Family{Address: "10.0.2.15/24", Gateway: "10.0.2.2", Nameserver: "10.0.2.3"},
-		IPv6: protocol.Family{Address: "fd6d:6973:6f00::15/64", Gateway: "fd6d:6973:6f00::2"},
+		IPv6: protocol.Family{Address: "fd6d:6973:6f00::15/64", Gateway: "fd6d:6973:6f00::2", Nameserver: "fd6d:6973:6f00::3"},
 	}
 
 	return card, network
