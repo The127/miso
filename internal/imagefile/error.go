@@ -24,11 +24,16 @@ var (
 
 // Error is a problem in a build file, at a line.
 type Error struct {
+	File string
 	Line int
 	Err  error
 }
 
 func (e *Error) Error() string {
+	if e.File != "" {
+		return fmt.Sprintf("%s:%d: %v", e.File, e.Line, e.Err)
+	}
+
 	return fmt.Sprintf("line %d: %v", e.Line, e.Err)
 }
 
