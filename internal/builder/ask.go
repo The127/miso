@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"errors"
 	"io"
 	"time"
@@ -18,16 +19,23 @@ const settle = time.Second
 
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
-// writes goes to out.
-func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
+// writes goes to out. Once ctx is done the running step is cancelled.
+func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
 	for _, request := range requests {
 		conn, err := connect(vm, dial)
 		if err != nil {
 			return err
 		}
 
+		// the agent cancels a step whose connection closes
+		closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
 		err = protocol.New(agent, conn, conn).Ask(request, out)
+		closeOnCancel()
 		_ = conn.Close()
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		if err != nil {
 			return failed(vm, err)
 		}

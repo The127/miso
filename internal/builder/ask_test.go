@@ -31,7 +31,7 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	}
 
 	// act
-	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := builder.Ask(running{}, dial, agentName, requests, &out)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
 
 	// act
-	err := builder.Ask(running{}, booting(2, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, booting(2, dial), agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
 	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
 
 	// act
-	err := builder.Ask(stopped{reason}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{reason}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, reason)
@@ -89,7 +89,7 @@ func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.
 	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
 
 	// act
-	err := builder.Ask(stopped{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "the builder VM stopped before its agent listened")
@@ -101,7 +101,7 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
 
 	// act
-	err := builder.Ask(vm, vm.dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, vm.reason)
@@ -113,10 +113,36 @@ func TestAVMThatDiesDuringAStepWithoutAReasonSaysOnlyThat(t *testing.T) {
 	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
 
 	// act
-	err := builder.Ask(vm, vm.dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "the builder VM stopped during a step")
+}
+
+func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
+	// arrange
+	ctx, cancel := context.WithCancel(t.Context())
+	agent := waiting{started: make(chan struct{}), cancelled: make(chan struct{})}
+	dial, _ := dialling(agent)
+	requests := []protocol.Message{protocol.Run{Key: "step", Command: "sleep infinity"}}
+	go func() {
+		<-agent.started
+		cancel()
+	}()
+
+	// act
+	err := builder.Ask(ctx, running{}, dial, agentName, requests, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Eventually(t, func() bool {
+		select {
+		case <-agent.cancelled:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
 }
 
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
@@ -126,7 +152,7 @@ func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	start := time.Now()
 
 	// act
-	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, protocol.ErrCommandFailed)
@@ -140,7 +166,7 @@ func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	start := time.Now()
 
 	// act
-	err := builder.Ask(running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, protocol.ErrAgentFailed)
@@ -292,4 +318,22 @@ func (f failing) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 
 func (f failing) Import(context.Context, protocol.Import, io.Writer) error {
 	return f.err
+}
+
+// waiting is an agent whose run lasts until it is cancelled.
+type waiting struct {
+	started   chan struct{}
+	cancelled chan struct{}
+}
+
+func (w waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, error) {
+	close(w.started)
+	<-ctx.Done()
+	close(w.cancelled)
+
+	return 0, ctx.Err()
+}
+
+func (w waiting) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
 }
