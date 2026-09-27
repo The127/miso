@@ -37,17 +37,24 @@ func (c *Cache) check(digest, format string) error {
 	}
 
 	// QEMU would open the host's file the downloaded image names
-	if format == "qcow2" && binary.BigEndian.Uint64([]byte(head[8:16])) != 0 {
-		return ErrExternalFile
-	}
-
-	// a version 2 header ends before the features, what follows is not one
-	version := binary.BigEndian.Uint32([]byte(head[4:8]))
-	if format == "qcow2" && version >= 3 && binary.BigEndian.Uint64([]byte(head[72:80]))&qcow2DataFile != 0 {
+	if format == "qcow2" && namesOutside(head) {
 		return ErrExternalFile
 	}
 
 	return nil
+}
+
+// namesOutside tells whether a qcow2 header names a backing file or a file
+// its data lives in.
+func namesOutside(head string) bool {
+	if binary.BigEndian.Uint64([]byte(head[8:16])) != 0 {
+		return true
+	}
+
+	// a version 2 header ends before the features, what follows is not one
+	version := binary.BigEndian.Uint32([]byte(head[4:8]))
+
+	return version >= 3 && binary.BigEndian.Uint64([]byte(head[72:80]))&qcow2DataFile != 0
 }
 
 // fits tells whether an image starting with some bytes can be in a format.
