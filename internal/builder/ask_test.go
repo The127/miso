@@ -81,6 +81,18 @@ func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
 	assert.ErrorIs(t, err, reason)
 }
 
+func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.T) {
+	// arrange
+	dial, _ := dialling(&recording{})
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+
+	// act
+	err := builder.Ask(stopped{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "the builder VM stopped before its agent listened")
+}
+
 // running is a VM that keeps running.
 type running struct{}
 
