@@ -6,13 +6,19 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v3"
+
+	"github.com/The127/miso/internal/sandbox"
 )
 
 func main() {
+	// the agent starts itself again as the helper of each run, which never
+	// returns
+	sandbox.Helper()
+
 	miso := &cli.Command{
 		Name:     "miso",
 		Usage:    "build systemd-based operating systems from a build file",
-		Commands: []*cli.Command{planCommand, versionCommand, agentCommand},
+		Commands: []*cli.Command{planCommand, buildCommand, versionCommand, agentCommand},
 	}
 
 	if err := miso.Run(context.Background(), os.Args); err != nil {
