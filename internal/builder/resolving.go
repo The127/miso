@@ -20,8 +20,9 @@ func HostResolving(conf io.Reader) Resolving {
 	var resolving Resolving
 	lines := bufio.NewScanner(conf)
 	for lines.Scan() {
-		named, found := strings.CutPrefix(lines.Text(), "nameserver ")
-		if !found {
+		after, found := strings.CutPrefix(lines.Text(), "nameserver")
+		named := strings.TrimLeft(after, " \t")
+		if !found || named == after {
 			continue
 		}
 

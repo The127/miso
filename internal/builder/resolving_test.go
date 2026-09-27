@@ -32,3 +32,11 @@ func TestANameserverNamedWithAnInterfaceCountsAsItsAddress(t *testing.T) {
 	// assert
 	assert.Equal(t, builder.Resolving{IPv4: true}, resolving)
 }
+
+func TestANameserverAfterATabCounts(t *testing.T) {
+	// act
+	resolving := builder.HostResolving(strings.NewReader("nameserver\t1.1.1.1\n"))
+
+	// assert
+	assert.Equal(t, builder.Resolving{IPv4: true}, resolving)
+}
