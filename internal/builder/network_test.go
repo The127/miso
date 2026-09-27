@@ -112,3 +112,13 @@ func TestARunOnAHostThatResolvesOnlyOverIPv4GetsNoIPv6Nameserver(t *testing.T) {
 	assert.Empty(t, network.IPv6.Nameserver)
 	assert.Equal(t, card.IPv4.Nameserver, network.IPv4.Nameserver)
 }
+
+func TestARunOnAHostThatResolvesOnlyOverIPv6GetsNoIPv4Nameserver(t *testing.T) {
+	// act
+	card, network := builder.Network(builder.Resolving{IPv6: true})
+
+	// assert
+	assert.NotEmpty(t, card.IPv4.Nameserver)
+	assert.Empty(t, network.IPv4.Nameserver)
+	assert.Equal(t, card.IPv6.Nameserver, network.IPv6.Nameserver)
+}

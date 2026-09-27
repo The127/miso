@@ -24,7 +24,7 @@ func Network(resolving Resolving) (qemu.Card, protocol.Network) {
 	card := qemu.Card{MAC: mac, IPv4: ipv4, IPv6: ipv6}
 	network := protocol.Network{
 		Card: mac,
-		IPv4: run(ipv4, "10.0.2.15/24", true),
+		IPv4: run(ipv4, "10.0.2.15/24", resolving.IPv4),
 		IPv6: run(ipv6, "fd6d:6973:6f00::15/64", resolving.IPv6),
 	}
 
