@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"math"
 	"net"
 	"sync"
 	"testing"
@@ -24,7 +23,7 @@ const agentName = "miso 1.2.0"
 func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	// arrange
 	agent := &recording{}
-	dial, dials := dialling(agent)
+	dial, dials := counted(dialling(agent))
 	requests := []protocol.Message{
 		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
@@ -41,7 +40,7 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 
 func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	// arrange
-	dial, _ := dialling(saying{"unpacking\n"})
+	dial := dialling(saying{"unpacking\n"})
 	requests := []protocol.Message{
 		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
@@ -59,8 +58,8 @@ func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 	// arrange
 	agent := &recording{}
-	dial, _ := dialling(agent)
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	dial := dialling(agent)
+	requests := oneImport()
 
 	// act
 	err := builder.Ask(t.Context(), running{}, booting(2, dial), agentName, requests, io.Discard)
@@ -73,11 +72,10 @@ func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
 	// arrange
 	reason := errors.New("QEMU stopped: exit status 1: could not open kernel")
-	dial, _ := dialling(&recording{})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), stopped{reason}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{reason}, unreachable, agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, reason)
@@ -85,11 +83,10 @@ func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
 
 func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.T) {
 	// arrange
-	dial, _ := dialling(&recording{})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), stopped{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{}, unreachable, agentName, requests, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "the builder VM stopped before its agent listened")
@@ -123,7 +120,7 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 	// arrange
 	ctx, cancel := context.WithCancel(t.Context())
 	agent := waiting{started: make(chan struct{}), cancelled: make(chan struct{})}
-	dial, _ := dialling(agent)
+	dial := dialling(agent)
 	requests := []protocol.Message{protocol.Run{Key: "step", Command: "sleep infinity"}}
 	go func() {
 		<-agent.started
@@ -148,12 +145,11 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 func TestACancelledBuildStopsWaitingForTheAgent(t *testing.T) {
 	// arrange
 	ctx, cancel := context.WithCancel(t.Context())
-	dial, _ := dialling(&recording{})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	requests := oneImport()
 	time.AfterFunc(50*time.Millisecond, cancel)
 
 	// act
-	err := builder.Ask(ctx, running{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(ctx, running{}, unreachable, agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
@@ -163,11 +159,10 @@ func TestACancelledBuildWhoseVMWasStoppedByTheCancelSaysCancelled(t *testing.T) 
 	// arrange
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	dial, _ := dialling(&recording{})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	requests := oneImport()
 
 	// act
-	err := builder.Ask(ctx, stopped{errors.New("QEMU stopped: signal: killed")}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(ctx, stopped{errors.New("QEMU stopped: signal: killed")}, unreachable, agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
@@ -176,11 +171,10 @@ func TestACancelledBuildWhoseVMWasStoppedByTheCancelSaysCancelled(t *testing.T) 
 func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
 	// arrange
 	builder.Patience(t, 100*time.Millisecond)
-	dial, _ := dialling(&recording{})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), running{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, unreachable, agentName, requests, io.Discard)
 
 	// assert
 	assert.ErrorContains(t, err, "the agent did not listen within 100ms")
@@ -188,7 +182,7 @@ func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
 
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
-	dial, _ := dialling(exiting{code: 1})
+	dial := dialling(exiting{code: 1})
 	requests := []protocol.Message{protocol.Run{Key: "step", Command: "false"}}
 	start := time.Now()
 
@@ -202,8 +196,8 @@ func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 
 func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
-	dial, _ := dialling(failing{errors.New("no space left on device")})
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+	dial := dialling(failing{errors.New("no space left on device")})
+	requests := oneImport()
 	start := time.Now()
 
 	// act
@@ -259,14 +253,19 @@ func (d *dying) dial() (io.ReadWriteCloser, error) {
 	return host, nil
 }
 
+// unreachable dials an agent that never listens.
+func unreachable() (io.ReadWriteCloser, error) {
+	return nil, errors.New("connection reset by peer")
+}
+
 // booting fails the first dials, the way dialling a VM fails before its
 // agent listens, and dials after that.
-func booting(fails int, dial func() (io.ReadWriteCloser, error)) func() (io.ReadWriteCloser, error) {
+func booting(fails int, dial builder.Dial) builder.Dial {
 	return func() (io.ReadWriteCloser, error) {
 		if fails > 0 {
 			fails--
 
-			return nil, errors.New("connection reset by peer")
+			return unreachable()
 		}
 
 		return dial()
@@ -274,12 +273,9 @@ func booting(fails int, dial func() (io.ReadWriteCloser, error)) func() (io.Read
 }
 
 // dialling hands out connections to an agent that does its work with the
-// runner, one request per connection as the real one answers, and counts
-// them.
-func dialling(runner protocol.Runner) (func() (io.ReadWriteCloser, error), *int) {
-	dials := 0
-	dial := func() (io.ReadWriteCloser, error) {
-		dials++
+// runner, one request per connection as the real one answers.
+func dialling(runner protocol.Runner) builder.Dial {
+	return func() (io.ReadWriteCloser, error) {
 		host, agent := net.Pipe()
 		go func() {
 			_ = protocol.New(agentName, agent, agent).Serve(runner)
@@ -288,8 +284,21 @@ func dialling(runner protocol.Runner) (func() (io.ReadWriteCloser, error), *int)
 
 		return host, nil
 	}
+}
 
-	return dial, &dials
+// counted dials and counts the dials.
+func counted(dial builder.Dial) (builder.Dial, *int) {
+	dials := 0
+	return func() (io.ReadWriteCloser, error) {
+		dials++
+
+		return dial()
+	}, &dials
+}
+
+// oneImport is a build that only brings in its base image.
+func oneImport() []protocol.Message {
+	return []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
 }
 
 // recording is an agent whose work succeeds and who notes what it was asked.
