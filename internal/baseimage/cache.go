@@ -17,12 +17,17 @@ var ErrUnknownBase = errors.New("unknown base image")
 type Cache struct {
 	dir     string
 	blobs   *download.Store
-	sources map[string]string
+	sources map[string]Source
+}
+
+// Source is where a name comes from.
+type Source struct {
+	URL string
 }
 
 // Open takes the directory the images live in and where each name comes
 // from. The images themselves live in the store. It touches nothing yet.
-func Open(dir string, blobs *download.Store, sources map[string]string) *Cache {
+func Open(dir string, blobs *download.Store, sources map[string]Source) *Cache {
 	return &Cache{dir: dir, blobs: blobs, sources: sources}
 }
 
@@ -53,11 +58,11 @@ func (c *Cache) Digest(name string) (string, error) {
 }
 
 // source is where a name comes from.
-func (c *Cache) source(name string) (string, error) {
-	url, known := c.sources[name]
+func (c *Cache) source(name string) (Source, error) {
+	source, known := c.sources[name]
 	if !known {
-		return "", ErrUnknownBase
+		return Source{}, ErrUnknownBase
 	}
 
-	return url, nil
+	return source, nil
 }
