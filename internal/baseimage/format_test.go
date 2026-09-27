@@ -2,6 +2,7 @@ package baseimage_test
 
 import (
 	"context"
+	"encoding/binary"
 	"net/http"
 	"strings"
 	"testing"
@@ -134,4 +135,23 @@ func TestAnEmptyImageIsNotFetched(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrFormat)
+}
+
+// with is an image with a big-endian number written at an offset.
+func with(image string, offset int, number uint64) string {
+	bytes := []byte(image)
+	binary.BigEndian.PutUint64(bytes[offset:], number)
+
+	return string(bytes)
+}
+
+func TestAQcow2ImageThatNamesABackingFileIsNotFetched(t *testing.T) {
+	// arrange
+	cache := declaring(t, with(qcow2(), 8, 512), "qcow2")
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrExternalFile)
 }

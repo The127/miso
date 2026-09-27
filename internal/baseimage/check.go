@@ -1,26 +1,40 @@
 package baseimage
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
 	"os"
+	"strings"
 )
 
 // ErrFormat is an image that is not in the format its source declares.
 var ErrFormat = errors.New("image is not in the format its source declares")
 
+// ErrExternalFile is a qcow2 image that names a file outside itself.
+var ErrExternalFile = errors.New("qcow2 image names a file outside itself")
+
 const qcow2Magic = "QFI\xfb"
+
+// qcow2Header is as much of a qcow2 header as a check reads, through the
+// offset of the backing file's name.
+const qcow2Header = 16
 
 // check fails for an image with a digest that does not start the way the
 // format declared for it does.
 func (c *Cache) check(digest, format string) error {
-	head, err := start(c.blobs.Path(digest), len(qcow2Magic))
+	head, err := start(c.blobs.Path(digest), qcow2Header)
 	if err != nil {
 		return err
 	}
 
 	if !fits(head, format) {
 		return ErrFormat
+	}
+
+	// QEMU would open the host's file the downloaded image names
+	if format == "qcow2" && binary.BigEndian.Uint64([]byte(head[8:16])) != 0 {
+		return ErrExternalFile
 	}
 
 	return nil
@@ -30,10 +44,10 @@ func (c *Cache) check(digest, format string) error {
 func fits(start, format string) bool {
 	switch format {
 	case "qcow2":
-		return start == qcow2Magic
+		return strings.HasPrefix(start, qcow2Magic)
 	case "raw":
 		// a raw image starting like qcow2 is a qcow2 image declared wrong
-		return start != "" && start != qcow2Magic
+		return start != "" && !strings.HasPrefix(start, qcow2Magic)
 	default:
 		return false
 	}
