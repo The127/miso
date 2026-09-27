@@ -3,15 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/buildcontext"
-	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/listing"
 	"github.com/The127/miso/internal/plan"
@@ -28,34 +25,44 @@ var planCommand = &cli.Command{
 }
 
 func listPlan(_ context.Context, command *cli.Command) error {
-	dir, file := located(command)
-
-	stages, err := parsed(file)
-	if err != nil {
-		return err
-	}
-
-	files, err := buildcontext.Open(dir)
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = files.Close() }()
-
 	cache, err := cacheDir()
 	if err != nil {
 		return err
 	}
 
-	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
-	bases := baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known)
+	_, bases := baseImages(cache)
 
-	planned, err := plan.New(stages, agentName(), files, bases)
+	planned, err := planOf(command, bases)
 	if err != nil {
-		return fmt.Errorf("%s: %w", file, err)
+		return err
 	}
 
 	return listing.Write(command.Root().Writer, planned)
+}
+
+// planOf is the plan of the build file the command names, on the base
+// images bases knows.
+func planOf(command *cli.Command, bases plan.Bases) (plan.Plan, error) {
+	dir, file := located(command)
+
+	stages, err := parsed(file)
+	if err != nil {
+		return plan.Plan{}, err
+	}
+
+	files, err := buildcontext.Open(dir)
+	if err != nil {
+		return plan.Plan{}, err
+	}
+
+	defer func() { _ = files.Close() }()
+
+	planned, err := plan.New(stages, agentName(), files, bases)
+	if err != nil {
+		return plan.Plan{}, fmt.Errorf("%s: %w", file, err)
+	}
+
+	return planned, nil
 }
 
 // located is the build context and the build file. The context is the

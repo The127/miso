@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -14,12 +13,10 @@ import (
 
 	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/build"
-	"github.com/The127/miso/internal/buildcontext"
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
 	"github.com/The127/miso/internal/cachedisk"
 	"github.com/The127/miso/internal/download"
-	"github.com/The127/miso/internal/plan"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsock"
@@ -45,8 +42,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
-	bases := baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known)
+	blobs, bases := baseImages(cache)
 
 	card, network, err := hostNetwork()
 	if err != nil {
@@ -120,23 +116,9 @@ func hostNetwork() (qemu.Card, protocol.Network, error) {
 // planned is what the agent is asked for the build file, with every base
 // image it names fetched.
 func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, network protocol.Network) ([]protocol.Message, error) {
-	dir, file := located(command)
-
-	stages, err := parsed(file)
+	planning, err := planOf(command, bases)
 	if err != nil {
 		return nil, err
-	}
-
-	files, err := buildcontext.Open(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = files.Close() }()
-
-	planning, err := plan.New(stages, agentName(), files, bases)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
 	}
 
 	if len(planning.Downloads) > 0 {
@@ -146,9 +128,9 @@ func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, 
 			}
 		}
 
-		planning, err = plan.New(stages, agentName(), files, bases)
+		planning, err = planOf(command, bases)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", file, err)
+			return nil, err
 		}
 	}
 
