@@ -13,11 +13,11 @@ const mac = "52:54:00:6d:69:73"
 func Network() (qemu.Card, protocol.Network) {
 	card := qemu.Card{
 		MAC:  mac,
-		IPv4: qemu.Family{Prefix: "10.0.2.0/24"},
+		IPv4: qemu.Family{Prefix: "10.0.2.0/24", Gateway: "10.0.2.2"},
 	}
 	network := protocol.Network{
 		Card: mac,
-		IPv4: protocol.Family{Address: "10.0.2.15/24"},
+		IPv4: protocol.Family{Address: "10.0.2.15/24", Gateway: "10.0.2.2"},
 	}
 
 	return card, network

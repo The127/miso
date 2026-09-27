@@ -34,3 +34,16 @@ func TestARunGetsAnIPv4AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	assert.NotEqual(t, card.IPv4.Gateway, address.Addr().String())
 	assert.NotEqual(t, card.IPv4.Nameserver, address.Addr().String())
 }
+
+func TestARunGoesOutThroughTheIPv4GatewayOfTheCardsNetwork(t *testing.T) {
+	// act
+	card, network := builder.Network()
+
+	// assert
+	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
+	require.NoError(t, err)
+	gateway, err := netip.ParseAddr(card.IPv4.Gateway)
+	require.NoError(t, err)
+	assert.True(t, prefix.Contains(gateway))
+	assert.Equal(t, card.IPv4.Gateway, network.IPv4.Gateway)
+}
