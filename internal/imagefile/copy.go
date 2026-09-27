@@ -3,6 +3,7 @@ package imagefile
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Copy puts files into the image. They come from the build context, or
@@ -44,5 +45,10 @@ func readCopy(line int, arguments string) ([]Instruction, error) {
 
 	sources := paths[:len(paths)-1]
 	destination := paths[len(paths)-1]
+	// there is no WORKDIR a relative one could start from
+	if !strings.HasPrefix(destination, "/") {
+		return nil, errors.New("needs an absolute destination")
+	}
+
 	return []Instruction{Copy{Line: line, From: from, Sources: sources, Destination: destination}}, nil
 }
