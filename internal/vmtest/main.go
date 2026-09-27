@@ -12,7 +12,7 @@ import (
 // off. The last line it prints tells the host how they went.
 func Main(m *testing.M) {
 	if os.Getpid() != 1 {
-		fmt.Fprintln(os.Stderr, "these tests run as the init of a VM, see just test-vm")
+		_, _ = fmt.Fprintln(os.Stderr, "these tests run as the init of a VM, see just test-vm")
 		os.Exit(1)
 	}
 

@@ -16,7 +16,7 @@ func main() {
 	}
 
 	if err := miso.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, "miso:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "miso:", err)
 		os.Exit(1)
 	}
 }

@@ -111,7 +111,7 @@ func fakeQEMU(recorded string) {
 	fmt.Println("fake QEMU console")
 
 	if refusal := os.Getenv("MISO_FAKE_QEMU_FAIL"); refusal != "" {
-		fmt.Fprintln(os.Stderr, refusal)
+		_, _ = fmt.Fprintln(os.Stderr, refusal)
 		os.Exit(1)
 	}
 
