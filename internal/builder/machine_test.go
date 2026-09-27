@@ -13,7 +13,7 @@ import (
 
 func TestTheBuildersCacheDiskIsWritableUnderTheCacheSerial(t *testing.T) {
 	// act
-	machine := builder.Machine("/cache/disk.img", nil, nil)
+	machine := builder.Machine("/cache/disk.img", nil, nil, qemu.Card{})
 
 	// assert
 	assert.Equal(t, []qemu.Disk{{Path: "/cache/disk.img", Format: "raw", Serial: protocol.CacheSerial}}, machine.Disks)
@@ -29,9 +29,20 @@ func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 	blob := func(digest string) string { return "/bases/" + digest }
 
 	// act
-	machine := builder.Machine("/cache/disk.img", requests, blob)
+	machine := builder.Machine("/cache/disk.img", requests, blob, qemu.Card{})
 
 	// assert
 	require.Len(t, machine.Disks, 2)
 	assert.Equal(t, qemu.Disk{Path: "/bases/" + digest, Format: "qcow2", Serial: protocol.Serial(digest), ReadOnly: true}, machine.Disks[1])
+}
+
+func TestTheBuilderHasTheCardItIsGiven(t *testing.T) {
+	// arrange
+	card, _ := builder.Network(builder.Resolving{IPv4: true})
+
+	// act
+	machine := builder.Machine("/cache/disk.img", nil, nil, card)
+
+	// assert
+	assert.Equal(t, &card, machine.Card)
 }
