@@ -16,9 +16,13 @@ var ErrExternalFile = errors.New("qcow2 image names a file outside itself")
 
 const qcow2Magic = "QFI\xfb"
 
-// qcow2Header is as much of a qcow2 header as a check reads, through the
-// offset of the backing file's name.
-const qcow2Header = 16
+// qcow2Header is as much of a qcow2 header as a check reads, through its
+// incompatible features.
+const qcow2Header = 80
+
+// qcow2DataFile is the incompatible feature of a qcow2 image whose data
+// lives in a file of its own.
+const qcow2DataFile = 1 << 2
 
 // check fails for an image with a digest that does not start the way the
 // format declared for it does.
@@ -34,6 +38,10 @@ func (c *Cache) check(digest, format string) error {
 
 	// QEMU would open the host's file the downloaded image names
 	if format == "qcow2" && binary.BigEndian.Uint64([]byte(head[8:16])) != 0 {
+		return ErrExternalFile
+	}
+
+	if format == "qcow2" && binary.BigEndian.Uint64([]byte(head[72:80]))&qcow2DataFile != 0 {
 		return ErrExternalFile
 	}
 

@@ -74,9 +74,10 @@ func declaring(t *testing.T, image, format string) *baseimage.Cache {
 	return baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/image", Format: format}})
 }
 
-// qcow2 is the start of an image in qcow2, more than its magic.
+// qcow2 is the header of an image in qcow2 version 3, naming nothing
+// outside itself.
 func qcow2() string {
-	return "QFI\xfb" + strings.Repeat("\x00", 12)
+	return "QFI\xfb" + "\x00\x00\x00\x03" + strings.Repeat("\x00", 96)
 }
 
 func TestAnImageThatIsNotTheQcow2ItsSourceDeclaresIsNotFetched(t *testing.T) {
@@ -165,4 +166,15 @@ func TestAQcow2ImageWhoseHeaderEndsEarlyIsNotFetched(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrFormat)
+}
+
+func TestAQcow2ImageWithAnExternalDataFileIsNotFetched(t *testing.T) {
+	// arrange
+	cache := declaring(t, with(qcow2(), 72, 1<<2), "qcow2")
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrExternalFile)
 }
