@@ -178,3 +178,20 @@ func TestAQcow2ImageWithAnExternalDataFileIsNotFetched(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrExternalFile)
 }
+
+// version2 is a qcow2 image made version 2, whose header ends before any
+// features.
+func version2(image string) string {
+	return image[:4] + "\x00\x00\x00\x02" + image[8:]
+}
+
+func TestAVersion2Qcow2ImageIsFetchedWhateverFollowsItsHeader(t *testing.T) {
+	// arrange
+	cache := declaring(t, with(version2(qcow2()), 72, 1<<2), "qcow2")
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.NoError(t, err)
+}
