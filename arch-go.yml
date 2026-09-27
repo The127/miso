@@ -206,7 +206,7 @@ dependenciesRules:
     shouldNotDependsOn:
       standard:
         - os/exec
-        - net
+        - '^net$'
         - syscall
   # the kvmtest readies the builder VM of the kvm tests. It never starts a
   # process itself, the tests start QEMU through the qemu driver
