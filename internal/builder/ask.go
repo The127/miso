@@ -2,7 +2,6 @@ package builder
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -27,11 +26,7 @@ func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests 
 		for err != nil {
 			select {
 			case <-vm.Done():
-				if vm.Err() == nil {
-					return errors.New("the builder VM stopped before its agent listened")
-				}
-
-				return fmt.Errorf("the builder VM stopped before its agent listened: %w", vm.Err())
+				return stopped(vm, "before its agent listened")
 			case <-time.After(redial):
 			}
 
@@ -50,7 +45,7 @@ func Ask(vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests 
 			// as stopped
 			select {
 			case <-vm.Done():
-				return fmt.Errorf("the builder VM stopped during a step: %w", vm.Err())
+				return stopped(vm, "during a step")
 			case <-time.After(settle):
 				return err
 			}

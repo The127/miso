@@ -107,6 +107,18 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 	assert.ErrorIs(t, err, vm.reason)
 }
 
+func TestAVMThatDiesDuringAStepWithoutAReasonSaysOnlyThat(t *testing.T) {
+	// arrange
+	vm := &dying{done: make(chan struct{})}
+	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
+
+	// act
+	err := builder.Ask(vm, vm.dial, agentName, requests, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "the builder VM stopped during a step")
+}
+
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
 	dial, _ := dialling(exiting{code: 1})
