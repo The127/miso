@@ -25,17 +25,6 @@ func AddressHeader(family byte, index int32, bits int, flags byte) []byte {
 	return binary.NativeEndian.AppendUint32(header, uint32(index)) //nolint:gosec // an index is positive
 }
 
-// TrafficHeader is the header of a request about how a card treats its
-// traffic: the card's index, the handle, the parent and the info of a
-// queue or filter.
-func TrafficHeader(index int32, handle, parent, info uint32) []byte {
-	header := binary.NativeEndian.AppendUint32([]byte{unix.AF_UNSPEC, 0, 0, 0}, uint32(index)) //nolint:gosec // the header holds an int32
-	header = binary.NativeEndian.AppendUint32(header, handle)
-	header = binary.NativeEndian.AppendUint32(header, parent)
-
-	return binary.NativeEndian.AppendUint32(header, info)
-}
-
 // RouteHeader is the header of a request for the default route of a
 // family.
 func RouteHeader(family byte) []byte {
