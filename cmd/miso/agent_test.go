@@ -43,7 +43,7 @@ func TestAnAgentBootedByTheBuilderKernelSaysWhyItDidNotStart(t *testing.T) {
 	err = ask(t, vm, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
 	require.ErrorIs(t, err, protocol.ErrAgentFailed)
 	assert.ErrorContains(t, err, "agent did not start")
-	assert.ErrorContains(t, err, "miso-cache")
+	assert.ErrorContains(t, err, protocol.CacheSerial)
 }
 
 // ask sends the agent a request, dialling until it listens, the VM stops or

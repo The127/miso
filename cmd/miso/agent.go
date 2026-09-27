@@ -34,5 +34,5 @@ func runAgent(context.Context, *cli.Command) error {
 		return err
 	}
 
-	return protocol.Serve(listener, "miso "+built(), agent.Serving("miso-cache", "/cache"))
+	return protocol.Serve(listener, "miso "+built(), agent.Serving(protocol.CacheSerial, "/cache"))
 }
