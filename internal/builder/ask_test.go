@@ -122,8 +122,10 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 	agent := waiting{started: make(chan struct{}), cancelled: make(chan struct{})}
 	dial := dialling(agent)
 	requests := []protocol.Message{protocol.Run{Key: "step", Command: "sleep infinity"}}
+	cancelled := make(chan time.Time, 1)
 	go func() {
 		<-agent.started
+		cancelled <- time.Now()
 		cancel()
 	}()
 
@@ -132,6 +134,7 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 
 	// assert
 	require.ErrorIs(t, err, context.Canceled)
+	assert.Less(t, time.Since(<-cancelled), 500*time.Millisecond)
 	assert.Eventually(t, func() bool {
 		select {
 		case <-agent.cancelled:
