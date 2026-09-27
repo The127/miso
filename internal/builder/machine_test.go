@@ -41,6 +41,21 @@ func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 	assert.Equal(t, qemu.Disk{Path: "/bases/" + digest, Format: "qcow2", Serial: protocol.Serial(digest), ReadOnly: true}, machine.Disks[1])
 }
 
+func TestABaseImagesDiskHasTheFormatItWasFetchedIn(t *testing.T) {
+	// arrange
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"}}
+	blob := func(digest string) string { return "/bases/" + digest }
+	format := func(string) (string, error) { return "raw", nil }
+
+	// act
+	machine, err := builder.Build{Requests: requests, Blob: blob, Format: format}.Machine()
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, machine.Disks, 2)
+	assert.Equal(t, "raw", machine.Disks[1].Format)
+}
+
 func TestABaseImageWhoseFormatIsUnknownFailsTheMachine(t *testing.T) {
 	// arrange
 	unknown := errors.New("no image fetched with that digest")

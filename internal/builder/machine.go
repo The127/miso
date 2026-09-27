@@ -62,12 +62,12 @@ func (b Build) bases() ([]qemu.Disk, error) {
 			continue
 		}
 
-		if _, err := b.Format(request.Digest); err != nil {
+		format, err := b.Format(request.Digest)
+		if err != nil {
 			return nil, fmt.Errorf("base image %s: %w", request.Digest, err)
 		}
 
-		// every base image miso knows is a qcow2 image
-		disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: "qcow2", Serial: protocol.Serial(request.Digest), ReadOnly: true})
+		disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: format, Serial: protocol.Serial(request.Digest), ReadOnly: true})
 	}
 
 	return disks, nil
