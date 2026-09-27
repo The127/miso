@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"runtime"
+
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 )
@@ -41,7 +43,9 @@ func (b Build) Machine() qemu.Machine {
 		CommandLine: "console=ttyS0 panic=-1 -- agent",
 		// room for a package manager's run, the proof of concept built with it
 		MemoryMiB: 4096,
-		Disks:     disks,
-		Card:      &b.Card,
+		// more than eight seldom speeds a build up and takes from the host
+		CPUs:  min(runtime.NumCPU(), 8),
+		Disks: disks,
+		Card:  &b.Card,
 	}
 }

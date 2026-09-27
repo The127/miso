@@ -1,6 +1,7 @@
 package builder_test
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,4 +67,12 @@ func TestTheBuilderHasFourGibibytesOfMemory(t *testing.T) {
 
 	// assert
 	assert.Equal(t, 4096, machine.MemoryMiB)
+}
+
+func TestTheBuilderHasTheHostsCPUsUpToEight(t *testing.T) {
+	// act
+	machine := builder.Build{}.Machine()
+
+	// assert
+	assert.Equal(t, min(runtime.NumCPU(), 8), machine.CPUs)
 }
