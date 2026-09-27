@@ -11,5 +11,14 @@ const mac = "52:54:00:6d:69:73"
 // Network is the builder VM's card on QEMU's user network and the network a
 // run gets through it, from one set of numbers so the two agree.
 func Network() (qemu.Card, protocol.Network) {
-	return qemu.Card{MAC: mac}, protocol.Network{Card: mac}
+	card := qemu.Card{
+		MAC:  mac,
+		IPv4: qemu.Family{Prefix: "10.0.2.0/24"},
+	}
+	network := protocol.Network{
+		Card: mac,
+		IPv4: protocol.Family{Address: "10.0.2.15/24"},
+	}
+
+	return card, network
 }
