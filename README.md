@@ -1,5 +1,8 @@
 # miso
 
+[![ci](https://github.com/The127/miso/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/The127/miso/actions/workflows/ci.yml)
+[![coverage](https://codecov.io/gh/The127/miso/graph/badge.svg)](https://app.codecov.io/gh/The127/miso)
+
 Dockerfile-style builds for systemd-based operating systems. A build file
 of `FROM`, `COPY` and `RUN` steps becomes a stack of cached layers, and the
 result comes out as standard systemd artifacts: disk images, ISOs,

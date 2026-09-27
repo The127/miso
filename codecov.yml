@@ -6,3 +6,9 @@ coverage:
     patch:
       default:
         informational: true
+
+# only the kvm and command line tests reach cmd/miso, and neither sends
+# coverage. hack holds the tools the tests use
+ignore:
+  - "cmd/miso"
+  - "hack"
