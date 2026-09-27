@@ -76,3 +76,15 @@ func TestAResolvConfThatCannotBeReadFails(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, broken)
 }
+
+func TestAHostThatNamesNoNameserverResolvesInNeitherFamily(t *testing.T) {
+	// act
+	resolving, err := builder.HostResolving(strings.NewReader("search example.com\noptions edns0\n"))
+
+	// assert
+	require.NoError(t, err)
+	// libslirp from 4.8 on falls back to 127.0.0.1 and ::1 here, before it
+	// to nothing, and miso cannot tell which one QEMU runs with. A lookup
+	// that fails at once beats one that waits for a timeout
+	assert.Equal(t, builder.Resolving{}, resolving)
+}
