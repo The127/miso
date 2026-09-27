@@ -195,6 +195,18 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the kvmtest readies the builder VM of the kvm tests. It never starts a
+  # process itself, the tests start QEMU through the qemu driver
+  - package: '**.internal.kvmtest$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.builderkernel$'
+        - '**.internal.download$'
+        - '**.internal.initramfs$'
+        - '**.internal.qemu$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
   # the vsock connects the host and its builder VM. It knows nothing of ours
   # and never starts a process or touches the network
   - package: '**.internal.vsock$'

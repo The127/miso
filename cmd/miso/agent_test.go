@@ -7,10 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,9 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/The127/miso/internal/builderkernel"
-	"github.com/The127/miso/internal/download"
-	"github.com/The127/miso/internal/initramfs"
+	"github.com/The127/miso/internal/kvmtest"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsock"
@@ -28,7 +24,9 @@ import (
 
 func TestAnAgentBootedByTheBuilderKernelSaysWhyItDidNotStart(t *testing.T) {
 	// arrange
-	machine := builderMachine(t)
+	init, err := os.ReadFile(miso(t))
+	require.NoError(t, err)
+	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
 	var console bytes.Buffer
 	machine.Console = &console
 
@@ -94,35 +92,4 @@ func miso(t *testing.T) string {
 	require.NotEmpty(t, binary, "MISO names the miso binary under test, see just test-kvm")
 
 	return binary
-}
-
-// builderMachine boots miso's pinned builder kernel with the miso under test
-// as its init, started as its agent. The kernel package is kept in miso's
-// own cache, fetched once.
-func builderMachine(t *testing.T) qemu.Machine {
-	t.Helper()
-
-	cache, err := os.UserCacheDir()
-	require.NoError(t, err)
-	kernel, err := builderkernel.Ready(t.Context(), download.Open(filepath.Join(cache, "miso", "bases"), http.DefaultClient))
-	require.NoError(t, err)
-
-	init, err := os.ReadFile(miso(t))
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	image := filepath.Join(dir, "vmlinuz")
-	require.NoError(t, os.WriteFile(image, kernel.Image, 0o600))
-	var initrd bytes.Buffer
-	require.NoError(t, initramfs.Write(&initrd, init, kernel.Modules))
-	initramfsPath := filepath.Join(dir, "initramfs")
-	require.NoError(t, os.WriteFile(initramfsPath, initrd.Bytes(), 0o600))
-
-	return qemu.Machine{
-		Kernel:      image,
-		Initramfs:   initramfsPath,
-		CommandLine: "console=ttyS0 panic=-1 -- agent",
-		MemoryMiB:   512,
-		CPUs:        1,
-	}
 }

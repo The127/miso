@@ -7,25 +7,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/The127/miso/internal/builderkernel"
-	"github.com/The127/miso/internal/download"
-	"github.com/The127/miso/internal/initramfs"
+	"github.com/The127/miso/internal/kvmtest"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsock"
 )
 
 func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 	// arrange
-	machine := builderMachine(t)
+	self, err := os.Executable()
+	require.NoError(t, err)
+	init, err := os.ReadFile(self)
+	require.NoError(t, err)
+	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1")
 	var console bytes.Buffer
 	machine.Console = &console
 
@@ -68,37 +68,5 @@ func answer(vm *qemu.VM, patience time.Duration) (string, error) {
 		_ = conn.Close()
 
 		return string(said), err
-	}
-}
-
-// builderMachine boots miso's pinned builder kernel with this test binary as
-// its init. The kernel package is kept in miso's own cache, fetched once.
-func builderMachine(t *testing.T) qemu.Machine {
-	t.Helper()
-
-	cache, err := os.UserCacheDir()
-	require.NoError(t, err)
-	kernel, err := builderkernel.Ready(t.Context(), download.Open(filepath.Join(cache, "miso", "bases"), http.DefaultClient))
-	require.NoError(t, err)
-
-	self, err := os.Executable()
-	require.NoError(t, err)
-	init, err := os.ReadFile(self)
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	image := filepath.Join(dir, "vmlinuz")
-	require.NoError(t, os.WriteFile(image, kernel.Image, 0o600))
-	var initrd bytes.Buffer
-	require.NoError(t, initramfs.Write(&initrd, init, kernel.Modules))
-	initramfsPath := filepath.Join(dir, "initramfs")
-	require.NoError(t, os.WriteFile(initramfsPath, initrd.Bytes(), 0o600))
-
-	return qemu.Machine{
-		Kernel:      image,
-		Initramfs:   initramfsPath,
-		CommandLine: "console=ttyS0 panic=-1 MISO_GUEST=1",
-		MemoryMiB:   512,
-		CPUs:        1,
 	}
 }
