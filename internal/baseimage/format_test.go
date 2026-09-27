@@ -15,7 +15,7 @@ import (
 
 func TestEachFetchedImageHasTheFormatItsSourceDeclares(t *testing.T) {
 	// arrange
-	server := serving(t, map[string]string{"/a.img": "one image", "/b.qcow2": "another image"})
+	server := serving(t, map[string]string{"/a.img": "one image", "/b.qcow2": qcow2()})
 	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{
 		"a": {URL: server.URL + "/a.img", Format: "raw"},
 		"b": {URL: server.URL + "/b.qcow2", Format: "qcow2"},
@@ -61,4 +61,24 @@ func TestADigestNoFetchBroughtHasNoFormat(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, baseimage.ErrNotFetched)
+}
+
+// qcow2 is the start of an image in qcow2, all the header a check reads.
+func qcow2() string {
+	return "QFI\xfb" + strings.Repeat("\x00", 12)
+}
+
+func TestAnImageThatIsNotTheQcow2ItsSourceDeclaresIsNotFetched(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "qcow2"}})
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrFormat)
+	digest, err := cache.Digest("debian:sid")
+	require.NoError(t, err)
+	assert.Empty(t, digest)
 }

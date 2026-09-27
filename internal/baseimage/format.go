@@ -2,6 +2,7 @@ package baseimage
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,6 +11,9 @@ import (
 
 // ErrNotFetched is a digest of no image this cache fetched.
 var ErrNotFetched = errors.New("no image fetched with that digest")
+
+// ErrFormat is an image that is not in the format its source declares.
+var ErrFormat = errors.New("image is not in the format its source declares")
 
 // Format is that of the image with a digest, as its source declared it.
 func (c *Cache) Format(digest string) (string, error) {
@@ -36,4 +40,30 @@ func (c *Cache) record(digest, format string) error {
 // formatOf is the file holding the format of the image with a digest.
 func (c *Cache) formatOf(digest string) string {
 	return filepath.Join(c.dir, "formats", strings.TrimPrefix(digest, "sha256:"))
+}
+
+// check fails for an image with a digest that does not start the way the
+// format declared for it does.
+func (c *Cache) check(digest, format string) error {
+	if format != "qcow2" {
+		return nil
+	}
+
+	image, err := os.Open(c.blobs.Path(digest))
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = image.Close() }()
+
+	magic := make([]byte, 4)
+	if _, err := io.ReadFull(image, magic); err != nil {
+		return err
+	}
+
+	if string(magic) != "QFI\xfb" {
+		return ErrFormat
+	}
+
+	return nil
 }

@@ -15,6 +15,10 @@ func (c *Cache) Fetch(ctx context.Context, name string) (string, error) {
 		return "", err
 	}
 
+	if err := c.check(digest, source.Format); err != nil {
+		return "", err
+	}
+
 	// before the name, so a name never points at an image of no format
 	if err := c.record(digest, source.Format); err != nil {
 		return "", err
