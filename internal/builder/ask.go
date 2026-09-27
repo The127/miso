@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -17,15 +18,23 @@ const redial = 100 * time.Millisecond
 // failed, so the error can say why the VM stopped.
 const settle = time.Second
 
+// patience is how long Ask waits for the agent to listen at first, far more
+// than a builder VM takes to boot, for one that hangs without stopping.
+var patience = time.Minute
+
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out. Once ctx is done the running step is cancelled.
 func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), agent string, requests []protocol.Message, out io.Writer) error {
+	booted := time.After(patience)
 	for _, request := range requests {
-		conn, err := connect(ctx, vm, dial)
+		conn, err := connect(ctx, vm, dial, booted)
 		if err != nil {
 			return err
 		}
+
+		// once the agent listened, a step may take as long as it takes
+		booted = nil
 
 		// the agent cancels a step whose connection closes
 		closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
@@ -45,8 +54,8 @@ func Ask(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), ag
 }
 
 // connect dials until the agent listens, which it does only once its VM has
-// booted, or until the VM stops or ctx is done.
-func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error)) (io.ReadWriteCloser, error) {
+// booted, or until the VM stops, ctx is done or the VM took too long to boot.
+func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error), booted <-chan time.Time) (io.ReadWriteCloser, error) {
 	for {
 		conn, err := dial()
 		if err == nil {
@@ -63,6 +72,8 @@ func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error)
 			}
 
 			return nil, stopped(vm, "before its agent listened")
+		case <-booted:
+			return nil, fmt.Errorf("the agent did not listen within %s", patience)
 		case <-time.After(redial):
 		}
 	}

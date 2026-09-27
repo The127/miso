@@ -173,6 +173,19 @@ func TestACancelledBuildWhoseVMWasStoppedByTheCancelSaysCancelled(t *testing.T) 
 	assert.ErrorIs(t, err, context.Canceled)
 }
 
+func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
+	// arrange
+	builder.Patience(t, 100*time.Millisecond)
+	dial, _ := dialling(&recording{})
+	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, booting(math.MaxInt, dial), agentName, requests, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "the agent did not listen within 100ms")
+}
+
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
 	dial, _ := dialling(exiting{code: 1})
