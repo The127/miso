@@ -57,6 +57,11 @@ func connect(ctx context.Context, vm VM, dial func() (io.ReadWriteCloser, error)
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-vm.Done():
+			// a cancel kills QEMU too, and then the cancel is what to tell
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
 			return nil, stopped(vm, "before its agent listened")
 		case <-time.After(redial):
 		}
