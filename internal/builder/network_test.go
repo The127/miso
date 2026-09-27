@@ -12,7 +12,7 @@ import (
 
 func TestTheRunsLookForTheMACOfTheBuildersCard(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
 	require.NotEmpty(t, card.MAC)
@@ -21,13 +21,11 @@ func TestTheRunsLookForTheMACOfTheBuildersCard(t *testing.T) {
 
 func TestARunGetsAnIPv4AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
-	require.NoError(t, err)
-	address, err := netip.ParsePrefix(network.IPv4.Address)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv4.Prefix)
+	address := parsedPrefix(t, network.IPv4.Address)
 	assert.True(t, address.Addr().Is4())
 	assert.True(t, prefix.Contains(address.Addr()))
 	assert.Equal(t, prefix.Bits(), address.Bits())
@@ -37,39 +35,33 @@ func TestARunGetsAnIPv4AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 
 func TestARunGoesOutThroughTheIPv4GatewayOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
-	require.NoError(t, err)
-	gateway, err := netip.ParseAddr(card.IPv4.Gateway)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv4.Prefix)
+	gateway := parsedAddr(t, card.IPv4.Gateway)
 	assert.True(t, prefix.Contains(gateway))
 	assert.Equal(t, card.IPv4.Gateway, network.IPv4.Gateway)
 }
 
 func TestARunResolvesThroughTheIPv4NameserverOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv4.Prefix)
-	require.NoError(t, err)
-	nameserver, err := netip.ParseAddr(card.IPv4.Nameserver)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv4.Prefix)
+	nameserver := parsedAddr(t, card.IPv4.Nameserver)
 	assert.True(t, prefix.Contains(nameserver))
 	assert.Equal(t, card.IPv4.Nameserver, network.IPv4.Nameserver)
 }
 
 func TestARunGetsAnIPv6AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
-	require.NoError(t, err)
-	address, err := netip.ParsePrefix(network.IPv6.Address)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv6.Prefix)
+	address := parsedPrefix(t, network.IPv6.Address)
 	assert.True(t, address.Addr().Is6())
 	assert.True(t, prefix.Contains(address.Addr()))
 	assert.Equal(t, prefix.Bits(), address.Bits())
@@ -79,26 +71,22 @@ func TestARunGetsAnIPv6AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 
 func TestARunGoesOutThroughTheIPv6GatewayOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
-	require.NoError(t, err)
-	gateway, err := netip.ParseAddr(card.IPv6.Gateway)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv6.Prefix)
+	gateway := parsedAddr(t, card.IPv6.Gateway)
 	assert.True(t, prefix.Contains(gateway))
 	assert.Equal(t, card.IPv6.Gateway, network.IPv6.Gateway)
 }
 
 func TestARunResolvesThroughTheIPv6NameserverOfTheCardsNetwork(t *testing.T) {
 	// act
-	card, network := builder.Network(builder.Resolving{IPv4: true, IPv6: true})
+	card, network := builder.Network(resolvingBoth)
 
 	// assert
-	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
-	require.NoError(t, err)
-	nameserver, err := netip.ParseAddr(card.IPv6.Nameserver)
-	require.NoError(t, err)
+	prefix := parsedPrefix(t, card.IPv6.Prefix)
+	nameserver := parsedAddr(t, card.IPv6.Nameserver)
 	assert.True(t, prefix.Contains(nameserver))
 	assert.Equal(t, card.IPv6.Nameserver, network.IPv6.Nameserver)
 }
@@ -121,4 +109,25 @@ func TestARunOnAHostThatResolvesOnlyOverIPv6GetsNoIPv4Nameserver(t *testing.T) {
 	assert.NotEmpty(t, card.IPv4.Nameserver)
 	assert.Empty(t, network.IPv4.Nameserver)
 	assert.Equal(t, card.IPv6.Nameserver, network.IPv6.Nameserver)
+}
+
+// resolvingBoth is a host that resolves names in both families.
+var resolvingBoth = builder.Resolving{IPv4: true, IPv6: true}
+
+func parsedPrefix(t *testing.T, text string) netip.Prefix {
+	t.Helper()
+
+	parsed, err := netip.ParsePrefix(text)
+	require.NoError(t, err)
+
+	return parsed
+}
+
+func parsedAddr(t *testing.T, text string) netip.Addr {
+	t.Helper()
+
+	parsed, err := netip.ParseAddr(text)
+	require.NoError(t, err)
+
+	return parsed
 }
