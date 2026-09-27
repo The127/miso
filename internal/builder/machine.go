@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"runtime"
 
 	"github.com/The127/miso/internal/protocol"
@@ -21,12 +22,20 @@ type Build struct {
 	// where the base image with a digest is
 	Blob func(digest string) string
 
+	// the format the base image with a digest was fetched in
+	Format func(digest string) (string, error)
+
 	// the card its runs reach out through
 	Card qemu.Card
 }
 
 // Machine is the builder VM of the build.
-func (b Build) Machine() qemu.Machine {
+func (b Build) Machine() (qemu.Machine, error) {
+	bases, err := b.bases()
+	if err != nil {
+		return qemu.Machine{}, err
+	}
+
 	// the cache disk is an ext4 image as it is, which QEMU must never guess
 	cache := qemu.Disk{Path: b.Cache, Format: "raw", Serial: protocol.CacheSerial}
 
@@ -39,20 +48,27 @@ func (b Build) Machine() qemu.Machine {
 		MemoryMiB: 4096,
 		// more than eight seldom speeds a build up and takes from the host
 		CPUs:  min(runtime.NumCPU(), 8),
-		Disks: append([]qemu.Disk{cache}, b.bases()...),
+		Disks: append([]qemu.Disk{cache}, bases...),
 		Card:  &b.Card,
-	}
+	}, nil
 }
 
 // bases is a read-only disk for each base image the requests import.
-func (b Build) bases() []qemu.Disk {
+func (b Build) bases() ([]qemu.Disk, error) {
 	var disks []qemu.Disk
 	for _, request := range b.Requests {
-		if request, isImport := request.(protocol.Import); isImport {
-			// every base image miso knows is a qcow2 image
-			disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: "qcow2", Serial: protocol.Serial(request.Digest), ReadOnly: true})
+		request, isImport := request.(protocol.Import)
+		if !isImport {
+			continue
 		}
+
+		if _, err := b.Format(request.Digest); err != nil {
+			return nil, fmt.Errorf("base image %s: %w", request.Digest, err)
+		}
+
+		// every base image miso knows is a qcow2 image
+		disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: "qcow2", Serial: protocol.Serial(request.Digest), ReadOnly: true})
 	}
 
-	return disks
+	return disks, nil
 }
