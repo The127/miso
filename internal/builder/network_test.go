@@ -76,3 +76,16 @@ func TestARunGetsAnIPv6AddressOfItsOwnOnTheCardsNetwork(t *testing.T) {
 	assert.NotEqual(t, card.IPv6.Gateway, address.Addr().String())
 	assert.NotEqual(t, card.IPv6.Nameserver, address.Addr().String())
 }
+
+func TestARunGoesOutThroughTheIPv6GatewayOfTheCardsNetwork(t *testing.T) {
+	// act
+	card, network := builder.Network()
+
+	// assert
+	prefix, err := netip.ParsePrefix(card.IPv6.Prefix)
+	require.NoError(t, err)
+	gateway, err := netip.ParseAddr(card.IPv6.Gateway)
+	require.NoError(t, err)
+	assert.True(t, prefix.Contains(gateway))
+	assert.Equal(t, card.IPv6.Gateway, network.IPv6.Gateway)
+}
