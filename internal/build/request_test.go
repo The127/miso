@@ -16,10 +16,10 @@ import (
 var network = protocol.Network{Card: "52:54:00:6d:69:73", IPv4: protocol.Family{Address: "10.0.2.15/24", Gateway: "10.0.2.2"}}
 
 // runsOf are the runs among the requests, in their order.
-func runsOf(requests []protocol.Message) []protocol.Run {
+func runsOf(requests []build.Request) []protocol.Run {
 	var runs []protocol.Run
 	for _, request := range requests {
-		if run, isRun := request.(protocol.Run); isRun {
+		if run, isRun := request.Message.(protocol.Run); isRun {
 			runs = append(runs, run)
 		}
 	}

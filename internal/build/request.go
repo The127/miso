@@ -14,14 +14,19 @@ import (
 // have no keys, so nothing can be asked for them.
 var ErrNotFetched = errors.New("not fetched yet")
 
+// Request is what the agent is asked for a step of the build file.
+type Request struct {
+	Message protocol.Message
+}
+
 // Requests are what the agent is asked, in the order it is asked. A run
 // with network gets the network the host set up for the builder.
-func Requests(planned plan.Plan, network protocol.Network) ([]protocol.Message, error) {
+func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 	if len(planned.Downloads) > 0 {
 		return nil, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
 	}
 
-	var requests []protocol.Message
+	var requests []Request
 	roots := map[string]rootfs{}
 	for _, stage := range planned.Stages {
 		// only a stage on an image has a digest. A stage on an earlier stage
@@ -30,7 +35,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]protocol.Message, 
 		_, seen := roots[stage.BaseKey]
 		if !seen && stage.BaseDigest != "" {
 			roots[stage.BaseKey] = rootfs{layers: []string{stage.BaseKey}}
-			requests = append(requests, protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest})
+			requests = append(requests, Request{Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
 		}
 
 		for _, step := range stage.Steps {
@@ -41,7 +46,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]protocol.Message, 
 					request.Network = &network
 				}
 
-				requests = append(requests, request)
+				requests = append(requests, Request{Message: request})
 			}
 
 			roots[step.Key] = under.after(step)

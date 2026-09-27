@@ -25,10 +25,10 @@ func TestTheBuildersCacheDiskIsWritableUnderTheCacheSerial(t *testing.T) {
 func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 	// arrange
 	digest := "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"
-	requests := []protocol.Message{
+	requests := requested(
 		protocol.Import{Key: "base", Digest: digest},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
-	}
+	)
 	blob := func(digest string) string { return "/bases/" + digest }
 	format := func(string) (string, error) { return "qcow2", nil }
 
@@ -43,7 +43,7 @@ func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 
 func TestABaseImagesDiskHasTheFormatItWasFetchedIn(t *testing.T) {
 	// arrange
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"}}
+	requests := requested(protocol.Import{Key: "base", Digest: "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"})
 	blob := func(digest string) string { return "/bases/" + digest }
 	format := func(string) (string, error) { return "raw", nil }
 
@@ -59,7 +59,7 @@ func TestABaseImagesDiskHasTheFormatItWasFetchedIn(t *testing.T) {
 func TestABaseImageWhoseFormatIsUnknownFailsTheMachine(t *testing.T) {
 	// arrange
 	unknown := errors.New("no image fetched with that digest")
-	requests := []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"}}
+	requests := requested(protocol.Import{Key: "base", Digest: "sha256:6e1f3a0c9b2d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789ab"})
 	blob := func(digest string) string { return "/bases/" + digest }
 	format := func(string) (string, error) { return "", unknown }
 

@@ -201,6 +201,7 @@ dependenciesRules:
   - package: '**.internal.builder$'
     shouldOnlyDependsOn:
       internal:
+        - '**.internal.build$'
         - '**.internal.protocol$'
         - '**.internal.qemu$'
         - '**.internal.builderkernel$'

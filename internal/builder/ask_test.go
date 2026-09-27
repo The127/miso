@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/protocol"
 )
@@ -24,27 +25,27 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	// arrange
 	agent := &recording{}
 	dial, dials := counted(dialling(agent))
-	requests := []protocol.Message{
+	requests := requested(
 		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
-	}
+	)
 
 	// act
 	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, requests, agent.asked)
+	assert.Equal(t, messagesOf(requests), agent.asked)
 	assert.Equal(t, 2, *dials)
 }
 
 func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	// arrange
 	dial := dialling(saying{"unpacking\n"})
-	requests := []protocol.Message{
+	requests := requested(
 		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
-	}
+	)
 	var out bytes.Buffer
 
 	// act
@@ -66,7 +67,7 @@ func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, requests, agent.asked)
+	assert.Equal(t, messagesOf(requests), agent.asked)
 }
 
 func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
@@ -95,7 +96,7 @@ func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.
 func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 	// arrange
 	vm := &dying{done: make(chan struct{}), reason: errors.New("QEMU stopped: signal: killed")}
-	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
+	requests := requested(protocol.Run{Key: "step", Command: "true"})
 
 	// act
 	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
@@ -107,7 +108,7 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 func TestAVMThatDiesDuringAStepWithoutAReasonSaysOnlyThat(t *testing.T) {
 	// arrange
 	vm := &dying{done: make(chan struct{})}
-	requests := []protocol.Message{protocol.Run{Key: "step", Command: "true"}}
+	requests := requested(protocol.Run{Key: "step", Command: "true"})
 
 	// act
 	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
@@ -121,7 +122,7 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	agent := waiting{started: make(chan struct{}), cancelled: make(chan struct{})}
 	dial := dialling(agent)
-	requests := []protocol.Message{protocol.Run{Key: "step", Command: "sleep infinity"}}
+	requests := requested(protocol.Run{Key: "step", Command: "sleep infinity"})
 	cancelled := make(chan time.Time, 1)
 	go func() {
 		<-agent.started
@@ -186,7 +187,7 @@ func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
 	dial := dialling(exiting{code: 1})
-	requests := []protocol.Message{protocol.Run{Key: "step", Command: "false"}}
+	requests := requested(protocol.Run{Key: "step", Command: "false"})
 	start := time.Now()
 
 	// act
@@ -300,8 +301,28 @@ func counted(dial builder.Dial) (builder.Dial, *int) {
 }
 
 // oneImport is a build that only brings in its base image.
-func oneImport() []protocol.Message {
-	return []protocol.Message{protocol.Import{Key: "base", Digest: "sha256:aaaa"}}
+func oneImport() []build.Request {
+	return requested(protocol.Import{Key: "base", Digest: "sha256:aaaa"})
+}
+
+// requested are the requests of a build that asks the agent these messages.
+func requested(messages ...protocol.Message) []build.Request {
+	requests := make([]build.Request, 0, len(messages))
+	for _, message := range messages {
+		requests = append(requests, build.Request{Message: message})
+	}
+
+	return requests
+}
+
+// messagesOf are what the agent is asked for the requests.
+func messagesOf(requests []build.Request) []protocol.Message {
+	messages := make([]protocol.Message, 0, len(requests))
+	for _, request := range requests {
+		messages = append(messages, request.Message)
+	}
+
+	return messages
 }
 
 // recording is an agent whose work succeeds and who notes what it was asked.

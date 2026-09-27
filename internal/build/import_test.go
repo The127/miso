@@ -27,7 +27,7 @@ func TestAStageOnAnImageImportsItsBaseFirst(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.NotEmpty(t, requests)
-	assert.Equal(t, protocol.Import{Key: "base", Digest: "sha256:image"}, requests[0])
+	assert.Equal(t, protocol.Import{Key: "base", Digest: "sha256:image"}, requests[0].Message)
 }
 
 func TestAStageOnScratchImportsNothing(t *testing.T) {
@@ -44,7 +44,7 @@ func TestAStageOnScratchImportsNothing(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.Len(t, requests, 1)
-	assert.IsType(t, protocol.Run{}, requests[0])
+	assert.IsType(t, protocol.Run{}, requests[0].Message)
 }
 
 func TestAStageOnAnEmptyScratchStageImportsNothing(t *testing.T) {
@@ -57,7 +57,7 @@ func TestAStageOnAnEmptyScratchStageImportsNothing(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.Len(t, requests, 1)
-	assert.IsType(t, protocol.Run{}, requests[0])
+	assert.IsType(t, protocol.Run{}, requests[0].Message)
 }
 
 func TestTwoStagesOnOneImageImportItOnce(t *testing.T) {
@@ -71,7 +71,7 @@ func TestTwoStagesOnOneImageImportItOnce(t *testing.T) {
 	require.NoError(t, err)
 	imports := 0
 	for _, request := range requests {
-		if _, isImport := request.(protocol.Import); isImport {
+		if _, isImport := request.Message.(protocol.Import); isImport {
 			imports++
 		}
 	}

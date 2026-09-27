@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -25,7 +26,7 @@ var patience = time.Minute
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out. Once ctx is done the running step is cancelled.
-func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []protocol.Message, out io.Writer) error {
+func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, out io.Writer) error {
 	booted := time.After(patience)
 	for _, request := range requests {
 		conn, err := connect(ctx, vm, dial, booted)
@@ -36,7 +37,7 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []protoco
 		// once the agent listened, a step may take as long as it takes
 		booted = nil
 
-		err = ask(ctx, conn, agent, request, out)
+		err = ask(ctx, conn, agent, request.Message, out)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}

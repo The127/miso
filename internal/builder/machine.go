@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 )
@@ -17,7 +18,7 @@ type Build struct {
 	Cache string
 
 	// what the agent is asked, whose imports each get a disk
-	Requests []protocol.Message
+	Requests []build.Request
 
 	// where the base image with a digest is
 	Blob func(digest string) string
@@ -57,7 +58,7 @@ func (b Build) Machine() (qemu.Machine, error) {
 func (b Build) bases() ([]qemu.Disk, error) {
 	var disks []qemu.Disk
 	for _, request := range b.Requests {
-		request, isImport := request.(protocol.Import)
+		request, isImport := request.Message.(protocol.Import)
 		if !isImport {
 			continue
 		}

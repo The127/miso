@@ -81,7 +81,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 // planned is what the agent is asked for the build file, with every base
 // image it names fetched.
-func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, network protocol.Network) ([]protocol.Message, error) {
+func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, network protocol.Network) ([]build.Request, error) {
 	planning, err := planOf(command, bases)
 	if err != nil {
 		return nil, err
