@@ -19,20 +19,28 @@ type Boot struct {
 // the kernel, and an initramfs with init as its init and the kernel's
 // modules.
 func WriteBoot(dir string, kernel builderkernel.Kernel, init []byte) (Boot, error) {
-	image := filepath.Join(dir, "vmlinuz")
-	if err := os.WriteFile(image, kernel.Image, 0o600); err != nil {
-		return Boot{}, err
-	}
-
 	var initrd bytes.Buffer
 	if err := initramfs.Write(&initrd, init, kernel.Modules); err != nil {
 		return Boot{}, err
 	}
 
-	initramfsPath := filepath.Join(dir, "initramfs")
-	if err := os.WriteFile(initramfsPath, initrd.Bytes(), 0o600); err != nil {
+	image, err := written(dir, "vmlinuz", kernel.Image)
+	if err != nil {
+		return Boot{}, err
+	}
+
+	initramfsPath, err := written(dir, "initramfs", initrd.Bytes())
+	if err != nil {
 		return Boot{}, err
 	}
 
 	return Boot{Kernel: image, Initramfs: initramfsPath}, nil
+}
+
+// written is the path of a file with a name in a directory, once it holds
+// the content given.
+func written(dir, name string, content []byte) (string, error) {
+	path := filepath.Join(dir, name)
+
+	return path, os.WriteFile(path, content, 0o600)
 }

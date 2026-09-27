@@ -28,13 +28,7 @@ type Build struct {
 // Machine is the builder VM of the build.
 func (b Build) Machine() qemu.Machine {
 	// the cache disk is an ext4 image as it is, which QEMU must never guess
-	disks := []qemu.Disk{{Path: b.Cache, Format: "raw", Serial: protocol.CacheSerial}}
-	for _, request := range b.Requests {
-		if request, isImport := request.(protocol.Import); isImport {
-			// every base image miso knows is a qcow2 image
-			disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: "qcow2", Serial: protocol.Serial(request.Digest), ReadOnly: true})
-		}
-	}
+	cache := qemu.Disk{Path: b.Cache, Format: "raw", Serial: protocol.CacheSerial}
 
 	return qemu.Machine{
 		Kernel:    b.Boot.Kernel,
@@ -45,7 +39,20 @@ func (b Build) Machine() qemu.Machine {
 		MemoryMiB: 4096,
 		// more than eight seldom speeds a build up and takes from the host
 		CPUs:  min(runtime.NumCPU(), 8),
-		Disks: disks,
+		Disks: append([]qemu.Disk{cache}, b.bases()...),
 		Card:  &b.Card,
 	}
+}
+
+// bases is a read-only disk for each base image the requests import.
+func (b Build) bases() []qemu.Disk {
+	var disks []qemu.Disk
+	for _, request := range b.Requests {
+		if request, isImport := request.(protocol.Import); isImport {
+			// every base image miso knows is a qcow2 image
+			disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: "qcow2", Serial: protocol.Serial(request.Digest), ReadOnly: true})
+		}
+	}
+
+	return disks
 }
