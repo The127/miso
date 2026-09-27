@@ -16,7 +16,7 @@ import (
 func TestAFetchDownloadsAnImageAndAnswersTheDigestOfItsBytes(t *testing.T) {
 	// arrange
 	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2"}})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "raw"}})
 	sum := sha256.Sum256([]byte("the image"))
 
 	// act
@@ -30,7 +30,7 @@ func TestAFetchDownloadsAnImageAndAnswersTheDigestOfItsBytes(t *testing.T) {
 func TestAFetchedImageIsKnownToACacheOpenedLaterOnTheSameDirectory(t *testing.T) {
 	// arrange
 	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
-	sources := map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2"}}
+	sources := map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "raw"}}
 	dir := t.TempDir()
 	fetched, err := baseimage.Open(dir, download.Open(dir, server.Client()), sources).Fetch(context.Background(), "debian:sid")
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestAFetchAgainReplacesWhatANamePointsAt(t *testing.T) {
 	// arrange
 	images := map[string]string{"/sid.qcow2": "yesterday's image"}
 	server := serving(t, images)
-	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2"}})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "raw"}})
 	_, err := cache.Fetch(context.Background(), "debian:sid")
 	require.NoError(t, err)
 	images["/sid.qcow2"] = "today's image"

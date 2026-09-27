@@ -45,6 +45,10 @@ func (c *Cache) formatOf(digest string) string {
 // check fails for an image with a digest that does not start the way the
 // format declared for it does.
 func (c *Cache) check(digest, format string) error {
+	if format != "raw" && format != "qcow2" {
+		return ErrFormat
+	}
+
 	image, err := os.Open(c.blobs.Path(digest))
 	if err != nil {
 		return err

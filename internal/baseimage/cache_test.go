@@ -42,7 +42,7 @@ func TestANameWhoseImageIsGoneHasNoDigest(t *testing.T) {
 	// arrange
 	server := serving(t, map[string]string{"/sid.qcow2": "the image"})
 	dir := t.TempDir()
-	cache := baseimage.Open(dir, download.Open(dir, server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2"}})
+	cache := baseimage.Open(dir, download.Open(dir, server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.qcow2", Format: "raw"}})
 	fetched, err := cache.Fetch(context.Background(), "debian:sid")
 	require.NoError(t, err)
 	require.NoError(t, os.Remove(filepath.Join(dir, "sha256", strings.TrimPrefix(fetched, "sha256:"))))
