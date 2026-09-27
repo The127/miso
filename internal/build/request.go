@@ -16,6 +16,8 @@ var ErrNotFetched = errors.New("not fetched yet")
 
 // Request is what the agent is asked for a step of the build file.
 type Request struct {
+	Line    int
+	Written string
 	Message protocol.Message
 }
 
@@ -46,7 +48,8 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 					request.Network = &network
 				}
 
-				requests = append(requests, Request{Message: request})
+				line, written := imagefile.Written(run)
+				requests = append(requests, Request{Line: line, Written: written, Message: request})
 			}
 
 			roots[step.Key] = under.after(step)
