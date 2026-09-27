@@ -62,3 +62,16 @@ func TestAStartedAgentKeepsAnImportedBaseOnTheCacheDisk(t *testing.T) {
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(dir, "layers", "started", "etc", "os-release"))
 }
+
+func TestAnAgentStartsOnADirectoryThatIsNotThereYet(t *testing.T) {
+	// arrange
+	dir := filepath.Join(t.TempDir(), "cache")
+
+	// act
+	_, err := agent.Start("miso-cache", dir)
+	unmountAtEnd(t, dir)
+
+	// assert
+	require.NoError(t, err)
+	assert.DirExists(t, filepath.Join(dir, "layers"))
+}

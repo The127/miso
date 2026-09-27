@@ -10,6 +10,11 @@ import (
 // Start mounts the cache disk with a serial on a directory and readies the
 // layers on it for an agent.
 func Start(serial, dir string) (*Agent, error) {
+	// the VM's root is a fresh tmpfs, which has no mount point for the disk
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, err
+	}
+
 	if err := MountCache(serial, dir); err != nil {
 		return nil, err
 	}
