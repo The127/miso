@@ -27,20 +27,20 @@ func TestQEMUDiesWithMiso(t *testing.T) {
 	t.Setenv("MISO_FAKE_MISO", "1")
 	miso := exec.Command(driver.Binary) //nolint:gosec // this test binary stands in for miso
 	require.NoError(t, miso.Start())
-	var qemu int
+	var qemuPid int
 	require.Eventually(t, func() bool {
-		qemu = pidIn(pidFile)
+		qemuPid = pidIn(pidFile)
 
-		return qemu != 0
+		return qemuPid != 0
 	}, 10*time.Second, 10*time.Millisecond)
-	t.Cleanup(func() { _ = syscall.Kill(qemu, syscall.SIGKILL) })
+	t.Cleanup(func() { _ = syscall.Kill(qemuPid, syscall.SIGKILL) })
 
 	// act
 	require.NoError(t, miso.Process.Kill())
 	_ = miso.Wait()
 
 	// assert
-	assert.Eventually(t, func() bool { return !running(qemu) }, 5*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, func() bool { return !running(qemuPid) }, 5*time.Second, 10*time.Millisecond)
 }
 
 func TestQEMUOutlivesTheThreadThatStartedIt(t *testing.T) {
