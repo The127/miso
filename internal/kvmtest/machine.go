@@ -1,7 +1,6 @@
 package kvmtest
 
 import (
-	"bytes"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -9,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
 	"github.com/The127/miso/internal/download"
-	"github.com/The127/miso/internal/initramfs"
 	"github.com/The127/miso/internal/qemu"
 )
 
@@ -26,17 +25,12 @@ func Machine(t *testing.T, init []byte, commandLine string) qemu.Machine {
 	kernel, err := builderkernel.Ready(t.Context(), download.Open(filepath.Join(cache, "miso", "bases"), http.DefaultClient))
 	require.NoError(t, err)
 
-	dir := t.TempDir()
-	image := filepath.Join(dir, "vmlinuz")
-	require.NoError(t, os.WriteFile(image, kernel.Image, 0o600))
-	var initrd bytes.Buffer
-	require.NoError(t, initramfs.Write(&initrd, init, kernel.Modules))
-	initramfsPath := filepath.Join(dir, "initramfs")
-	require.NoError(t, os.WriteFile(initramfsPath, initrd.Bytes(), 0o600))
+	boot, err := builder.WriteBoot(t.TempDir(), kernel, init)
+	require.NoError(t, err)
 
 	return qemu.Machine{
-		Kernel:      image,
-		Initramfs:   initramfsPath,
+		Kernel:      boot.Kernel,
+		Initramfs:   boot.Initramfs,
 		CommandLine: commandLine,
 		MemoryMiB:   512,
 		CPUs:        1,

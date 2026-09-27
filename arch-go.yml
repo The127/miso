@@ -204,6 +204,7 @@ dependenciesRules:
         - '**.internal.protocol$'
         - '**.internal.qemu$'
         - '**.internal.builderkernel$'
+        - '**.internal.initramfs$'
     shouldNotDependsOn:
       standard:
         - os/exec
@@ -214,9 +215,9 @@ dependenciesRules:
   - package: '**.internal.kvmtest$'
     shouldOnlyDependsOn:
       internal:
+        - '**.internal.builder$'
         - '**.internal.builderkernel$'
         - '**.internal.download$'
-        - '**.internal.initramfs$'
         - '**.internal.qemu$'
     shouldNotDependsOn:
       standard:
