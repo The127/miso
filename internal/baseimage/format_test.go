@@ -82,3 +82,15 @@ func TestAnImageThatIsNotTheQcow2ItsSourceDeclaresIsNotFetched(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, digest)
 }
+
+func TestAnImageDeclaredRawThatStartsLikeQcow2IsNotFetched(t *testing.T) {
+	// arrange
+	server := serving(t, map[string]string{"/sid.img": qcow2()})
+	cache := baseimage.Open(t.TempDir(), download.Open(t.TempDir(), server.Client()), map[string]baseimage.Source{"debian:sid": {URL: server.URL + "/sid.img", Format: "raw"}})
+
+	// act
+	_, err := cache.Fetch(context.Background(), "debian:sid")
+
+	// assert
+	assert.ErrorIs(t, err, baseimage.ErrFormat)
+}
