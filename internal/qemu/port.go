@@ -7,8 +7,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// agentPort is the name the agent finds its virtio port by.
-const agentPort = "miso"
+// AgentPort is the name the agent finds its virtio port by.
+const AgentPort = "miso"
 
 // port gives the machine a virtio serial port for its agent, on the socket
 // QEMU finds at fd.
@@ -16,7 +16,7 @@ func port(fd int) []string {
 	return []string{
 		"-device", "virtio-serial-pci",
 		"-chardev", fmt.Sprintf("socket,id=agent,fd=%d", fd),
-		"-device", "virtserialport,chardev=agent,name=" + agentPort,
+		"-device", "virtserialport,chardev=agent,name=" + AgentPort,
 	}
 }
 
