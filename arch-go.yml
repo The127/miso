@@ -321,12 +321,13 @@ dependenciesRules:
         - net
         - syscall
   # the firmware takes miso's pinned OVMF package apart into what a check
-  # boots through. It never starts a process, opens a connection or
-  # touches the kernel
+  # boots through. It has the download fetch the package, and never starts
+  # a process, opens a connection or touches the kernel
   - package: '**.internal.firmware$'
     shouldOnlyDependsOn:
       internal:
         - '**.internal.deb$'
+        - '**.internal.download$'
     shouldNotDependsOn:
       standard:
         - os/exec
