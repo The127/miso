@@ -90,6 +90,10 @@ func (b blocking) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, er
 
 func (blocking) Import(context.Context, protocol.Import, io.Writer) error { return nil }
 
+func (blocking) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
+	return nil
+}
+
 func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {
 	// arrange
 	_, firstConn := asking(t, protocol.Run{Command: "wait"})

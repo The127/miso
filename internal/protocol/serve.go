@@ -12,6 +12,7 @@ import (
 type Runner interface {
 	Run(ctx context.Context, run Run, out io.Writer) (code int, err error)
 	Import(ctx context.Context, request Import, out io.Writer) error
+	Copy(ctx context.Context, request Copy, entries Entries, out io.Writer) error
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -27,7 +28,8 @@ func (c *Conn) Serve(runner Runner) error {
 
 	run, isRun := message.(Run)
 	request, isImport := message.(Import)
-	if !isRun && !isImport {
+	copying, isCopy := message.(Copy)
+	if !isRun && !isImport && !isCopy {
 		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
 	}
 
@@ -44,6 +46,14 @@ func (c *Conn) Serve(runner Runner) error {
 
 	if isImport {
 		if err := runner.Import(ctx, request, outputs{c}); err != nil {
+			return c.Send(Failed{Reason: err.Error()})
+		}
+
+		return c.Send(Done{})
+	}
+
+	if isCopy {
+		if err := runner.Copy(ctx, copying, nil, outputs{c}); err != nil {
 			return c.Send(Failed{Reason: err.Error()})
 		}
 

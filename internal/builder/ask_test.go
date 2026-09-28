@@ -354,6 +354,12 @@ func (r *recording) Import(_ context.Context, request protocol.Import, _ io.Writ
 	return nil
 }
 
+func (r *recording) Copy(_ context.Context, request protocol.Copy, _ protocol.Entries, _ io.Writer) error {
+	r.note(request)
+
+	return nil
+}
+
 func (r *recording) note(request protocol.Message) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -379,6 +385,12 @@ func (s saying) Import(_ context.Context, _ protocol.Import, out io.Writer) erro
 	return err
 }
 
+func (s saying) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, out io.Writer) error {
+	_, err := io.WriteString(out, s.words)
+
+	return err
+}
+
 // exiting is an agent whose commands exit with a code.
 type exiting struct {
 	code int
@@ -392,6 +404,10 @@ func (e exiting) Import(context.Context, protocol.Import, io.Writer) error {
 	return nil
 }
 
+func (e exiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
+	return nil
+}
+
 // failing is an agent that fails at its own work.
 type failing struct {
 	err error
@@ -402,6 +418,10 @@ func (f failing) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 }
 
 func (f failing) Import(context.Context, protocol.Import, io.Writer) error {
+	return f.err
+}
+
+func (f failing) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return f.err
 }
 
@@ -420,5 +440,9 @@ func (w waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, err
 }
 
 func (w waiting) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
+}
+
+func (w waiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return nil
 }
