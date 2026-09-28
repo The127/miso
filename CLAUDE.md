@@ -45,6 +45,17 @@ standard systemd formats and leaves the rest to whoever runs the machine.
 - Use the justfile: `just ci` must pass before a commit. `just setup`
   prepares a fresh clone.
 
+## Creating issues
+
+- Reproduce first. Write a throwaway test or command that shows the
+  problem, run it, and only file an issue for what it confirmed. Do one
+  problem at a time, one issue each. Never commit the throwaway test.
+- Write in plain, human language. Short sentences, no odd grammar, no
+  jargon where a simple word works. No em-dashes and no semicolons.
+- Body: the steps to reproduce, what happens, what was expected, and where
+  in the code it lives. State what was not checked instead of guessing.
+- Title says the problem in one plain line. No `type:` prefix.
+
 ## Go tests
 
 - External test packages (`package foo_test`), testing the exported
