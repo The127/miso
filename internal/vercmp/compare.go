@@ -10,11 +10,16 @@ import (
 func Compare(a, b string) int {
 	for {
 		a, b = skipped(a), skipped(b)
-		if a == "" || b == "" {
-			return cmp.Compare(len(a), len(b))
+		compared, found := separator(a, b, tilde)
+		if !found {
+			if a == "" || b == "" {
+				return cmp.Compare(len(a), len(b))
+			}
+
+			compared, found = separator(a, b, separators)
 		}
 
-		if compared, found := separator(a[0], b[0]); found {
+		if found {
 			if compared != 0 {
 				return compared
 			}
@@ -45,19 +50,25 @@ func Compare(a, b string) int {
 	}
 }
 
+// tilde is looked for before a version that has ended counts as older, so
+// it makes the older version even against the end.
+const tilde = "~"
+
 // separators are looked for in the order the specification checks them.
 const separators = "-^."
 
-// separator compares the fronts of two versions when either is a separator.
-// The version with a separator the other lacks is the older one.
-func separator(a, b byte) (compared int, found bool) {
-	for _, each := range []byte(separators) {
+// separator compares the fronts of two versions when either starts with one
+// of the separators among. The version with a separator the other lacks is
+// the older one.
+func separator(a, b, among string) (compared int, found bool) {
+	for _, each := range among {
+		atA, atB := strings.HasPrefix(a, string(each)), strings.HasPrefix(b, string(each))
 		switch {
-		case a == each && b == each:
+		case atA && atB:
 			return 0, true
-		case a == each:
+		case atA:
 			return -1, true
-		case b == each:
+		case atB:
 			return 1, true
 		}
 	}
