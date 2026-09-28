@@ -23,6 +23,16 @@ func Ceiling(scratch string, below []string, network *protocol.Network) (string,
 		return "", err
 	}
 
+	// the run's layer takes the mode of the top root, which the ceiling is
+	root, err := os.Stat(below[0])
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.Chmod(ceiling, root.Mode().Perm()); err != nil {
+		return "", err
+	}
+
 	for _, layer := range below {
 		info, err := os.Lstat(filepath.Join(layer, "etc"))
 		if errors.Is(err, fs.ErrNotExist) {

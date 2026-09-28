@@ -56,3 +56,24 @@ func TestAnOnlineRunThatWritesInEtcKeepsTheModeAndOwnerOfEtc(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, []uint32{7, 8}, []uint32{owner.Uid, owner.Gid})
 }
+
+func TestAnOnlineRunsLayerHasTheModeOfTheRootBelow(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	odd := protocol.Run{Key: "odd", Layers: []string{"base"}, Command: "chmod 0751 /"}
+	code, err := worker.Run(context.Background(), odd, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	run := protocol.Run{Key: "run", Layers: []string{"base", "odd"}, Network: online(t), Command: "true"}
+
+	// act
+	code, err = worker.Run(context.Background(), run, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	info, err := os.Lstat(filepath.Join(layers, "run"))
+	require.NoError(t, err)
+	assert.Equal(t, fs.ModeDir|0o751, info.Mode())
+}
