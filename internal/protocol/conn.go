@@ -26,6 +26,9 @@ type Conn struct {
 
 	// whether the entries of the copy were asked for
 	asked bool
+
+	// whether the host said all entries are sent
+	sent bool
 }
 
 // New speaks as the given agent, reads what the other side sends from r and

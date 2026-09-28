@@ -14,6 +14,11 @@ type Entries interface {
 // Next asks the host for the entries of the copy the first time, and then
 // reads them one by one until it says all are sent.
 func (c *Conn) Next() (Entry, io.Reader, error) {
+	// nothing follows Sent, a read would wait forever
+	if c.sent {
+		return Entry{}, nil, io.EOF
+	}
+
 	if !c.asked {
 		c.asked = true
 
@@ -31,6 +36,8 @@ func (c *Conn) Next() (Entry, io.Reader, error) {
 	case Entry:
 		return message, c.content, nil
 	case Sent:
+		c.sent = true
+
 		return Entry{}, nil, io.EOF
 	}
 
