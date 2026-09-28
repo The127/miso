@@ -64,6 +64,11 @@ func (c stageCopy) put(name, below string) error {
 }
 
 func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error {
+	there, err := c.image.IsDirectory(target)
+	if err != nil {
+		return err
+	}
+
 	if err := c.image.Directory(target, uint32(info.Mode().Perm())); err != nil {
 		return err
 	}
@@ -77,6 +82,12 @@ func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error
 		if err := c.put(path.Join(name, entry.Name()), path.Join(below, entry.Name())); err != nil {
 			return err
 		}
+	}
+
+	// one the image has keeps its owner, mode and times, so that a stage
+	// copied onto / does not hand them to /, /etc and the rest
+	if there {
+		return nil
 	}
 
 	opened, err := c.from.Open(name)

@@ -137,3 +137,24 @@ func TestADirectoryOfAStageKeepsItsOwnerModeAndTimesPastItsChildren(t *testing.T
 	assert.Equal(t, os.ModeDir|os.ModeSticky|0o750, info.Mode())
 	assert.True(t, then.Equal(info.ModTime()), "modified %s", info.ModTime())
 }
+
+func TestADirectoryOfTheImageKeepsItsOwnWhenAStageIsCopiedIntoIt(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(stage, "d"), 0o750))
+	require.NoError(t, os.Chown(filepath.Join(stage, "d"), 1234, 5678))
+	require.NoError(t, os.Mkdir(filepath.Join(image, "etc"), 0o700))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/d"}, below("/etc"))
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Stat(filepath.Join(image, "etc"))
+	require.NoError(t, err)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	assert.Equal(t, uint32(0), stat.Uid)
+	assert.Equal(t, os.ModeDir|0o700, info.Mode())
+}
