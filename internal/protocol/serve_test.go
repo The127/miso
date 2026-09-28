@@ -381,3 +381,48 @@ func TestACopyAsksForItsEntriesAndReadsThemUntilSent(t *testing.T) {
 	assert.Equal(t, []protocol.Entry{entry}, runner.entries)
 	assert.Equal(t, []string{"hello\n"}, runner.contents)
 }
+
+// breaking is an agent that fails after the first entry of a copy.
+type breaking struct {
+	err error
+}
+
+func (b breaking) Run(context.Context, protocol.Run, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (b breaking) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
+}
+
+func (b breaking) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
+	if _, _, err := entries.Next(); err != nil {
+		return err
+	}
+
+	return b.err
+}
+
+func TestACopyThatFailsReadsTheRestOfItsEntriesBeforeItSaysSo(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Copy{Key: "abc", Sources: []string{"etc"}, Destination: "/etc"}))
+	require.NoError(t, host.SendEntry(protocol.Entry{Kind: "file", Path: "motd", Mode: 0o644, Size: 6}, strings.NewReader("hello\n")))
+	require.NoError(t, host.SendEntry(protocol.Entry{Kind: "file", Path: "issue", Mode: 0o644, Size: 4}, strings.NewReader("hey\n")))
+	require.NoError(t, host.Send(protocol.Sent{}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(breaking{err: errors.New("disk full")})
+
+	// assert
+	require.NoError(t, err)
+	send, err := host.Receive()
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Send{}, send)
+	assert.Equal(t, protocol.Failed{Reason: "disk full"}, failed)
+	assert.Zero(t, requests.Len())
+}

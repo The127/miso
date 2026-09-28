@@ -39,6 +39,14 @@ func (c *Conn) Serve(runner Runner) error {
 	// a copy reads its entries from the host, so no one else may read
 	if isCopy {
 		if err := runner.Copy(ctx, copying, c, outputs{c}); err != nil {
+			// the host sends every entry before it reads an answer, so it
+			// would wait on us while we wait on it
+			for {
+				if _, _, err := c.Next(); err != nil {
+					break
+				}
+			}
+
 			return c.Send(Failed{Reason: err.Error()})
 		}
 
