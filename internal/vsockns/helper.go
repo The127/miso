@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -25,6 +26,7 @@ const (
 	modeQuestion   = "mode"
 	socketQuestion = "socket"
 	runQuestion    = "run"
+	startQuestion  = "start"
 )
 
 // Helper holds a vsock namespace when miso was started as its helper, and
@@ -77,6 +79,7 @@ var handlers = map[string]handler{
 	modeQuestion:   mode,
 	socketQuestion: socket,
 	runQuestion:    run,
+	startQuestion:  start,
 }
 
 // serve answers miso until it hangs up.
@@ -172,4 +175,62 @@ func run(argument string, files []int) (string, []int, error) {
 	program.Stdout = stdout
 
 	return "", nil, program.Run()
+}
+
+// start starts a program from this thread, so in the namespace, with the
+// first file miso lent as its stdout, and tells on the second how it ended.
+func start(argument string, files []int) (string, []int, error) {
+	if len(files) != 2 {
+		return "", nil, fmt.Errorf("a program needs its stdout and its report, it got %d files", len(files))
+	}
+
+	var args []string
+	if err := json.Unmarshal([]byte(argument), &args); err != nil {
+		return "", nil, err
+	}
+
+	if len(args) == 0 {
+		return "", nil, errors.New("a program needs a name")
+	}
+
+	// copies of their own, since the files are only lent, and ones the
+	// program does not inherit
+	own, err := unix.FcntlInt(uintptr(files[0]), unix.F_DUPFD_CLOEXEC, 0)
+	if err != nil {
+		return "", nil, err
+	}
+
+	stdout := os.NewFile(uintptr(own), "stdout")
+	defer func() { _ = stdout.Close() }()
+
+	report, err := unix.FcntlInt(uintptr(files[1]), unix.F_DUPFD_CLOEXEC, 0)
+	if err != nil {
+		return "", nil, err
+	}
+
+	//nolint:gosec // miso names the program it runs in its own namespace
+	program := exec.Command(args[0], args[1:]...)
+	program.Stdout = stdout
+
+	if err := program.Start(); err != nil {
+		_ = unix.Close(report)
+
+		return "", nil, err
+	}
+
+	go func() {
+		defer func() { _ = unix.Close(report) }()
+
+		err := program.Wait()
+		var exited *exec.ExitError
+		if err != nil && !errors.As(err, &exited) {
+			_ = answerFailed(report, err)
+
+			return
+		}
+
+		_ = answerOK(report, strconv.Itoa(program.ProcessState.ExitCode()))
+	}()
+
+	return "", nil, nil
 }
