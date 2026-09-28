@@ -1,6 +1,8 @@
 package guestport
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,5 +29,5 @@ func Find(sys, dev, name string) (string, error) {
 		}
 	}
 
-	return "", nil
+	return "", fmt.Errorf("no virtio port named %q: %w", name, fs.ErrNotExist)
 }

@@ -1,6 +1,7 @@
 package guestport_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,4 +37,15 @@ func TestTheAgentsPortIsFoundByItsName(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "/dev/vport1p1", found)
+}
+
+func TestAVMWithoutTheAgentsPortSaysItHasNone(t *testing.T) {
+	// arrange
+	sys := ports(t, map[string]string{"vport0p1": "org.qemu.guest_agent.0"})
+
+	// act
+	_, err := guestport.Find(sys, "/dev", "miso")
+
+	// assert
+	assert.ErrorIs(t, err, fs.ErrNotExist)
 }
