@@ -83,38 +83,41 @@ func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32)
 // awaitBoot waits until the image has booted, the VM stopped, the caller
 // gave up or the patience ran out.
 func (b Boot) awaitBoot(ctx context.Context, vm *qemu.VM, notices *vsock.Listener) error {
+	stopped, stop := context.WithCancelCause(ctx)
+	defer stop(nil)
+
+	wait, cancel := context.WithTimeoutCause(stopped, b.Patience, fmt.Errorf("the image did not boot within %s", b.Patience))
+	defer cancel()
+
 	// a VM that stops ends the wait for its boot, the notices can come from
 	// nobody else
 	go func() {
 		select {
 		case <-vm.Done():
-		case <-ctx.Done():
+			stop(fmt.Errorf("the image did not boot: %w", vm.Err()))
+		case <-wait.Done():
 		}
-
-		_ = notices.Close()
 	}()
 
-	late := make(chan struct{})
-	patience := time.AfterFunc(b.Patience, func() {
-		close(late)
+	closing := context.AfterFunc(wait, func() { _ = notices.Close() })
 
-		_ = notices.Close()
-	})
-	defer patience.Stop()
+	err := booted(notices)
 
-	if err := booted(notices); err != nil {
-		return b.notBooted(ctx, vm, late, err)
+	// the notices after the boot must stay open, and a wait that ended as
+	// the boot came has closed them already
+	if err == nil && closing() {
+		return nil
 	}
 
-	// the notices after the boot were closed with it. Stop only says the
-	// timer started, so it is waited for
-	if !patience.Stop() {
-		<-late
-
-		return b.notBooted(ctx, vm, late, nil)
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
 
-	return nil
+	if wait.Err() != nil {
+		return context.Cause(wait)
+	}
+
+	return fmt.Errorf("the image did not boot: %w", err)
 }
 
 // runChecks runs each check on a connection of its own.
@@ -137,27 +140,6 @@ func runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
 	}
 
 	return results, nil
-}
-
-// notBooted is why a wait for the boot ended without it: the caller gave
-// up, the patience ran out, or the VM's own reason once it stopped.
-func (b Boot) notBooted(ctx context.Context, vm *qemu.VM, late <-chan struct{}, err error) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	select {
-	case <-late:
-		return fmt.Errorf("the image did not boot within %s", b.Patience)
-	default:
-	}
-
-	select {
-	case <-vm.Done():
-		return fmt.Errorf("the image did not boot: %w", vm.Err())
-	default:
-		return fmt.Errorf("the image did not boot: %w", err)
-	}
 }
 
 // flash writes the firmware where QEMU reads it, the vars a copy of their
