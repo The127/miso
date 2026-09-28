@@ -89,3 +89,18 @@ func TestACopiedTreeKeepsItsDirectoriesAndLinks(t *testing.T) {
 	assert.Equal(t, "motd", target)
 	assert.FileExists(t, filepath.Join(layers, "copy", "etc", "motd"))
 }
+
+func TestAnEntryOfAnUnknownKindFailsTheCopyAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"dev"}, Destination: "/dev/null"}
+	files := &sent{entries: []protocol.Entry{{Kind: "device", Path: "."}}, contents: []string{""}}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.ErrorContains(t, err, "device")
+	assert.NoDirExists(t, filepath.Join(layers, "copy"))
+}

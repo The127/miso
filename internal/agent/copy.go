@@ -3,12 +3,17 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
 )
+
+// ErrUnknownKind is an entry that is no file, no directory and no link. A
+// copy carries nothing else.
+var ErrUnknownKind = errors.New("unknown kind of entry")
 
 // Copy puts what the host sends on top of layers and keeps it as the layer
 // of the key.
@@ -56,7 +61,9 @@ func placeOne(image *place.Root, path string, entry protocol.Entry, content io.R
 		return image.Directory(path, entry.Mode)
 	case "link":
 		return image.Link(path, entry.Target)
-	default:
+	case "file":
 		return image.File(path, entry.Mode, content)
+	default:
+		return fmt.Errorf("%s: %w: %s", path, ErrUnknownKind, entry.Kind)
 	}
 }
