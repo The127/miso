@@ -123,7 +123,7 @@ func TestAMachineQEMUStoppedWithoutAWordSaysOnlyHow(t *testing.T) {
 func startOn(t *testing.T, driver qemu.Driver, kvm string) {
 	t.Helper()
 
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm, "/dev/vhost-vsock")
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm)
 	if err == nil {
 		t.Cleanup(func() { <-vm.Done() })
 	}
@@ -158,7 +158,7 @@ func TestAMachineOnAHostWithoutKVMSaysSo(t *testing.T) {
 	driver, _ := fakeDriver(t)
 
 	// act
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, filepath.Join(t.TempDir(), "kvm"), "/dev/vhost-vsock")
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, filepath.Join(t.TempDir(), "kvm"))
 
 	// assert
 	require.NoError(t, err)
@@ -206,9 +206,10 @@ func TestAMachineWithoutATempDirLeavesQEMUTheHostsOwn(t *testing.T) {
 func TestAHostWithoutVsockGivesTheMachineAVirtioPortForItsAgent(t *testing.T) {
 	// arrange
 	driver, recorded := fakeDriver(t)
+	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
 
 	// act
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 
 	// assert
 	require.NoError(t, err)
@@ -225,9 +226,10 @@ func TestAHostWithoutVsockIsToldWhyItsMachineHasAVirtioPort(t *testing.T) {
 	driver, _ := fakeDriver(t)
 	var told error
 	driver.WithoutVsock = func(why error) { told = why }
+	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
 
 	// act
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 
 	// assert
 	require.NoError(t, err)
@@ -239,7 +241,8 @@ func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_ECHO", "1")
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 	t.Cleanup(func() { <-vm.Done() })
 	port := vm.Port()
@@ -259,7 +262,8 @@ func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
 func TestAStoppedMachineLetsGoOfItsVirtioPort(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 
 	// act

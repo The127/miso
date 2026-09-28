@@ -33,15 +33,10 @@ type Driver struct {
 // Start boots the machine, which is killed when ctx is done. Killing is
 // safe, the cache disk is written to survive a crash of the machine.
 func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
-	vsockDevice := d.Vsock
-	if vsockDevice == "" {
-		vsockDevice = vhostVsock
-	}
-
-	return d.start(ctx, machine, kvmDevice, vsockDevice)
+	return d.start(ctx, machine, kvmDevice)
 }
 
-func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice string) (*VM, error) {
+func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, error) {
 	args, err := arguments(machine)
 	if err != nil {
 		return nil, err
@@ -50,6 +45,11 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice str
 	accelerated, why := accel(kvm)
 	if why != nil {
 		d.withoutKVM(why)
+	}
+
+	vsockDevice := d.Vsock
+	if vsockDevice == "" {
+		vsockDevice = vhostVsock
 	}
 
 	reach, err := reachFor(vsockDevice)
