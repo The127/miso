@@ -37,12 +37,13 @@ func run(conn shellConn, command string) (Result, error) {
 	}
 
 	// the service's echo ends the output with the line break before the marker
-	at := strings.LastIndex(string(answer), "\n"+exitMarker+" ")
+	markerLine := "\n" + exitMarker + " "
+	at := strings.LastIndex(string(answer), markerLine)
 	if at == -1 {
 		return Result{}, errors.New("the check's answer ended without an exit code")
 	}
 
-	code, err := strconv.Atoi(strings.TrimSpace(string(answer[at+len(exitMarker)+2:])))
+	code, err := strconv.Atoi(strings.TrimSpace(string(answer[at+len(markerLine):])))
 	if err != nil {
 		return Result{}, err
 	}
