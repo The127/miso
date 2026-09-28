@@ -1,4 +1,4 @@
-package builderkernel
+package deb
 
 import (
 	"archive/tar"
@@ -10,10 +10,10 @@ import (
 	"github.com/therootcompany/xz"
 )
 
-// eachFile reads through the files of a package's data, giving the name of
+// Files reads through the files of a package's data, giving the name of
 // each and the file itself. A loop over it may stop early. Whatever went
 // wrong is read from the second return, after the loop.
-func eachFile(deb io.Reader) (iter.Seq2[string, io.Reader], func() error) {
+func Files(deb io.Reader) (iter.Seq2[string, io.Reader], func() error) {
 	var failed error
 
 	each := func(yield func(string, io.Reader) bool) {

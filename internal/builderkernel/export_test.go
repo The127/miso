@@ -8,11 +8,6 @@ import (
 	"github.com/The127/miso/internal/initramfs"
 )
 
-// Data is the data of a package, which holds the kernel and its modules.
-func Data(deb io.Reader) (io.Reader, error) {
-	return data(deb)
-}
-
 // Contents is everything miso reads out of a kernel package.
 type Contents = contents
 

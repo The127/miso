@@ -297,6 +297,29 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the deb reads the files out of a Debian package it is handed. It knows
+  # nothing of ours and never opens, fetches or starts anything
+  - package: '**.internal.deb$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
+  # the debtest makes Debian packages for tests, in memory
+  - package: '**.internal.deb.debtest$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the builder kernel takes miso's pinned Debian package apart into the
   # kernel the builder VM boots and the modules its agent loads. It has the
   # download fetch the package, and never starts a process, opens a
@@ -304,6 +327,7 @@ dependenciesRules:
   - package: '**.internal.builderkernel$'
     shouldOnlyDependsOn:
       internal:
+        - '**.internal.deb$'
         - '**.internal.download$'
         - '**.internal.initramfs$'
     shouldNotDependsOn:

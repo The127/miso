@@ -1,7 +1,6 @@
 package builderkernel_test
 
 import (
-	"archive/tar"
 	"bytes"
 	"maps"
 	"testing"
@@ -11,33 +10,11 @@ import (
 	"github.com/ulikunitz/xz"
 
 	"github.com/The127/miso/internal/builderkernel"
+	"github.com/The127/miso/internal/deb/debtest"
 )
 
 // testRelease is the kernel release the fixtures are built around.
 const testRelease = "6.12.107+deb13-cloud-amd64"
-
-// packaged is a Debian package whose data holds the files, as the kernel
-// package holds its kernel and modules.
-func packaged(t *testing.T, files map[string]string) []byte {
-	t.Helper()
-
-	var packed bytes.Buffer
-
-	compressed, err := xz.NewWriter(&packed)
-	require.NoError(t, err)
-
-	writer := tar.NewWriter(compressed)
-	for name, content := range files {
-		require.NoError(t, writer.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(content))}))
-		_, err := writer.Write([]byte(content))
-		require.NoError(t, err)
-	}
-
-	require.NoError(t, writer.Close())
-	require.NoError(t, compressed.Close())
-
-	return archive(t, member{"debian-binary", "2.0\n"}, member{"data.tar.xz", packed.String()})
-}
 
 // wholePackage is a package that holds everything miso reads out of one, so
 // that a test names only the files it is about.
@@ -51,7 +28,7 @@ func wholePackage(t *testing.T, files map[string]string) []byte {
 
 	maps.Copy(whole, files)
 
-	return packaged(t, whole)
+	return debtest.Package(t, whole)
 }
 
 // packedModule is a kernel module as a package holds it, xz packed.
@@ -103,7 +80,7 @@ func TestAPackageWithTwoKernelsIsRefused(t *testing.T) {
 
 func TestAPackageWithNoKernelIsRefused(t *testing.T) {
 	// arrange
-	deb := packaged(t, map[string]string{"./usr/share/doc/linux-image/changelog": "the changelog"})
+	deb := debtest.Package(t, map[string]string{"./usr/share/doc/linux-image/changelog": "the changelog"})
 
 	// act
 	_, err := builderkernel.Read(bytes.NewReader(deb))
@@ -159,7 +136,7 @@ func TestWhatTheKernelBuildsInIsNamedByItsModulesBuiltin(t *testing.T) {
 
 func TestAPackageWithNoModulesBuiltinIsRefused(t *testing.T) {
 	// arrange
-	deb := packaged(t, map[string]string{"./boot/vmlinuz-" + testRelease: "the kernel"})
+	deb := debtest.Package(t, map[string]string{"./boot/vmlinuz-" + testRelease: "the kernel"})
 
 	// act
 	_, err := builderkernel.Read(bytes.NewReader(deb))

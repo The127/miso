@@ -1,4 +1,4 @@
-package builderkernel
+package deb
 
 import (
 	"errors"

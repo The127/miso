@@ -7,6 +7,8 @@ import (
 	"io"
 	"path"
 	"strings"
+
+	"github.com/The127/miso/internal/deb"
 )
 
 // kernelPrefix is what the kernel of a package is called, the release
@@ -23,13 +25,13 @@ type contents struct {
 
 // read takes a package apart in one walk: the kernel it holds, what that
 // kernel has built in, and what every module of it says about itself.
-func read(deb io.Reader) (contents, error) {
+func read(pkg io.Reader) (contents, error) {
 	var held contents
 
 	// an empty modules.builtin is not a missing one
 	var listed bool
 
-	files, failed := eachFile(deb)
+	files, failed := deb.Files(pkg)
 	for name, file := range files {
 		base := path.Base(name)
 
