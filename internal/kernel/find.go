@@ -1,12 +1,17 @@
 package kernel
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
 	"path"
 )
 
 // modules holds a directory per installed kernel, named by its version.
 const modules = "usr/lib/modules"
+
+// ErrNoKernel is an image without a kernel where distributions install it.
+var ErrNoKernel = errors.New("no kernel")
 
 // Kernel is what boots an image, as paths in the image.
 type Kernel struct {
@@ -18,7 +23,7 @@ type Kernel struct {
 // Find finds the kernel of an image and the initrd made for it.
 func Find(image fs.FS) (Kernel, error) {
 	versions, err := fs.ReadDir(image, modules)
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return Kernel{}, err
 	}
 
@@ -27,6 +32,10 @@ func Find(image fs.FS) (Kernel, error) {
 		if _, err := fs.Stat(image, path.Join(modules, entry.Name(), "vmlinuz")); err == nil {
 			installed = append(installed, entry.Name())
 		}
+	}
+
+	if len(installed) == 0 {
+		return Kernel{}, fmt.Errorf("%w, looked at /%s/*/vmlinuz", ErrNoKernel, modules)
 	}
 
 	version := installed[0]

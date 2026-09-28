@@ -60,6 +60,34 @@ func TestModulesLeftOfARemovedKernelAreNoKernel(t *testing.T) {
 	assert.Equal(t, "7.2.8+deb14-amd64", found.Version)
 }
 
+func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"etc/os-release": {},
+	}
+
+	// act
+	_, err := kernel.Find(image)
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoKernel)
+	assert.ErrorContains(t, err, "/usr/lib/modules/*/vmlinuz")
+}
+
+func TestAnImageWithOnlyModulesLeftHasNoKernel(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.1.0+deb14-amd64/modules.dep": {},
+	}
+
+	// act
+	_, err := kernel.Find(image)
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoKernel)
+	assert.ErrorContains(t, err, "/usr/lib/modules/*/vmlinuz")
+}
+
 func TestAnInitrdOfFedoraIsFoundInBoot(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{
