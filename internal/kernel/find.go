@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"strings"
 
 	"github.com/The127/miso/internal/vercmp"
 )
@@ -45,6 +46,11 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 	// the kernel systemd-boot would start first
 	version := slices.MaxFunc(installed, vercmp.Compare)
 	if wanted != "" {
+		// a version only ever names a kernel the image has, never a path
+		if !slices.Contains(installed, wanted) {
+			return Kernel{}, fmt.Errorf("%w %s, the image has %s", ErrNoKernel, wanted, strings.Join(installed, ", "))
+		}
+
 		version = wanted
 	}
 

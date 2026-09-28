@@ -94,6 +94,22 @@ func TestAWantedKernelIsFoundOverANewerOne(t *testing.T) {
 	assert.Equal(t, "7.2.8+deb14-amd64", found.Version)
 }
 
+func TestAWantedKernelThatIsNotInstalledFailsNamingTheInstalledOnes(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2.8+deb14-amd64/vmlinuz": {},
+		"usr/lib/modules/7.2.8+deb14-amd64/initrd":  {},
+	}
+
+	// act
+	_, err := kernel.Find(image, "7.9")
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoKernel)
+	assert.ErrorContains(t, err, "7.9")
+	assert.ErrorContains(t, err, "7.2.8+deb14-amd64")
+}
+
 func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{
