@@ -33,6 +33,10 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 				return err
 			}
 		case Send:
+			if files == nil {
+				return fmt.Errorf("%T is no answer to %T", m, request)
+			}
+
 			if err := files(c.SendEntry); err != nil {
 				return err
 			}
