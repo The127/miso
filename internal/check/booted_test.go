@@ -40,12 +40,30 @@ func (n *notices) Accept() (io.ReadWriteCloser, error) {
 	return <-n.sent, nil
 }
 
+// booted waits for Booted, and fails the test at once if it never returns
+// rather than when the test run times out.
+func booted(t *testing.T, notices check.Notices) error {
+	t.Helper()
+
+	done := make(chan error, 1)
+	go func() { done <- check.Booted(notices) }()
+
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(time.Second):
+		require.FailNow(t, "Booted never returned")
+
+		return nil
+	}
+}
+
 func TestAnImageHasBootedOnceItsSystemdSaysReady(t *testing.T) {
 	// arrange
 	said := sending("X_SYSTEMD_MACHINE_ID=52f7605c5e7c40b3a39ffcb0aaceb307", "READY=1\nSTATUS=Ready.")
 
 	// act
-	err := check.Booted(said)
+	err := booted(t, said)
 
 	// assert
 	require.NoError(t, err)
@@ -57,7 +75,7 @@ func TestReadyInTheTextOfAStatusIsNoBoot(t *testing.T) {
 	said := sending("STATUS=Waiting for READY=1 from the network", "READY=1")
 
 	// act
-	err := check.Booted(said)
+	err := booted(t, said)
 
 	// assert
 	require.NoError(t, err)
@@ -82,7 +100,7 @@ func (l *late) Close() error {
 func TestNoticesAfterTheBootAreStillTaken(t *testing.T) {
 	// arrange
 	said := sending("READY=1")
-	require.NoError(t, check.Booted(said))
+	require.NoError(t, booted(t, said))
 	notice := &late{Reader: strings.NewReader("X_SYSTEMD_UNIT_ACTIVE=getty.target"), Writer: io.Discard, closed: make(chan bool, 1)}
 
 	// act
@@ -109,7 +127,7 @@ func (broken) Close() error { return nil }
 func TestANoticeThatBreaksAfterTheBootDoesNotEndTheTaking(t *testing.T) {
 	// arrange
 	said := sending("READY=1")
-	require.NoError(t, check.Booted(said))
+	require.NoError(t, booted(t, said))
 	notice := &late{Reader: strings.NewReader("X_SYSTEMD_UNIT_ACTIVE=getty.target"), Writer: io.Discard, closed: make(chan bool, 1)}
 
 	// act
@@ -147,7 +165,7 @@ func TestReadyInANoticeThatBreaksAfterwardsStillCounts(t *testing.T) {
 	said.sent <- cut{strings.NewReader("READY=1\nSTATUS=Rea"), io.Discard}
 
 	// act
-	err := check.Booted(said)
+	err := booted(t, said)
 
 	// assert
 	require.NoError(t, err)
