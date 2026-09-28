@@ -29,5 +29,12 @@ func (r *Root) File(path string, mode uint32, content io.Reader) error {
 		return err
 	}
 
+	// the mode given at create passes the umask first
+	if err := unix.Fchmod(fd, mode); err != nil {
+		_ = file.Close()
+
+		return &os.PathError{Op: "chmod", Path: path, Err: err}
+	}
+
 	return file.Close()
 }
