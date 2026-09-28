@@ -21,6 +21,10 @@ type Driver struct {
 
 	// WithoutKVM hears why the machine runs on TCG. It may be nil.
 	WithoutKVM func(why error)
+
+	// WithoutVsock hears why the machine's agent is reached over a virtio
+	// port. It may be nil.
+	WithoutVsock func(why error)
 }
 
 // Start boots the machine, which is killed when ctx is done. Killing is
@@ -43,6 +47,10 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice str
 	reach, err := reachFor(vsockDevice)
 	if err != nil {
 		return nil, err
+	}
+
+	if reach.withoutVsock != nil {
+		d.withoutVsock(reach.withoutVsock)
 	}
 
 	// QEMU holds its own copy of its end, and of a vsock device the CID with
@@ -76,5 +84,12 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice str
 func (d Driver) withoutKVM(why error) {
 	if d.WithoutKVM != nil {
 		d.WithoutKVM(why)
+	}
+}
+
+// withoutVsock is only a notice, the agent is still reached over the port.
+func (d Driver) withoutVsock(why error) {
+	if d.WithoutVsock != nil {
+		d.WithoutVsock(why)
 	}
 }

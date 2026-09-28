@@ -218,3 +218,18 @@ func TestAHostWithoutVsockGivesTheMachineAVirtioPortForItsAgent(t *testing.T) {
 	assert.Equal(t, "socket,id=agent,fd=3", valueOf(t, args, "-chardev"))
 	assert.Contains(t, args, "virtserialport,chardev=agent,name=miso")
 }
+
+func TestAHostWithoutVsockIsToldWhyItsMachineHasAVirtioPort(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	var told error
+	driver.WithoutVsock = func(why error) { told = why }
+
+	// act
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	assert.ErrorIs(t, told, fs.ErrNotExist)
+}
