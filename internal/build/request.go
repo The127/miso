@@ -42,28 +42,15 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 		_, seen := roots[stage.BaseKey]
 		if !seen && stage.BaseDigest != "" {
 			roots[stage.BaseKey] = rootfs{layers: []string{stage.BaseKey}}
-			requests = append(requests, Request{Line: stage.Line, Written: "FROM " + stage.Base, Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
+			requests = append(requests, importOf(stage))
 		}
 
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
-			var message protocol.Message
-			switch instruction := step.Instruction.(type) {
-			case imagefile.Run:
-				run := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command}
-				if !instruction.Offline {
-					run.Network = &network
-				}
-
-				message = run
-			case imagefile.Copy:
-				copying, err := copyRequest(step, instruction, under, ends[instruction.From])
-				if err != nil {
-					return nil, err
-				}
-
-				message = copying
+			message, err := messageOf(step, under, ends, network)
+			if err != nil {
+				return nil, err
 			}
 
 			if message != nil {
@@ -78,4 +65,27 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 	}
 
 	return requests, nil
+}
+
+// importOf brings the image a stage is on into the cache.
+func importOf(stage plan.Stage) Request {
+	return Request{Line: stage.Line, Written: "FROM " + stage.Base, Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}}
+}
+
+// messageOf is what the agent is asked for a step on the root file system
+// under it, or nothing for a step the agent has no part in.
+func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network) (protocol.Message, error) {
+	switch instruction := step.Instruction.(type) {
+	case imagefile.Run:
+		run := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command}
+		if !instruction.Offline {
+			run.Network = &network
+		}
+
+		return run, nil
+	case imagefile.Copy:
+		return copyRequest(step, instruction, under, ends[instruction.From])
+	}
+
+	return nil, nil
 }
