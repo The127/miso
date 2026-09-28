@@ -246,3 +246,19 @@ func TestACopySentIsTheCopyReceived(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, request, received)
 }
+
+func TestAnEntrySentIsTheEntryReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	entry := protocol.Entry{Kind: "file", Path: "motd", Mode: 0o4755, Size: 12}
+
+	// act
+	sent := conn.Send(entry)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, entry, received)
+}
