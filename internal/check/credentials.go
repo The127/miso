@@ -14,5 +14,6 @@ func Credentials(notifyPort uint32) []qemu.Credential {
 		{Name: "vmm.notify_socket", Value: fmt.Appendf(nil, "vsock-stream:%d:%d", unix.VMADDR_CID_HOST, notifyPort)},
 		socket(),
 		service(),
+		dropin(),
 	}
 }
