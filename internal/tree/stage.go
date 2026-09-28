@@ -79,7 +79,15 @@ func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error
 		}
 	}
 
-	return nil
+	opened, err := c.from.Open(name)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = opened.Close() }()
+
+	// once it is filled, since what lands in it moves its time
+	return c.keep(target, info, opened)
 }
 
 func (c stageCopy) file(name, target string, info fs.FileInfo) error {
@@ -94,12 +102,18 @@ func (c stageCopy) file(name, target string, info fs.FileInfo) error {
 		return err
 	}
 
+	return c.keep(target, info, in)
+}
+
+// keep gives what landed at the target what the opened original is apart
+// from its content.
+func (c stageCopy) keep(target string, info fs.FileInfo, opened *os.File) error {
 	kept, err := meta(c.source, info)
 	if err != nil {
 		return err
 	}
 
-	if kept.Xattrs, err = fileXattrs(in); err != nil {
+	if kept.Xattrs, err = fileXattrs(opened); err != nil {
 		return &fs.PathError{Op: "getxattr", Path: c.source, Err: err}
 	}
 

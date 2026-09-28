@@ -110,3 +110,30 @@ func TestADirectoryOfAStageCopiesWhatIsInIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "welcome\n", string(issue))
 }
+
+func TestADirectoryOfAStageKeepsItsOwnerModeAndTimesPastItsChildren(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	dir := filepath.Join(stage, "d")
+	require.NoError(t, os.Mkdir(dir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "f"), nil, 0o600))
+	require.NoError(t, os.Chown(dir, 1234, 5678))
+	require.NoError(t, os.Chmod(dir, os.ModeSticky|0o750))
+	then := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, os.Chtimes(dir, then, then))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/d"}, below("/copied"))
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Stat(filepath.Join(image, "copied"))
+	require.NoError(t, err)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	assert.Equal(t, uint32(1234), stat.Uid)
+	assert.Equal(t, uint32(5678), stat.Gid)
+	assert.Equal(t, os.ModeDir|os.ModeSticky|0o750, info.Mode())
+	assert.True(t, then.Equal(info.ModTime()), "modified %s", info.ModTime())
+}
