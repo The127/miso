@@ -64,3 +64,14 @@ func TestAHostWhosePortCarriesNoSessionSaysNothingOnStandardError(t *testing.T) 
 	// assert
 	assert.Empty(t, said())
 }
+
+func TestASessionOnAPortKeepsNoWatchOnASilentVM(t *testing.T) {
+	// arrange
+	config := vport.Config()
+
+	// act
+	keepsWatch := config.EnableKeepAlive
+
+	// assert
+	assert.False(t, keepsWatch)
+}
