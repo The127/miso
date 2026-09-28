@@ -18,6 +18,8 @@ type envelope struct {
 	Import *Import `json:",omitempty"`
 	Copy   *Copy   `json:",omitempty"`
 	Entry  *Entry  `json:",omitempty"`
+	Send   *Send   `json:",omitempty"`
+	Sent   *Sent   `json:",omitempty"`
 	Output *Output `json:",omitempty"`
 	Done   *Done   `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
@@ -36,6 +38,10 @@ func (e envelope) open() Message {
 		return *e.Copy
 	case e.Entry != nil:
 		return *e.Entry
+	case e.Send != nil:
+		return *e.Send
+	case e.Sent != nil:
+		return *e.Sent
 	case e.Output != nil:
 		return *e.Output
 	case e.Done != nil:

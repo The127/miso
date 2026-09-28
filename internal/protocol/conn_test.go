@@ -262,3 +262,33 @@ func TestAnEntrySentIsTheEntryReceived(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, entry, received)
 }
+
+func TestASendSentIsTheSendReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	sent := conn.Send(protocol.Send{})
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Send{}, received)
+}
+
+func TestASentSentIsTheSentReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	sent := conn.Send(protocol.Sent{})
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Sent{}, received)
+}
