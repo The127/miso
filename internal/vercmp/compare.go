@@ -14,15 +14,14 @@ func Compare(a, b string) int {
 			return cmp.Compare(len(a), len(b))
 		}
 
-		switch {
-		case a[0] == '-' && b[0] == '-':
+		if compared, found := separator(a[0], b[0]); found {
+			if compared != 0 {
+				return compared
+			}
+
 			a, b = a[1:], b[1:]
 
 			continue
-		case a[0] == '-':
-			return -1
-		case b[0] == '-':
-			return 1
 		}
 
 		if a[0] == '.' && b[0] == '.' {
@@ -50,6 +49,26 @@ func Compare(a, b string) int {
 			return compared
 		}
 	}
+}
+
+// separators are looked for in the order the specification checks them.
+const separators = "-^"
+
+// separator compares the fronts of two versions when either is a separator.
+// The version with a separator the other lacks is the older one.
+func separator(a, b byte) (compared int, found bool) {
+	for _, each := range []byte(separators) {
+		switch {
+		case a == each && b == each:
+			return 0, true
+		case a == each:
+			return -1, true
+		case b == each:
+			return 1, true
+		}
+	}
+
+	return 0, false
 }
 
 // skipped is a version without the characters at its front that the
