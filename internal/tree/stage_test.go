@@ -84,3 +84,29 @@ func TestAFileCapabilityOfAStageOutlivesItsOwnerChange(t *testing.T) {
 	assert.Equal(t, netRaw, xattr(t, filepath.Join(image, "ping"), "security.capability"))
 	assert.Equal(t, "file", string(xattr(t, filepath.Join(image, "ping"), "user.note")))
 }
+
+// below lands what a copy takes below one directory of the image.
+func below(dir string) tree.Land {
+	return func(_, path string, _ bool) (string, error) { return filepath.Join(dir, path), nil }
+}
+
+func TestADirectoryOfAStageCopiesWhatIsInIt(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "etc", "sub"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "etc", "motd"), []byte("hello\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "etc", "sub", "issue"), []byte("welcome\n"), 0o600))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/etc"}, below("/copied"))
+
+	// assert
+	require.NoError(t, err)
+	motd, err := os.ReadFile(filepath.Join(image, "copied", "motd"))
+	require.NoError(t, err)
+	assert.Equal(t, "hello\n", string(motd))
+	issue, err := os.ReadFile(filepath.Join(image, "copied", "sub", "issue"))
+	require.NoError(t, err)
+	assert.Equal(t, "welcome\n", string(issue))
+}

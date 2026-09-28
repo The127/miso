@@ -3,6 +3,7 @@ package tree
 import (
 	"io/fs"
 	"os"
+	"path"
 	"strings"
 	"syscall"
 
@@ -25,7 +26,8 @@ func Into(stage string, image *place.Root, sources []string, land Land) error {
 	defer func() { _ = from.Close() }()
 
 	for _, source := range sources {
-		if err := into(from, image, source, land); err != nil {
+		copying := stageCopy{from: from, image: image, source: source, land: land}
+		if err := copying.put(strings.TrimPrefix(source, "/"), "."); err != nil {
 			return err
 		}
 	}
@@ -33,38 +35,75 @@ func Into(stage string, image *place.Root, sources []string, land Land) error {
 	return nil
 }
 
-func into(from *os.Root, image *place.Root, source string, land Land) error {
-	in, err := from.Open(strings.TrimPrefix(source, "/"))
+// stageCopy is one source of a stage on its way into the image.
+type stageCopy struct {
+	from   *os.Root
+	image  *place.Root
+	source string
+	land   Land
+}
+
+// put copies what is at a name of the stage, which is at a path below the
+// source.
+func (c stageCopy) put(name, below string) error {
+	info, err := c.from.Lstat(name)
+	if err != nil {
+		return err
+	}
+
+	target, err := c.land(c.source, below, info.IsDir())
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		return c.directory(name, below, target, info)
+	}
+
+	return c.file(name, target, info)
+}
+
+func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error {
+	if err := c.image.Directory(target, uint32(info.Mode().Perm())); err != nil {
+		return err
+	}
+
+	entries, err := fs.ReadDir(c.from.FS(), name)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if err := c.put(path.Join(name, entry.Name()), path.Join(below, entry.Name())); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c stageCopy) file(name, target string, info fs.FileInfo) error {
+	in, err := c.from.Open(name)
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = in.Close() }()
 
-	info, err := in.Stat()
-	if err != nil {
+	if err := c.image.File(target, uint32(info.Mode().Perm()), in); err != nil {
 		return err
 	}
 
-	target, err := land(source, ".", false)
-	if err != nil {
-		return err
-	}
-
-	if err := image.File(target, uint32(info.Mode().Perm()), in); err != nil {
-		return err
-	}
-
-	kept, err := meta(source, info)
+	kept, err := meta(c.source, info)
 	if err != nil {
 		return err
 	}
 
 	if kept.Xattrs, err = fileXattrs(in); err != nil {
-		return &fs.PathError{Op: "getxattr", Path: source, Err: err}
+		return &fs.PathError{Op: "getxattr", Path: c.source, Err: err}
 	}
 
-	return image.Keep(target, kept)
+	return c.image.Keep(target, kept)
 }
 
 // meta is what a copy keeps of a file apart from its content.
