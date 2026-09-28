@@ -13,15 +13,19 @@ import (
 // last match, so a caller can show why.
 func (c *Console) Expect(ctx context.Context, pattern *regexp.Regexp) (string, error) {
 	for {
-		before, found, err := c.match(pattern)
-		if found || err != nil {
-			return before, err
+		before, found, end := c.match(pattern)
+
+		switch {
+		case found:
+			return before, nil
+		case end != nil:
+			return c.neverCame(pattern, end)
 		}
 
 		select {
 		case <-c.more:
 		case <-ctx.Done():
-			return c.shown(), fmt.Errorf("%q never came: %w", pattern, ctx.Err())
+			return c.neverCame(pattern, ctx.Err())
 		}
 	}
 }
@@ -37,16 +41,12 @@ func (c *Console) match(pattern *regexp.Regexp) (string, bool, error) {
 		return before, true, nil
 	}
 
-	if c.end != nil {
-		return string(c.seen), false, fmt.Errorf("%q never came: %w", pattern, c.end)
-	}
-
-	return "", false, nil
+	return "", false, c.end
 }
 
-func (c *Console) shown() string {
+func (c *Console) neverCame(pattern *regexp.Regexp, cause error) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	return string(c.seen)
+	return string(c.seen), fmt.Errorf("%q never came: %w", pattern, cause)
 }
