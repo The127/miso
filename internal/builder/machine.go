@@ -68,7 +68,7 @@ func (b Build) bases() ([]qemu.Disk, error) {
 			return nil, fmt.Errorf("base image %s: %w", request.Digest, err)
 		}
 
-		disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: format, Serial: protocol.Serial(request.Digest), ReadOnly: true})
+		disks = append(disks, qemu.Disk{Path: b.Blob(request.Digest), Format: format, Serial: protocol.Serial(request.Digest), Access: qemu.ReadOnly})
 	}
 
 	return disks, nil

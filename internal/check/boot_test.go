@@ -42,7 +42,7 @@ func TestAnImageThatCannotBeBootedFailsItsChecksWithQEMUsReasonWithKVM(t *testin
 	boot := check.Boot{
 		Driver:   qemu.Driver{Binary: "qemu-system-x86_64"},
 		Firmware: kvmtest.Firmware(t),
-		Image:    qemu.Disk{Path: "/nonexistent/image.qcow2", Format: "qcow2", Serial: "image", Snapshot: true},
+		Image:    qemu.Disk{Path: "/nonexistent/image.qcow2", Format: "qcow2", Serial: "image", Access: qemu.Snapshot},
 		Dir:      t.TempDir(),
 		Console:  io.Discard,
 		Patience: time.Minute,
@@ -92,7 +92,7 @@ func TestAnImageTheFirmwareCannotBootFailsItsChecksOnceThePatienceIsUpWithKVM(t 
 	boot := check.Boot{
 		Driver:   qemu.Driver{Binary: "qemu-system-x86_64"},
 		Firmware: kvmtest.Firmware(t),
-		Image:    qemu.Disk{Path: blank, Format: "raw", Serial: "image", Snapshot: true},
+		Image:    qemu.Disk{Path: blank, Format: "raw", Serial: "image", Access: qemu.Snapshot},
 		Dir:      t.TempDir(),
 		Console:  io.Discard,
 		Patience: 5 * time.Second,

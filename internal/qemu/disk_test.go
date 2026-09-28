@@ -11,7 +11,7 @@ import (
 
 func TestAReadOnlyDiskIsFoundByItsSerial(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "base", ReadOnly: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "base", Access: qemu.ReadOnly}}}
 
 	// act
 	args, err := qemu.Arguments(machine)
@@ -36,7 +36,7 @@ func TestAWritableDiskKeepsTheGuestsFlushes(t *testing.T) {
 
 func TestACommaInADisksPathStaysPartOfThePath(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/a,readonly=off.img", Format: "raw", Serial: "base", ReadOnly: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/a,readonly=off.img", Format: "raw", Serial: "base", Access: qemu.ReadOnly}}}
 
 	// act
 	args, err := qemu.Arguments(machine)
@@ -48,7 +48,7 @@ func TestACommaInADisksPathStaysPartOfThePath(t *testing.T) {
 
 func TestACommaInADisksSerialStaysPartOfTheSerial(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "a,drive=b", ReadOnly: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "a,drive=b", Access: qemu.ReadOnly}}}
 
 	// act
 	args, err := qemu.Arguments(machine)
@@ -60,7 +60,7 @@ func TestACommaInADisksSerialStaysPartOfTheSerial(t *testing.T) {
 
 func TestASerialLongerThanAVirtioDiskShowsIsRefused(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "0123456789abcdef01234", ReadOnly: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "0123456789abcdef01234", Access: qemu.ReadOnly}}}
 
 	// act
 	_, err := qemu.Arguments(machine)
@@ -72,7 +72,7 @@ func TestASerialLongerThanAVirtioDiskShowsIsRefused(t *testing.T) {
 
 func TestASerialOfAllTheBytesAVirtioDiskShowsIsKept(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "0123456789abcdef0123", ReadOnly: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/c/base.qcow2", Format: "qcow2", Serial: "0123456789abcdef0123", Access: qemu.ReadOnly}}}
 
 	// act
 	args, err := qemu.Arguments(machine)
@@ -84,7 +84,7 @@ func TestASerialOfAllTheBytesAVirtioDiskShowsIsKept(t *testing.T) {
 
 func TestASnapshotDiskIsWrittenToAndForgotten(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/o/image.raw", Format: "raw", Serial: "image", Snapshot: true}}}
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/o/image.raw", Format: "raw", Serial: "image", Access: qemu.Snapshot}}}
 
 	// act
 	args, err := qemu.Arguments(machine)

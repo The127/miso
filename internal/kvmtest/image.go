@@ -34,5 +34,5 @@ func Image(t *testing.T, name string) qemu.Disk {
 	format, err := bases.Format(digest)
 	require.NoError(t, err)
 
-	return qemu.Disk{Path: blobs.Path(digest), Format: format, Serial: "image", Snapshot: true}
+	return qemu.Disk{Path: blobs.Path(digest), Format: format, Serial: "image", Access: qemu.Snapshot}
 }

@@ -38,7 +38,7 @@ func TestEachBaseImageIsAttachedReadOnlyUnderItsSerial(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.Len(t, machine.Disks, 2)
-	assert.Equal(t, qemu.Disk{Path: "/bases/" + digest, Format: "qcow2", Serial: protocol.Serial(digest), ReadOnly: true}, machine.Disks[1])
+	assert.Equal(t, qemu.Disk{Path: "/bases/" + digest, Format: "qcow2", Serial: protocol.Serial(digest), Access: qemu.ReadOnly}, machine.Disks[1])
 }
 
 func TestABaseImagesDiskHasTheFormatItWasFetchedIn(t *testing.T) {

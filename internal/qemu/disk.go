@@ -8,15 +8,26 @@ import (
 // Disk is a disk image the machine sees as a virtio disk, which the agent
 // finds by its serial.
 type Disk struct {
-	Path     string
-	Format   string
-	Serial   string
-	ReadOnly bool
-
-	// written to during the boot and forgotten after it, so the file stays
-	// as it was
-	Snapshot bool
+	Path   string
+	Format string
+	Serial string
+	Access Access
 }
+
+// Access is what a boot may do to a disk.
+type Access int
+
+const (
+	// Writable keeps what the boot writes.
+	Writable Access = iota
+
+	// ReadOnly refuses what the boot writes.
+	ReadOnly
+
+	// Snapshot takes what the boot writes and forgets it after, so the file
+	// stays as it was.
+	Snapshot
+)
 
 // serialBytes is all of a serial a virtio disk shows, QEMU cuts a longer
 // one without a word and the agent would look for a disk that is not there.
@@ -44,12 +55,12 @@ func drives(machine Machine) ([]string, error) {
 // holds a layer only once the guest's flushes reach it, which cache=unsafe
 // would drop.
 func access(disk Disk) string {
-	if disk.ReadOnly {
+	switch disk.Access {
+	case ReadOnly:
 		return "readonly=on"
-	}
-
-	if disk.Snapshot {
+	case Snapshot:
 		return "snapshot=on"
+	case Writable:
 	}
 
 	return "cache=writeback"
