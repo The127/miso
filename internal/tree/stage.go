@@ -1,8 +1,12 @@
 package tree
 
 import (
+	"io/fs"
 	"os"
 	"strings"
+	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/place"
 )
@@ -47,5 +51,30 @@ func into(from *os.Root, image *place.Root, source string, land Land) error {
 		return err
 	}
 
-	return image.File(target, uint32(info.Mode().Perm()), in)
+	if err := image.File(target, uint32(info.Mode().Perm()), in); err != nil {
+		return err
+	}
+
+	kept, err := meta(source, info)
+	if err != nil {
+		return err
+	}
+
+	return image.Keep(target, kept)
+}
+
+// meta is what a copy keeps of a file apart from its content.
+func meta(source string, info fs.FileInfo) (place.Meta, error) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return place.Meta{}, &fs.PathError{Op: "stat", Path: source, Err: fs.ErrInvalid}
+	}
+
+	return place.Meta{
+		UID:   stat.Uid,
+		GID:   stat.Gid,
+		Mode:  stat.Mode &^ unix.S_IFMT,
+		Atime: unix.Timespec(stat.Atim),
+		Mtime: unix.Timespec(stat.Mtim),
+	}, nil
 }
