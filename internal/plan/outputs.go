@@ -7,6 +7,10 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
+// Tools is the option of an OUTPUT that names the stage bringing the tools
+// to make it.
+const Tools = "tools"
+
 // ErrDuplicateOutput is a file name that an earlier OUTPUT already writes.
 var ErrDuplicateOutput = errors.New("file name taken")
 

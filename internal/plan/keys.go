@@ -39,7 +39,7 @@ func words(instruction imagefile.Instruction) []string {
 			found = append(found, name)
 			// the tools stage's key is among the reads, so a renamed stage
 			// keeps its cache
-			if name != "tools" {
+			if name != Tools {
 				found = append(found, step.Options[name])
 			}
 		}

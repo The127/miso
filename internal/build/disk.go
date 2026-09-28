@@ -12,7 +12,7 @@ import (
 // with the tools taken from where their stage ends.
 func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs) (protocol.Disk, error) {
 	var refused error
-	switch _, hasTools := instruction.Options["tools"]; {
+	switch _, hasTools := instruction.Options[plan.Tools]; {
 	case instruction.Kind != "disk":
 		refused = ErrUnknownKind
 	case !hasTools:

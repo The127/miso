@@ -140,7 +140,7 @@ func (p *planner) reads(instruction imagefile.Instruction, files []File) []strin
 	}
 
 	if step, isOutput := instruction.(imagefile.Output); isOutput {
-		if tools, hasTools := step.Options["tools"]; hasTools {
+		if tools, hasTools := step.Options[Tools]; hasTools {
 			return []string{p.ends[tools]}
 		}
 	}

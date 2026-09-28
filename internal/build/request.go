@@ -92,7 +92,7 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return diskRequest(step, instruction, under, ends[instruction.Options["tools"]])
+		return diskRequest(step, instruction, under, ends[instruction.Options[plan.Tools]])
 	}
 
 	return nil, nil
