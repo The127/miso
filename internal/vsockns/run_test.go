@@ -51,3 +51,21 @@ func TestAProgramRunInTheNamespaceRunsInIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, inside, strings.TrimSpace(string(theirs)))
 }
+
+func TestAProgramRunInTheNamespaceHoldsNoWayToTalkToMiso(t *testing.T) {
+	// arrange
+	namespace := opened(t)
+	read, written, err := os.Pipe()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = read.Close() })
+
+	// act
+	err = namespace.Run([]string{"ls", "-l", "/proc/self/fd"}, written)
+
+	// assert
+	require.NoError(t, err)
+	require.NoError(t, written.Close())
+	open, err := io.ReadAll(read)
+	require.NoError(t, err)
+	assert.NotContains(t, string(open), "socket:")
+}

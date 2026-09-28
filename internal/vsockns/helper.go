@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -31,6 +32,9 @@ func Helper() {
 	if os.Args[0] != helperName {
 		return
 	}
+
+	// what the helper runs must not be able to talk to miso as the helper
+	syscall.CloseOnExec(helperConn)
 
 	// the inner namespace is this thread's alone, so everything inside it
 	// is done here
