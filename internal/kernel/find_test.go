@@ -183,6 +183,7 @@ func TestAnImageWithOnlyModulesLeftHasNoKernel(t *testing.T) {
 	// assert
 	require.ErrorIs(t, err, kernel.ErrNoKernel)
 	assert.ErrorContains(t, err, "/usr/lib/modules/*/vmlinuz")
+	assert.ErrorContains(t, err, "/boot/vmlinuz-*")
 }
 
 func TestAnInitrdOfFedoraIsFoundInBoot(t *testing.T) {

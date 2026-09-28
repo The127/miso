@@ -33,7 +33,12 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 	}
 
 	if len(installed) == 0 {
-		return Kernel{}, fmt.Errorf("%w, looked at /%s/*/vmlinuz", ErrNoKernel, modules)
+		looked := make([]string, 0, len(linuxes))
+		for _, place := range linuxes {
+			looked = append(looked, "/"+place("*"))
+		}
+
+		return Kernel{}, fmt.Errorf("%w, looked at %s", ErrNoKernel, strings.Join(looked, ", "))
 	}
 
 	// the kernel systemd-boot would start first
