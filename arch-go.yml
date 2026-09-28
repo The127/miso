@@ -315,6 +315,16 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the vsockns keeps the vsock of miso's VMs to miso, through a helper it
+  # starts from miso's own binary. It knows nothing of ours and never
+  # touches the network
+  - package: '**.internal.vsockns$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - net
   # the vsock connects the host and its builder VM. It knows nothing of ours
   # and never starts a process or touches the network
   - package: '**.internal.vsock$'
