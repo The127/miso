@@ -44,6 +44,22 @@ func TestAnInitrdOfDebianIsFoundInBoot(t *testing.T) {
 	assert.Equal(t, "boot/initrd.img-7.2.8+deb14-amd64", found.Initrd)
 }
 
+func TestAKernelOfDebian13IsFoundInBoot(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/6.12.107+deb13-cloud-amd64/modules.dep": {},
+		"boot/vmlinuz-6.12.107+deb13-cloud-amd64":                {},
+		"boot/initrd.img-6.12.107+deb13-cloud-amd64":             {},
+	}
+
+	// act
+	found, err := kernel.Find(image, "")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "boot/vmlinuz-6.12.107+deb13-cloud-amd64", found.Linux)
+}
+
 func TestModulesLeftOfARemovedKernelAreNoKernel(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{

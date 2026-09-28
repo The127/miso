@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,9 +52,11 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 		return Kernel{}, err
 	}
 
+	linux, _ := linuxOf(image, version)
+
 	return Kernel{
 		Version: version,
-		Linux:   path.Join(modules, version, "vmlinuz"),
+		Linux:   linux,
 		Initrd:  initrd,
 	}, nil
 }
@@ -81,7 +82,7 @@ func installedIn(image fs.FS) ([]string, error) {
 
 	var installed []string
 	for _, entry := range versions {
-		if _, err := fs.Stat(image, path.Join(modules, entry.Name(), "vmlinuz")); err == nil {
+		if _, found := linuxOf(image, entry.Name()); found {
 			installed = append(installed, entry.Name())
 		}
 	}
