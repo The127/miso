@@ -144,6 +144,13 @@ func fakeQEMU(recorded string) {
 		}
 	}
 
+	if held := os.Getenv("MISO_FAKE_QEMU_FDS"); held != "" {
+		//nolint:gosec // the test that started this binary names the file
+		if err := os.WriteFile(held, []byte(openFiles()), 0o600); err != nil {
+			os.Exit(2)
+		}
+	}
+
 	fmt.Println("fake QEMU console")
 
 	if refusal := os.Getenv("MISO_FAKE_QEMU_FAIL"); refusal != "" {
@@ -184,4 +191,22 @@ func fakeMiso() {
 	}
 
 	time.Sleep(30 * time.Second)
+}
+
+// openFiles are where the open fds of this process point, one a line.
+func openFiles() string {
+	fds, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		return err.Error()
+	}
+
+	var targets []string
+	for _, fd := range fds {
+		target, err := os.Readlink(filepath.Join("/proc/self/fd", fd.Name()))
+		if err == nil {
+			targets = append(targets, target)
+		}
+	}
+
+	return strings.Join(targets, "\n")
 }

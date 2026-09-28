@@ -289,3 +289,31 @@ func TestADriverClaimsItsCIDOnTheVsockDeviceItNames(t *testing.T) {
 	<-vm.Done()
 	assert.ErrorContains(t, told, driver.Vsock)
 }
+
+func TestQEMUHoldsNothingMisosCallerLeftOpen(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	held := filepath.Join(t.TempDir(), "held")
+	t.Setenv("MISO_FAKE_QEMU_FDS", held)
+	left := filepath.Join(t.TempDir(), "left open by miso's caller")
+	require.NoError(t, os.WriteFile(left, nil, 0o600))
+	file, err := os.Open(left)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = file.Close() })
+	// what a caller leaves open is not close-on-exec, as a dup is not
+	fd, err := unix.Dup(int(file.Fd()))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = unix.Close(fd) })
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	targets, err := os.ReadFile(held)
+	require.NoError(t, err)
+	require.NotEmpty(t, targets)
+	assert.NotContains(t, strings.Split(string(targets), "\n"), left)
+}

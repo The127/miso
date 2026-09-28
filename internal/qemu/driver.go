@@ -65,6 +65,10 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 	// it, so the host's copy goes once QEMU runs
 	defer func() { _ = reach.machine.Close() }()
 
+	if err := inheritNothing(); err != nil {
+		return nil, err
+	}
+
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
 	command := exec.CommandContext(ctx, d.Binary, slices.Concat(args, accelerated, reach.args)...)
 	command.ExtraFiles = []*os.File{reach.machine}
