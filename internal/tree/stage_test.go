@@ -158,3 +158,29 @@ func TestADirectoryOfTheImageKeepsItsOwnWhenAStageIsCopiedIntoIt(t *testing.T) {
 	assert.Equal(t, uint32(0), stat.Uid)
 	assert.Equal(t, os.ModeDir|0o700, info.Mode())
 }
+
+func TestALinkOfAStageStaysTheLinkItIs(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	link := filepath.Join(stage, "l")
+	require.NoError(t, os.Symlink("/etc/target", link))
+	require.NoError(t, os.Lchown(link, 1234, 5678))
+	then := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, unix.Lutimes(link, []unix.Timeval{unix.NsecToTimeval(then.UnixNano()), unix.NsecToTimeval(then.UnixNano())}))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/l"}, onto("/l"))
+
+	// assert
+	require.NoError(t, err)
+	text, err := os.Readlink(filepath.Join(image, "l"))
+	require.NoError(t, err)
+	assert.Equal(t, "/etc/target", text)
+	info, err := os.Lstat(filepath.Join(image, "l"))
+	require.NoError(t, err)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	assert.Equal(t, uint32(1234), stat.Uid)
+	assert.True(t, then.Equal(info.ModTime()), "modified %s", info.ModTime())
+}

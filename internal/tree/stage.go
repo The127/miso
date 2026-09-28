@@ -56,11 +56,43 @@ func (c stageCopy) put(name, below string) error {
 		return err
 	}
 
-	if info.IsDir() {
+	switch {
+	case info.IsDir():
 		return c.directory(name, below, target, info)
+	case info.Mode()&fs.ModeSymlink != 0:
+		return c.link(name, target, info)
 	}
 
 	return c.file(name, target, info)
+}
+
+// link copies a link as the text it holds and never follows it.
+func (c stageCopy) link(name, target string, info fs.FileInfo) error {
+	text, err := c.from.Readlink(name)
+	if err != nil {
+		return err
+	}
+
+	if err := c.image.Link(target, text); err != nil {
+		return err
+	}
+
+	kept, err := meta(c.source, info)
+	if err != nil {
+		return err
+	}
+
+	// a link cannot be opened, its attributes are read through its directory
+	err = at(c.from, "getxattr", name, func(path string) (err error) {
+		kept.Xattrs, err = read(path)
+
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.image.Keep(target, kept)
 }
 
 func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error {

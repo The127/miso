@@ -41,8 +41,17 @@ func (r *Root) Keep(path string, meta Meta) error {
 		return &os.PathError{Op: "chown", Path: path, Err: err}
 	}
 
-	if err := unix.Fchmodat(parent, name, meta.Mode, 0); err != nil {
-		return &os.PathError{Op: "chmod", Path: path, Err: err}
+	var stat unix.Stat_t
+	if err := unix.Fstatat(parent, name, &stat, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+		return &os.PathError{Op: "stat", Path: path, Err: err}
+	}
+
+	// a link has no mode of its own, and a chmod through it would reach its
+	// target
+	if stat.Mode&unix.S_IFMT != unix.S_IFLNK {
+		if err := unix.Fchmodat(parent, name, meta.Mode, 0); err != nil {
+			return &os.PathError{Op: "chmod", Path: path, Err: err}
+		}
 	}
 
 	// after the owner too, whose change clears a file capability
