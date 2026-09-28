@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 	"slices"
 	"strconv"
 
@@ -38,7 +37,7 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 	}
 
 	err = a.overlaid(request.Layers, work.Dir(), func(root string) (bool, error) {
-		arrived, err := placeAll(place.Open(root), request.Destination, entries)
+		arrived, err := placeAll(place.Open(root), request, entries)
 		if err != nil {
 			return false, err
 		}
@@ -58,9 +57,9 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 	return work.Finish()
 }
 
-// placeAll puts every entry below the destination, the source itself at
-// the destination, and hands back the digest of what it put.
-func placeAll(image *place.Root, destination string, entries protocol.Entries) (string, error) {
+// placeAll puts every entry where it lands, and hands back the digest of
+// what it put.
+func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries) (string, error) {
 	var sums []string
 	for {
 		entry, content, err := entries.Next()
@@ -73,7 +72,7 @@ func placeAll(image *place.Root, destination string, entries protocol.Entries) (
 		}
 
 		hash := sha256.New()
-		if err := placeOne(image, filepath.Join(destination, entry.Path), entry, io.TeeReader(content, hash)); err != nil {
+		if err := placeOne(image, target(request, entry), entry, io.TeeReader(content, hash)); err != nil {
 			return "", err
 		}
 
