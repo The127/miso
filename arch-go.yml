@@ -176,6 +176,17 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the place puts what a copy carries into the root file system of an
+  # image. It knows nothing of ours and never starts a process or touches
+  # the network
+  - package: '**.internal.place$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
   # the layer keeps the layers on the agent's cache disk. It knows nothing
   # of ours, never touches a process or the network, and asks the kernel
   # only to put its file system on the disk before a key names a layer
