@@ -18,9 +18,8 @@ type Entry struct {
 	Target string
 }
 
-// Sum is the hash of an entry. It takes the hash of a file's content, so
-// that a payload can stream the content first and sum the entry after.
-func (e Entry) Sum(content string) string {
+// sum is the hash of an entry, with the hash of a file's content.
+func (e Entry) sum(content string) string {
 	payload := e.Target
 	if e.Kind == "file" {
 		payload = content

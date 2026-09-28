@@ -1,9 +1,8 @@
 package buildcontext
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
+	"strings"
 
 	"github.com/The127/miso/internal/copydigest"
 )
@@ -12,17 +11,17 @@ import (
 func (d *Dir) Digest(path string) (string, error) {
 	var sums []string
 	err := d.walk(path, func(found entry) error {
-		content := ""
-		if found.kind == kindFile {
-			var err error
-			if content, err = d.content(found); err != nil {
-				return err
-			}
+		content, _, err := d.contentOf(found)
+		if err != nil {
+			return err
 		}
 
-		sums = append(sums, found.sum(content))
+		defer func() { _ = content.Close() }()
 
-		return nil
+		sum, err := copydigest.Pass(content).Sum(found.digested())
+		sums = append(sums, sum)
+
+		return err
 	})
 	if err != nil {
 		return "", err
@@ -31,25 +30,29 @@ func (d *Dir) Digest(path string) (string, error) {
 	return copydigest.Of(sums), nil
 }
 
-// sum is the hash of the entry, with the hash of a file's content.
-func (e entry) sum(content string) string {
-	return copydigest.Entry{Kind: string(e.kind), Path: e.path, Mode: e.mode, Target: e.target}.Sum(content)
+// digested is the entry as its digest sees it.
+func (e entry) digested() copydigest.Entry {
+	return copydigest.Entry{Kind: string(e.kind), Path: e.path, Mode: e.mode, Target: e.target}
 }
 
-// content streams a file into its hash, a source may be a disk image of
-// many gigabytes.
-func (d *Dir) content(found entry) (string, error) {
+// contentOf is what an entry carries, and how much of it. Only a file
+// carries anything.
+func (d *Dir) contentOf(found entry) (io.ReadCloser, int64, error) {
+	if found.kind != kindFile {
+		return io.NopCloser(strings.NewReader("")), 0, nil
+	}
+
 	file, err := d.open(found.name, found.looked)
 	if err != nil {
-		return "", err
+		return nil, 0, err
 	}
 
-	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+		return nil, 0, err
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return file, info.Size(), nil
 }

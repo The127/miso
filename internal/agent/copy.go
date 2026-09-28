@@ -2,8 +2,6 @@ package agent
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -117,17 +115,17 @@ func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries
 			return nil, err
 		}
 
-		hash := sha256.New()
-		if err := placeOne(image, path, entry, io.TeeReader(content, hash)); err != nil {
+		passing := copydigest.Pass(content)
+		if err := placeOne(image, path, entry, passing); err != nil {
 			return nil, err
 		}
 
-		// what was not placed is part of the entry too
-		if _, err := io.Copy(hash, content); err != nil {
+		sum, err := passing.Sum(summed(entry))
+		if err != nil {
 			return nil, err
 		}
 
-		sums[entry.Source] = append(sums[entry.Source], summed(entry).Sum(hex.EncodeToString(hash.Sum(nil))))
+		sums[entry.Source] = append(sums[entry.Source], sum)
 	}
 
 	digests := make([]string, 0, len(sums))

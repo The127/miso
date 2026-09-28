@@ -22,7 +22,7 @@ func TestAFileCopiedIntoADirectoryKeepsTheNameOfItsSource(t *testing.T) {
 	layers := bareLayers(t)
 	worker := agent.New(layers, t.TempDir())
 	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
-	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"etc/motd"}, Digests: []string{files.digest()}, Destination: "/etc/"}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"etc/motd"}, Digests: []string{files.digest(t)}, Destination: "/etc/"}
 
 	// act
 	err := worker.Copy(context.Background(), request, files, io.Discard)
@@ -41,7 +41,7 @@ func TestEachSourceOfACopyLandsUnderItsOwnName(t *testing.T) {
 	motd := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
 	issue := &sent{entries: []protocol.Entry{{Source: 1, Kind: "file", Path: ".", Mode: 0o644, Size: 8}}, contents: []string{"welcome\n"}}
 	files := &sent{entries: append(motd.entries, issue.entries...), contents: append(motd.contents, issue.contents...)}
-	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd", "issue"}, Digests: []string{motd.digest(), issue.digest()}, Destination: "/etc/"}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd", "issue"}, Digests: []string{motd.digest(t), issue.digest(t)}, Destination: "/etc/"}
 
 	// act
 	err := worker.Copy(context.Background(), request, files, io.Discard)
@@ -65,7 +65,7 @@ func TestAFileCopiedOntoADirectoryOfTheImageGoesIntoIt(t *testing.T) {
 	require.NoError(t, work.Finish())
 	worker := agent.New(layers, t.TempDir())
 	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
-	request := protocol.Copy{Key: "copy", Layers: []string{"etc"}, Sources: []string{"motd"}, Digests: []string{files.digest()}, Destination: "/etc"}
+	request := protocol.Copy{Key: "copy", Layers: []string{"etc"}, Sources: []string{"motd"}, Digests: []string{files.digest(t)}, Destination: "/etc"}
 
 	// act
 	err = worker.Copy(context.Background(), request, files, io.Discard)
@@ -82,7 +82,7 @@ func TestASourceIsNamedAsTheHostReadsItsPath(t *testing.T) {
 	layers := bareLayers(t)
 	worker := agent.New(layers, t.TempDir())
 	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
-	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd/."}, Digests: []string{files.digest()}, Destination: "/etc/"}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd/."}, Digests: []string{files.digest(t)}, Destination: "/etc/"}
 
 	// act
 	err := worker.Copy(context.Background(), request, files, io.Discard)

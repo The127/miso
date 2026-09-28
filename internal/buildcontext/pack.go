@@ -1,11 +1,8 @@
 package buildcontext
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/The127/miso/internal/copydigest"
 )
@@ -54,35 +51,18 @@ func (d *Dir) Pack(source string, digest string, visit func(Entry, io.Reader) er
 
 // pack hands one entry to visit and sums it as it went out.
 func (d *Dir) pack(found entry, visit func(Entry, io.Reader) error) (string, error) {
-	packed := Entry{Kind: string(found.kind), Path: found.path, Mode: found.mode, Target: found.target}
-
-	if found.kind != kindFile {
-		return found.sum(""), visit(packed, strings.NewReader(""))
-	}
-
-	file, err := d.open(found.name, found.looked)
+	content, size, err := d.contentOf(found)
 	if err != nil {
 		return "", err
 	}
 
-	defer func() { _ = file.Close() }()
+	defer func() { _ = content.Close() }()
 
-	info, err := file.Stat()
-	if err != nil {
+	passing := copydigest.Pass(content)
+	packed := Entry{Kind: string(found.kind), Path: found.path, Mode: found.mode, Target: found.target, Size: size}
+	if err := visit(packed, passing); err != nil {
 		return "", err
 	}
 
-	packed.Size = info.Size()
-
-	hash := sha256.New()
-	if err := visit(packed, io.TeeReader(file, hash)); err != nil {
-		return "", err
-	}
-
-	// what visit left unread is part of the file too
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return found.sum(hex.EncodeToString(hash.Sum(nil))), nil
+	return passing.Sum(found.digested())
 }
