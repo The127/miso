@@ -71,10 +71,5 @@ setup: hooks
 hooks:
     lefthook install
 
-# sign a claude/* branch with your key and land it on main, after you have
-# read its commits
-land branch:
-    bash hack/land.sh {{branch}}
-
 # everything that must pass before a push
 ci: lint prose doccheck arch build cover test-cli vuln
