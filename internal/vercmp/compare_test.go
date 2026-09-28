@@ -23,3 +23,11 @@ func TestLeadingZerosOfANumberDoNotCount(t *testing.T) {
 	// assert
 	assert.Zero(t, compared)
 }
+
+func TestNumbersBetweenDotsCompareOneByOne(t *testing.T) {
+	// act
+	compared := vercmp.Compare("1.2.1", "1.10")
+
+	// assert
+	assert.Negative(t, compared)
+}
