@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/The127/miso/internal/firmware"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsock"
@@ -17,7 +15,11 @@ import (
 
 // Boot is an image booted for its checks.
 type Boot struct {
-	Driver   qemu.Driver
+	Driver qemu.Driver
+
+	// the host's own vsock when nil
+	Namespace Namespace
+
 	Firmware firmware.Firmware
 	Image    qemu.Disk
 
@@ -37,7 +39,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		return nil, err
 	}
 
-	notices, err := vsock.Listen(unix.VMADDR_PORT_ANY)
+	notices, err := b.listen()
 	if err != nil {
 		return nil, err
 	}
@@ -64,12 +66,17 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		return nil, err
 	}
 
-	return runChecks(vm, checks)
+	return b.runChecks(vm, checks)
 }
 
 // start is the VM the image boots in, told where to send its notices.
 func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (*qemu.VM, error) {
-	return b.Driver.Start(ctx, qemu.Machine{
+	driver := b.Driver
+	if b.Namespace != nil {
+		driver.OpenVsock = b.Namespace.Device
+	}
+
+	return driver.Start(ctx, qemu.Machine{
 		Boot:        flash,
 		MemoryMiB:   2048,
 		CPUs:        2,
@@ -121,10 +128,10 @@ func (b Boot) awaitBoot(ctx context.Context, vm *qemu.VM, notices *vsock.Listene
 }
 
 // runChecks runs each check on a connection of its own.
-func runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
+func (b Boot) runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
 	var results []Result
 	for _, check := range checks {
-		conn, err := vsock.Dial(vm.CID(), shellPort)
+		conn, err := b.dial(vm.CID(), shellPort)
 		if err != nil {
 			return nil, err
 		}
