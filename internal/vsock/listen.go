@@ -32,3 +32,10 @@ func (l *Listener) Accept() (io.ReadWriteCloser, error) {
 
 	return conn, nil
 }
+
+// Port is the port the listener takes connections on, the one the system
+// chose for a listener on any port.
+func (l *Listener) Port() uint32 {
+	// a vsock listener's address is always a vsock address
+	return l.listener.Addr().(*mdvsock.Addr).Port
+}

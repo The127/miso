@@ -129,3 +129,17 @@ func closedOnExecFD(t *testing.T, fd uintptr) bool {
 
 	return flags&unix.FD_CLOEXEC != 0
 }
+
+func TestAListenerOnAnyPortTellsWhichItGot(t *testing.T) {
+	// arrange
+	listener, err := vsock.Listen(unix.VMADDR_PORT_ANY)
+	require.NoError(t, err)
+
+	// act
+	port := listener.Port()
+
+	// assert
+	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, port)
+	require.NoError(t, err)
+	assert.NoError(t, dialed.Close())
+}
