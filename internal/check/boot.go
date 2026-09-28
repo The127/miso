@@ -68,7 +68,7 @@ func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32)
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},
 		Console:     b.Console,
-		Credentials: Credentials(notifyPort),
+		Credentials: credentials(notifyPort),
 		Temp:        b.Dir,
 	})
 }
@@ -95,7 +95,7 @@ func (b Boot) awaitBoot(ctx context.Context, vm *qemu.VM, notices *vsock.Listene
 	})
 	defer patience.Stop()
 
-	if err := Booted(notices); err != nil {
+	if err := booted(notices); err != nil {
 		return b.notBooted(ctx, vm, late, err)
 	}
 
@@ -119,7 +119,7 @@ func runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
 			return nil, err
 		}
 
-		result, err := Run(conn, check)
+		result, err := run(conn, check)
 		_ = conn.Close()
 
 		if err != nil {

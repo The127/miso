@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// Conn is the host's end of a connection to the image's check shell.
-type Conn interface {
+// shellConn is the host's end of a connection to the image's check shell.
+type shellConn interface {
 	io.ReadWriter
 
 	// CloseWrite the shell reads the check until the host closes its side
@@ -21,8 +21,8 @@ type Result struct {
 	Code   int
 }
 
-// Run runs one check on its own connection.
-func Run(conn Conn, command string) (Result, error) {
+// run runs one check on its own connection.
+func run(conn shellConn, command string) (Result, error) {
 	if _, err := io.WriteString(conn, command+"\n"); err != nil {
 		return Result{}, err
 	}
