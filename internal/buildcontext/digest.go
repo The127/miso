@@ -4,12 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"strconv"
-)
 
-// format names the way a digest is made. A change to what goes into a
-// digest, or how, gets a new name, so that no old digest can match a new one.
-const format = "miso-context-1"
+	"github.com/The127/miso/internal/copydigest"
+)
 
 // Digest says what a COPY of this path would put into an image.
 func (d *Dir) Digest(path string) (string, error) {
@@ -31,18 +28,12 @@ func (d *Dir) Digest(path string) (string, error) {
 		return "", err
 	}
 
-	return format + ":" + hashed(sums), nil
+	return copydigest.Of(sums), nil
 }
 
-// sum takes the hash of a file's content, so that a payload can stream the
-// content first and sum the entry after.
+// sum is the hash of the entry, with the hash of a file's content.
 func (e entry) sum(content string) string {
-	payload := e.target
-	if e.kind == kindFile {
-		payload = content
-	}
-
-	return hashed([]string{string(e.kind), e.path, e.mode, payload})
+	return copydigest.Entry{Kind: string(e.kind), Path: e.path, Mode: e.mode, Target: e.target}.Sum(content)
 }
 
 // content streams a file into its hash, a source may be a disk image of
@@ -61,15 +52,4 @@ func (d *Dir) content(name string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-// hashed puts the length in front of every field, so that no field can
-// run into the next.
-func hashed(fields []string) string {
-	hash := sha256.New()
-	for _, field := range fields {
-		hash.Write([]byte(strconv.Itoa(len(field)) + ":" + field))
-	}
-
-	return hex.EncodeToString(hash.Sum(nil))
 }

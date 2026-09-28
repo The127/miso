@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/The127/miso/internal/copydigest"
 )
 
 // Entry is one thing a copy carries, with nothing in it that a digest does
@@ -44,7 +46,7 @@ func (d *Dir) Pack(source string, digest string, visit func(Entry, io.Reader) er
 		return err
 	}
 
-	if format+":"+hashed(sums) != digest {
+	if copydigest.Of(sums) != digest {
 		return fmt.Errorf("%s: %w", source, ErrChanged)
 	}
 
