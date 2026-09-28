@@ -52,3 +52,15 @@ func TestContentLeftUnreadIsSkippedByTheNextReceive(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Done{}, next)
 }
+
+func TestAnEntryWhoseContentEndsEarlyIsNotSentWhole(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	host := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	err := host.SendEntry(protocol.Entry{Kind: "file", Path: "motd", Size: 6}, strings.NewReader("hel"))
+
+	// assert
+	assert.ErrorIs(t, err, io.EOF)
+}
