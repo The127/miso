@@ -207,13 +207,14 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
-  # the tree copies a directory tree as it is. It knows nothing of ours and
+  # the tree copies a directory tree as it is, and what a copy takes from a
+  # stage into an image through the place. It knows nothing else of ours and
   # never starts a process or touches the network
   - package: '**.internal.tree$'
-    shouldNotDependsOn:
+    shouldOnlyDependsOn:
       internal:
-        - '**.internal.**'
-        - '**.cmd.**'
+        - '**.internal.place$'
+    shouldNotDependsOn:
       standard:
         - os/exec
         - net
