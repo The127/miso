@@ -2,6 +2,7 @@ package vsock
 
 import (
 	"io"
+	"os"
 
 	mdvsock "github.com/mdlayher/vsock"
 	"golang.org/x/sys/unix"
@@ -16,6 +17,18 @@ type Listener struct {
 func Listen(port uint32) (*Listener, error) {
 	// any context ID, so a connection arrives whichever the machine has
 	listener, err := mdvsock.ListenContextID(unix.VMADDR_CID_ANY, port, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Listener{listener: listener}, nil
+}
+
+// Listening takes the connections made to a socket that already listens,
+// wherever it was made. The listener has a copy of the socket of its own,
+// so the socket stays the caller's to close.
+func Listening(socket *os.File) (*Listener, error) {
+	listener, err := mdvsock.FileListener(socket)
 	if err != nil {
 		return nil, err
 	}

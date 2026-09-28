@@ -166,3 +166,36 @@ func TestClosingAListenerEndsTheWaitForAConnection(t *testing.T) {
 		assert.Fail(t, "the wait for a connection did not end")
 	}
 }
+
+// listening is a socket of this machine listening on any port, made
+// outside the package as a namespace makes it.
+func listening(t *testing.T) *os.File {
+	t.Helper()
+
+	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
+	require.NoError(t, err)
+	socket := os.NewFile(uintptr(fd), "vsock")
+	t.Cleanup(func() { assert.NoError(t, socket.Close()) })
+	require.NoError(t, unix.Bind(fd, &unix.SockaddrVM{CID: unix.VMADDR_CID_ANY, Port: unix.VMADDR_PORT_ANY}))
+	require.NoError(t, unix.Listen(fd, unix.SOMAXCONN))
+
+	return socket
+}
+
+func TestAListenerOfAListeningSocketTakesItsConnections(t *testing.T) {
+	// arrange
+	socket := listening(t)
+
+	// act
+	listener, err := vsock.Listening(socket)
+
+	// assert
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, listener.Close()) })
+	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, listener.Port())
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
+	accepted, err := listener.Accept()
+	require.NoError(t, err)
+	assert.NoError(t, accepted.Close())
+}
