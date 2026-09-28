@@ -46,21 +46,5 @@ func directory(root int, dir string) (int, error) {
 
 	defer func() { _ = unix.Close(parent) }()
 
-	name := filepath.Base(dir)
-	if err := unix.Mkdirat(parent, name, 0o700); err != nil {
-		return -1, &os.PathError{Op: "mkdir", Path: dir, Err: err}
-	}
-
-	fd, err = unix.Openat(parent, name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return -1, &os.PathError{Op: "open", Path: dir, Err: err}
-	}
-
-	if err := settle(fd, dir, 0o755); err != nil {
-		_ = unix.Close(fd)
-
-		return -1, err
-	}
-
-	return fd, nil
+	return makeDirectory(parent, filepath.Base(dir), dir, 0o755)
 }
