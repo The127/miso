@@ -269,3 +269,19 @@ func TestAStoppedMachineLetsGoOfItsVirtioPort(t *testing.T) {
 	_, err = vm.Port().Write([]byte("hello"))
 	assert.ErrorIs(t, err, os.ErrClosed)
 }
+
+func TestADriverClaimsItsCIDOnTheVsockDeviceItNames(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	var told error
+	driver.WithoutVsock = func(why error) { told = why }
+
+	// act
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	assert.ErrorContains(t, told, driver.Vsock)
+}

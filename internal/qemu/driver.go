@@ -19,6 +19,9 @@ const deviceFD = 3
 type Driver struct {
 	Binary string
 
+	// Vsock is the host's vsock device, /dev/vhost-vsock when empty.
+	Vsock string
+
 	// WithoutKVM hears why the machine runs on TCG. It may be nil.
 	WithoutKVM func(why error)
 
@@ -30,7 +33,12 @@ type Driver struct {
 // Start boots the machine, which is killed when ctx is done. Killing is
 // safe, the cache disk is written to survive a crash of the machine.
 func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
-	return d.start(ctx, machine, kvmDevice, vhostVsock)
+	vsockDevice := d.Vsock
+	if vsockDevice == "" {
+		vsockDevice = vhostVsock
+	}
+
+	return d.start(ctx, machine, kvmDevice, vsockDevice)
 }
 
 func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice string) (*VM, error) {
