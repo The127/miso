@@ -99,3 +99,16 @@ func TestAnInitramfsCarriesNothingOfTheMachineThatWroteIt(t *testing.T) {
 		assert.Zero(t, found.Minor, found.Name)
 	}
 }
+
+func TestAnInitramfsForAKernelWithoutModulesStillHoldsTheirDirectory(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, static(t), nil)
+
+	// assert
+	require.NoError(t, err)
+	modules := record(t, archive.Bytes(), "modules")
+	assert.Equal(t, uint64(cpio.S_IFDIR), modules.Mode&cpio.S_IFMT)
+}

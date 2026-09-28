@@ -18,6 +18,9 @@ func Write(w io.Writer, init []byte, modules []Module) error {
 		cpio.StaticRecord(init, cpio.Info{Name: "init", Mode: cpio.S_IFREG | 0o700}),
 		// init has no output without it, and only some kernels bring one
 		cpio.CharDev("dev/console", 0o600, 5, 1),
+		// the agent copies it off the initial ramfs, also for a kernel that
+		// has every module built in
+		cpio.Directory("modules", 0o700),
 	}
 
 	// the agent loads them in the order of their names
