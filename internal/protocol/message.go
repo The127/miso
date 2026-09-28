@@ -16,6 +16,7 @@ type envelope struct {
 	Agent  string
 	Run    *Run    `json:",omitempty"`
 	Import *Import `json:",omitempty"`
+	Copy   *Copy   `json:",omitempty"`
 	Output *Output `json:",omitempty"`
 	Done   *Done   `json:",omitempty"`
 	Exited *Exited `json:",omitempty"`
@@ -30,6 +31,8 @@ func (e envelope) open() Message {
 		return *e.Run
 	case e.Import != nil:
 		return *e.Import
+	case e.Copy != nil:
+		return *e.Copy
 	case e.Output != nil:
 		return *e.Output
 	case e.Done != nil:

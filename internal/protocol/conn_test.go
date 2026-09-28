@@ -230,3 +230,19 @@ func TestALengthOverTheLimitIsRefusedBeforeItsBodyIsRead(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, protocol.ErrMessageTooLong)
 }
+
+func TestACopySentIsTheCopyReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	request := protocol.Copy{Key: "abc", Layers: []string{"base"}, Sources: []string{"etc/motd", "etc/issue"}, Destination: "/etc/"}
+
+	// act
+	sent := conn.Send(request)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, request, received)
+}
