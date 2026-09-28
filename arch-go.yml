@@ -56,6 +56,19 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the files of a copy come from the build context and leave in the
+  # agent's form, nothing else
+  - package: '**.internal.contextfiles$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.buildcontext$'
+        - '**.internal.protocol$'
+    shouldNotDependsOn:
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the version reads what the Go toolchain wrote into the binary and
   # nothing else
   - package: '**.internal.version$'
