@@ -11,6 +11,13 @@ import (
 const (
 	// arMagic starts every ar archive, and a Debian package is one
 	arMagic = "!<arch>\n"
+
+	// the header of an ar member, and where its name and size are in it
+	arHeaderSize = 60
+	arNameEnd    = 16
+	arSizeStart  = 48
+	arSizeEnd    = 58
+
 	// dataMember is the file of a Debian package that holds its files
 	dataMember = "data.tar.xz"
 )
@@ -24,13 +31,13 @@ func data(deb io.Reader) (io.Reader, error) {
 	}
 
 	for {
-		header := make([]byte, 60)
+		header := make([]byte, arHeaderSize)
 		if _, err := io.ReadFull(deb, header); err != nil {
 			return nil, err
 		}
 
-		name := strings.TrimRight(strings.TrimSpace(string(header[:16])), "/")
-		size, err := strconv.ParseInt(strings.TrimSpace(string(header[48:58])), 10, 64)
+		name := strings.TrimRight(strings.TrimSpace(string(header[:arNameEnd])), "/")
+		size, err := strconv.ParseInt(strings.TrimSpace(string(header[arSizeStart:arSizeEnd])), 10, 64)
 		if err != nil {
 			return nil, err
 		}
