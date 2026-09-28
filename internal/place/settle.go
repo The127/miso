@@ -21,8 +21,9 @@ func settle(fd int, path string, mode uint32) error {
 		return &os.PathError{Op: "chmod", Path: path, Err: err}
 	}
 
-	// the digest leaves times out, so a layer must not take them from the
-	// moment it was built
+	// the digest leaves times out, so what is placed does not take the
+	// moment it was built. A directory takes it again as things land in
+	// it, and an output clamps its times
 	if err := unix.Futimes(fd, make([]unix.Timeval, 2)); err != nil {
 		return &os.PathError{Op: "utimes", Path: path, Err: err}
 	}
