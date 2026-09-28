@@ -355,3 +355,35 @@ func TestAHoleInAFileOfAStageStaysAHole(t *testing.T) {
 	assert.Equal(t, int64(64<<20+1), copied.Size)
 	assert.Less(t, copied.Blocks*512, int64(1<<20), "the hole takes room")
 }
+
+// aclReadForUser1234 is a POSIX access ACL of version 2 that lets user 1234
+// read, besides the owner, group and others the mode names.
+var aclReadForUser1234 = []byte{
+	0x02, 0x00, 0x00, 0x00,
+	0x01, 0x00, 0x06, 0x00, 0xff, 0xff, 0xff, 0xff,
+	0x02, 0x00, 0x04, 0x00, 0xd2, 0x04, 0x00, 0x00,
+	0x04, 0x00, 0x04, 0x00, 0xff, 0xff, 0xff, 0xff,
+	0x10, 0x00, 0x04, 0x00, 0xff, 0xff, 0xff, 0xff,
+	0x20, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+}
+
+func TestExtendedAttributesOfEveryNamespaceOfAStageAreKept(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	file := filepath.Join(stage, "f")
+	require.NoError(t, os.WriteFile(file, nil, 0o600))
+	require.NoError(t, unix.Lsetxattr(file, "system.posix_acl_access", aclReadForUser1234, 0))
+	require.NoError(t, unix.Lsetxattr(file, "trusted.note", []byte("trusted"), 0))
+	require.NoError(t, os.Symlink("f", filepath.Join(stage, "l")))
+	require.NoError(t, unix.Lsetxattr(filepath.Join(stage, "l"), "trusted.note", []byte("link"), 0))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/"}, below("/"))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, aclReadForUser1234, xattr(t, filepath.Join(image, "f"), "system.posix_acl_access"))
+	assert.Equal(t, "trusted", string(xattr(t, filepath.Join(image, "f"), "trusted.note")))
+	assert.Equal(t, "link", string(xattr(t, filepath.Join(image, "l"), "trusted.note")))
+}
