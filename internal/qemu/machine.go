@@ -2,8 +2,10 @@ package qemu
 
 import "io"
 
-// Machine is what a builder VM boots.
+// Machine is what a VM boots: the builder's kernel, or through firmware
+// an image miso made.
 type Machine struct {
+	Firmware    *Firmware
 	Kernel      string
 	Initramfs   string
 	CommandLine string

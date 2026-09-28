@@ -17,3 +17,15 @@ func valueOf(t *testing.T, args []string, flag string) string {
 
 	return args[at+1]
 }
+
+// valuesOf are the values of every flag of that name in args, in order.
+func valuesOf(args []string, flag string) []string {
+	var values []string
+	for at, arg := range args {
+		if arg == flag && at+1 < len(args) {
+			values = append(values, args[at+1])
+		}
+	}
+
+	return values
+}
