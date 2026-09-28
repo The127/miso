@@ -14,4 +14,5 @@ type Machine struct {
 	Disks       []Disk
 	Card        *Card
 	Console     io.Writer
+	Credentials []Credential
 }
