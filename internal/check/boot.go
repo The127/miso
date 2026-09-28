@@ -53,6 +53,13 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		return nil, err
 	}
 
+	// QEMU writes to the console and into Dir until it is gone, and the
+	// caller may read the one and remove the other once Run returns
+	defer func() {
+		stop()
+		<-vm.Done()
+	}()
+
 	if err := b.awaitBoot(ctx, vm, notices); err != nil {
 		return nil, err
 	}
