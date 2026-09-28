@@ -52,6 +52,14 @@ func enter(childMode string) error {
 	return unix.Unshare(unix.CLONE_NEWNET)
 }
 
+// handler answers one kind of question, with the files it hands over.
+type handler func(argument string) (string, []int, error)
+
+var handlers = map[string]handler{
+	modeQuestion:   mode,
+	listenQuestion: listenOn,
+}
+
 // serve answers miso until it hangs up.
 func serve(conn int) {
 	for {
@@ -61,39 +69,50 @@ func serve(conn int) {
 		}
 
 		question, argument, _ := strings.Cut(asked, " ")
-		switch question {
-		case modeQuestion:
-			// a helper that cannot tell ends, and miso hears no answer
-			mode, err := os.ReadFile("/proc/sys/net/vsock/ns_mode")
-			if err != nil {
-				return
-			}
+		handle, known := handlers[question]
+		if !known {
+			continue
+		}
 
-			_ = answerOK(conn, strings.TrimSpace(string(mode)))
-		case listenQuestion:
-			answerListen(conn, argument)
+		text, files, err := handle(argument)
+		if err != nil {
+			_ = answerFailed(conn, err)
+
+			continue
+		}
+
+		_ = answerOK(conn, text, files...)
+
+		// miso holds its own copies now
+		for _, file := range files {
+			_ = unix.Close(file)
 		}
 	}
 }
 
-// answerListen hands miso a listening vsock socket made inside.
-func answerListen(conn int, argument string) {
+// mode is the vsock mode of the namespace the helper works in.
+func mode(string) (string, []int, error) {
+	said, err := os.ReadFile("/proc/sys/net/vsock/ns_mode")
+	if err != nil {
+		return "", nil, err
+	}
+
+	return strings.TrimSpace(string(said)), nil, nil
+}
+
+// listenOn is a listening vsock socket made inside, on the port asked for.
+func listenOn(argument string) (string, []int, error) {
 	port, err := strconv.ParseUint(argument, 10, 32)
 	if err != nil {
-		_ = answerFailed(conn, err)
-
-		return
+		return "", nil, err
 	}
 
 	listener, err := listen(uint32(port))
 	if err != nil {
-		_ = answerFailed(conn, err)
-
-		return
+		return "", nil, err
 	}
 
-	_ = answerOK(conn, "", listener)
-	_ = unix.Close(listener)
+	return "", []int{listener}, nil
 }
 
 func listen(port uint32) (int, error) {
