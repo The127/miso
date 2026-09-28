@@ -218,3 +218,15 @@ func TestAMessageLongerThanTheLimitIsNotSent(t *testing.T) {
 	assert.ErrorIs(t, err, protocol.ErrMessageTooLong)
 	assert.Zero(t, wire.Len())
 }
+
+func TestALengthOverTheLimitIsRefusedBeforeItsBodyIsRead(t *testing.T) {
+	// arrange
+	wire := bytes.NewBuffer(binary.BigEndian.AppendUint32(nil, protocol.MaxMessage+1))
+	conn := protocol.New("miso 1.2.0", wire, wire)
+
+	// act
+	_, err := conn.Receive()
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrMessageTooLong)
+}

@@ -59,7 +59,13 @@ func (c *Conn) Receive() (Message, error) {
 		return nil, err
 	}
 
-	body := make([]byte, binary.BigEndian.Uint32(length[:]))
+	// a broken length must not have us allocate up to 4 GiB
+	size := binary.BigEndian.Uint32(length[:])
+	if size > MaxMessage {
+		return nil, fmt.Errorf("%w: %d bytes", ErrMessageTooLong, size)
+	}
+
+	body := make([]byte, size)
 	if _, err := io.ReadFull(c.r, body); err != nil {
 		return nil, err
 	}
