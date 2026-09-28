@@ -1,12 +1,16 @@
 package vsockns_test
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/vsockns"
 )
 
 func TestAProgramStartedInTheNamespaceRunsAlongsideMisoAndSaysHowItEnded(t *testing.T) {
@@ -70,4 +74,28 @@ func TestStoppingAProgramThatEndedStopsNothingElse(t *testing.T) {
 	code, err := running.Wait()
 	require.NoError(t, err)
 	assert.Equal(t, 3, code)
+}
+
+func TestAProgramStartedInTheNamespaceEndsWithIt(t *testing.T) {
+	// arrange
+	namespace, err := vsockns.Open()
+	if errors.Is(err, vsockns.ErrNotPrivate) {
+		t.Skip("this host cannot keep vsock private")
+	}
+
+	require.NoError(t, err)
+	read, written, err := os.Pipe()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = read.Close() })
+	_, err = namespace.Start([]string{"sleep", "60"}, written)
+	require.NoError(t, err)
+	// the program holds the pipe open for as long as it lives
+	require.NoError(t, written.Close())
+
+	// act
+	require.NoError(t, namespace.Close())
+
+	// assert
+	_, err = io.ReadAll(read)
+	assert.NoError(t, err)
 }

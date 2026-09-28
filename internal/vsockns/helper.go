@@ -214,6 +214,9 @@ func start(argument string, files []int) (string, []int, error) {
 	//nolint:gosec // miso names the program it runs in its own namespace
 	program := exec.Command(args[0], args[1:]...)
 	program.Stdout = stdout
+	// a program ends with the helper, whether miso closed the namespace or
+	// died. The thread it is started from lives as long as the helper
+	program.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 
 	if err := program.Start(); err != nil {
 		_ = unix.Close(report)
