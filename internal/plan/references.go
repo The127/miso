@@ -17,6 +17,16 @@ var ErrUnknownOutput = errors.New("unknown output")
 
 func checkReferences(stage imagefile.Stage, known map[string]map[string]bool) error {
 	for _, instruction := range stage.Instructions {
+		if output, isOutput := instruction.(imagefile.Output); isOutput {
+			if tools, hasTools := output.Options["tools"]; hasTools {
+				if _, isStage := known[tools]; !isStage {
+					return at(output.Line, fmt.Errorf("OUTPUT --tools=%s: %w", tools, ErrUnknownStage))
+				}
+			}
+
+			continue
+		}
+
 		copied, isCopy := instruction.(imagefile.Copy)
 		if !isCopy || copied.From == "" {
 			continue
