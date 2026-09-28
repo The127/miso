@@ -3,6 +3,7 @@ package qemu
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -15,6 +16,7 @@ type VM struct {
 	done       chan struct{}
 	err        error
 	withoutKVM bool
+	port       *os.File
 }
 
 // run starts QEMU and gives the VM that lasts as long as it does.

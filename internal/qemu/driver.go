@@ -10,8 +10,9 @@ import (
 // vhostVsock is the host's device on which a machine's CID is claimed.
 const vhostVsock = "/dev/vhost-vsock"
 
-// deviceFD is where QEMU finds the device, the first of a process's extra
-// files after standard input, output and error.
+// deviceFD is where QEMU finds the vsock device or its end of the agent's
+// port, the first of a process's extra files after standard input, output
+// and error.
 const deviceFD = 3
 
 // Driver starts builder VMs with the QEMU binary it names.
@@ -25,10 +26,10 @@ type Driver struct {
 // Start boots the machine, which is killed when ctx is done. Killing is
 // safe, the cache disk is written to survive a crash of the machine.
 func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
-	return d.start(ctx, machine, kvmDevice)
+	return d.start(ctx, machine, kvmDevice, vhostVsock)
 }
 
-func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, error) {
+func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice string) (*VM, error) {
 	args, err := arguments(machine)
 	if err != nil {
 		return nil, err
@@ -39,28 +40,32 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 		d.withoutKVM(why)
 	}
 
-	device, cid, err := holdCID(vhostVsock)
+	reach, err := reachFor(vsockDevice)
 	if err != nil {
 		return nil, err
 	}
 
-	defer func() { _ = device.Close() }()
+	// QEMU holds its own copy of its end, and of a vsock device the CID with
+	// it, so the host's copy goes once QEMU runs
+	defer func() { _ = reach.machine.Close() }()
 
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
-	command := exec.CommandContext(ctx, d.Binary, slices.Concat(args, accelerated, vsock(cid, deviceFD))...)
-	// QEMU keeps the device open, and with it the CID, which the host lets
-	// go once QEMU runs
-	command.ExtraFiles = []*os.File{device}
+	command := exec.CommandContext(ctx, d.Binary, slices.Concat(args, accelerated, reach.args)...)
+	command.ExtraFiles = []*os.File{reach.machine}
 	command.Stdout = machine.Console
 
 	if machine.Temp != "" {
 		command.Env = append(os.Environ(), "TMPDIR="+machine.Temp)
 	}
 
-	vm, err := run(command, cid)
+	vm, err := run(command, reach.cid)
 	if err != nil {
+		_ = reach.close()
+
 		return nil, err
 	}
+
+	vm.port = reach.host
 
 	vm.withoutKVM = why != nil
 

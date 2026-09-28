@@ -122,7 +122,7 @@ func TestAMachineQEMUStoppedWithoutAWordSaysOnlyHow(t *testing.T) {
 func startOn(t *testing.T, driver qemu.Driver, kvm string) {
 	t.Helper()
 
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm)
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm, "/dev/vhost-vsock")
 	if err == nil {
 		t.Cleanup(func() { <-vm.Done() })
 	}
@@ -157,7 +157,7 @@ func TestAMachineOnAHostWithoutKVMSaysSo(t *testing.T) {
 	driver, _ := fakeDriver(t)
 
 	// act
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, filepath.Join(t.TempDir(), "kvm"))
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, filepath.Join(t.TempDir(), "kvm"), "/dev/vhost-vsock")
 
 	// assert
 	require.NoError(t, err)
@@ -200,4 +200,21 @@ func TestAMachineWithoutATempDirLeavesQEMUTheHostsOwn(t *testing.T) {
 	temp, err := os.ReadFile(told)
 	require.NoError(t, err)
 	assert.Equal(t, "/host/tmp", string(temp))
+}
+
+func TestAHostWithoutVsockGivesTheMachineAVirtioPortForItsAgent(t *testing.T) {
+	// arrange
+	driver, recorded := fakeDriver(t)
+
+	// act
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	written, err := os.ReadFile(recorded)
+	require.NoError(t, err)
+	args := strings.Split(string(written), "\n")
+	assert.Equal(t, "socket,id=agent,fd=3", valueOf(t, args, "-chardev"))
+	assert.Contains(t, args, "virtserialport,chardev=agent,name=miso")
 }
