@@ -78,8 +78,13 @@ func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries
 			return nil, fmt.Errorf("%s: %w: %d", entry.Path, ErrUnknownSource, entry.Source)
 		}
 
+		path, err := target(image, request, entry)
+		if err != nil {
+			return nil, err
+		}
+
 		hash := sha256.New()
-		if err := placeOne(image, target(request, entry), entry, io.TeeReader(content, hash)); err != nil {
+		if err := placeOne(image, path, entry, io.TeeReader(content, hash)); err != nil {
 			return nil, err
 		}
 

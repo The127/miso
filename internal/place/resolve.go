@@ -16,14 +16,49 @@ func (r *Root) parent(path string) (int, error) {
 
 // at opens a directory of the image, and makes it when it is missing.
 func (r *Root) at(dir string) (int, error) {
-	root, err := unix.Open(r.dir, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	root, err := r.openRoot()
 	if err != nil {
-		return -1, &os.PathError{Op: "open", Path: r.dir, Err: err}
+		return -1, err
 	}
 
 	defer func() { _ = unix.Close(root) }()
 
 	return directory(root, dir)
+}
+
+// IsDirectory tells whether a path of the image is a directory, as the
+// image sees it, through its links too.
+func (r *Root) IsDirectory(path string) (bool, error) {
+	root, err := r.openRoot()
+	if err != nil {
+		return false, err
+	}
+
+	defer func() { _ = unix.Close(root) }()
+
+	fd, err := unix.Openat2(root, path, &unix.OpenHow{
+		Flags:   unix.O_PATH | unix.O_DIRECTORY | unix.O_CLOEXEC,
+		Resolve: unix.RESOLVE_IN_ROOT,
+	})
+	if errors.Is(err, unix.ENOENT) || errors.Is(err, unix.ENOTDIR) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, &os.PathError{Op: "open", Path: path, Err: err}
+	}
+
+	return true, unix.Close(fd)
+}
+
+// openRoot opens the root of the image.
+func (r *Root) openRoot() (int, error) {
+	root, err := unix.Open(r.dir, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return -1, &os.PathError{Op: "open", Path: r.dir, Err: err}
+	}
+
+	return root, nil
 }
 
 // directory opens a directory of the image, made open to all and root's
