@@ -3,9 +3,65 @@ package agent
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
+	"syscall"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/The127/miso/internal/sandbox"
 )
+
+// overlaid mounts layers, lowest first, over a directory and hands the
+// root to work, whose writes go into the directory. The directory is no
+// longer mounted once it returns. Work tells whether what it wrote is kept.
+func (a *Agent) overlaid(layers []string, upper string, work func(root string) (keep bool, err error)) error {
+	// overlay wants its work directory on the file system of the upper one
+	scratch, err := a.layers.Scratch()
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = os.RemoveAll(scratch) }()
+
+	root := filepath.Join(scratch, "root")
+	overlayWork := filepath.Join(scratch, "work")
+	for _, dir := range []string{root, overlayWork} {
+		if err := os.Mkdir(dir, 0o700); err != nil {
+			return err
+		}
+	}
+
+	// overlay takes the top layer first
+	lowers := make([]string, 0, len(layers))
+	for _, key := range slices.Backward(layers) {
+		lowers = append(lowers, a.layers.Path(key))
+	}
+
+	// the run's mount points live below every layer, so a layer holds only
+	// what its command wrote
+	floor, err := sandbox.Floor(scratch)
+	if err != nil {
+		return err
+	}
+
+	lowers = append(lowers, floor)
+
+	if err := mountOverlay(root, lowers, upper, overlayWork); err != nil {
+		return err
+	}
+
+	// removing scratch must never reach into the root, so it goes first
+	defer func() { _ = syscall.Unmount(root, syscall.MNT_DETACH) }()
+
+	keep, err := work(root)
+	if err != nil || !keep {
+		return err
+	}
+
+	// not detached, a busy root means something still writes into the layer
+	return syscall.Unmount(root, 0)
+}
 
 // mountOverlay mounts on root the layers below, top first, with what is
 // written going into upper.
