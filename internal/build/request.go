@@ -18,6 +18,9 @@ var ErrNotFetched = errors.New("not fetched yet")
 // built yet, so there is nothing to copy.
 var ErrOutputNotBuilt = errors.New("output not built yet")
 
+// ErrUnknownKind is an output of a kind miso cannot make.
+var ErrUnknownKind = errors.New("unknown kind of output")
+
 // Request is what the agent is asked for a step of the build file.
 type Request struct {
 	Line    int
@@ -86,7 +89,7 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: ends[instruction.Options["tools"]].layers}, nil
+		return diskRequest(step, instruction, under, ends[instruction.Options["tools"]])
 	}
 
 	return nil, nil

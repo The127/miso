@@ -39,3 +39,16 @@ func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testin
 		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
 	}, disksOf(requests)[0])
 }
+
+func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT portable os.raw\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrUnknownKind)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "portable")
+}
