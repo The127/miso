@@ -170,3 +170,16 @@ func TestReadyInANoticeThatBreaksAfterwardsStillCounts(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 }
+
+func TestANoticeThatBreaksBeforeTheBootDoesNotEndTheWait(t *testing.T) {
+	// arrange
+	said := &notices{sent: make(chan io.ReadWriteCloser, 2)}
+	said.sent <- broken{io.Discard}
+	said.sent <- notice{strings.NewReader("READY=1"), io.Discard}
+
+	// act
+	err := booted(t, said)
+
+	// assert
+	require.NoError(t, err)
+}

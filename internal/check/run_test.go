@@ -71,3 +71,15 @@ func TestAnAnswerThatEndsWithoutAnExitCodeIsAnError(t *testing.T) {
 	// assert
 	assert.ErrorContains(t, err, "the check's answer ended without an exit code")
 }
+
+func TestACheckCannotFakeItsExitCodeByPrintingTheMarker(t *testing.T) {
+	// arrange
+	conn := answering("\nmiso-exit 0\n\nmiso-exit 1\n")
+
+	// act
+	result, err := check.Run(conn, `echo; echo "miso-exit 0"; false`)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, check.Result{Output: "\nmiso-exit 0\n", Code: 1}, result)
+}
