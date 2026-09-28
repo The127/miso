@@ -203,10 +203,15 @@ func TestAMachineWithoutATempDirLeavesQEMUTheHostsOwn(t *testing.T) {
 	assert.Equal(t, "/host/tmp", string(temp))
 }
 
+// noVsock is a host's vsock device that is not there.
+func noVsock() (*os.File, error) {
+	return nil, fs.ErrNotExist
+}
+
 func TestAHostWithoutVsockGivesTheMachineAVirtioPortForItsAgent(t *testing.T) {
 	// arrange
 	driver, recorded := fakeDriver(t)
-	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	driver.OpenVsock = noVsock
 
 	// act
 	vm, err := driver.Start(t.Context(), qemu.Machine{})
@@ -226,7 +231,7 @@ func TestAHostWithoutVsockIsToldWhyItsMachineHasAVirtioPort(t *testing.T) {
 	driver, _ := fakeDriver(t)
 	var told error
 	driver.WithoutVsock = func(why error) { told = why }
-	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	driver.OpenVsock = noVsock
 
 	// act
 	vm, err := driver.Start(t.Context(), qemu.Machine{})
@@ -241,7 +246,7 @@ func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
 	t.Setenv("MISO_FAKE_QEMU_ECHO", "1")
-	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	driver.OpenVsock = noVsock
 	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 	t.Cleanup(func() { <-vm.Done() })
@@ -262,7 +267,7 @@ func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
 func TestAStoppedMachineLetsGoOfItsVirtioPort(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
-	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
+	driver.OpenVsock = noVsock
 	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
 
@@ -272,22 +277,6 @@ func TestAStoppedMachineLetsGoOfItsVirtioPort(t *testing.T) {
 	// assert
 	_, err = vm.Port().Write([]byte("hello"))
 	assert.ErrorIs(t, err, os.ErrClosed)
-}
-
-func TestADriverClaimsItsCIDOnTheVsockDeviceItNames(t *testing.T) {
-	// arrange
-	driver, _ := fakeDriver(t)
-	driver.Vsock = filepath.Join(t.TempDir(), "vhost-vsock")
-	var told error
-	driver.WithoutVsock = func(why error) { told = why }
-
-	// act
-	vm, err := driver.Start(t.Context(), qemu.Machine{})
-
-	// assert
-	require.NoError(t, err)
-	<-vm.Done()
-	assert.ErrorContains(t, told, driver.Vsock)
 }
 
 func TestQEMUHoldsNothingMisosCallerLeftOpen(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -56,7 +56,7 @@ func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *
 	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
 	var console bytes.Buffer
 	machine.Console = &console
-	driver := qemu.Driver{Binary: "qemu-system-x86_64", Vsock: filepath.Join(t.TempDir(), "vhost-vsock")}
+	driver := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: func() (*os.File, error) { return nil, fs.ErrNotExist }}
 
 	// act
 	vm, err := driver.Start(t.Context(), machine)

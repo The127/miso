@@ -19,10 +19,7 @@ const deviceFD = 3
 type Driver struct {
 	Binary string
 
-	// Vsock is the host's vsock device, /dev/vhost-vsock when empty.
-	Vsock string
-
-	// OpenVsock opens the vsock device the machine runs on, the one at Vsock
+	// OpenVsock opens the vsock device the machine runs on, the host's own
 	// when nil. A VM is in the network namespace its device was opened in.
 	OpenVsock func() (*os.File, error)
 
@@ -95,12 +92,7 @@ func (d Driver) openVsock() (*os.File, error) {
 		return d.OpenVsock()
 	}
 
-	path := d.Vsock
-	if path == "" {
-		path = vhostVsock
-	}
-
-	return openVsock(path)
+	return openVsock(vhostVsock)
 }
 
 // withoutKVM is only a notice, the machine still runs, only slower.
