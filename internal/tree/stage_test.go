@@ -290,3 +290,23 @@ func TestAFileWithTwoNamesKeepsItsContentWhenALaterLinkTakesItsFirstPlace(t *tes
 	require.NoError(t, err)
 	assert.Equal(t, "p\n", string(c))
 }
+
+func TestAFileWithTwoNamesKeepsItsContentWhenALaterSymlinkTakesItsFirstPlace(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "x"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "y"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "x", "a"), []byte("x\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(stage, "x", "a"), filepath.Join(stage, "x", "c")))
+	require.NoError(t, os.Symlink("elsewhere", filepath.Join(stage, "y", "a")))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/x/a", "/y/a", "/x/c"}, named)
+
+	// assert
+	require.NoError(t, err)
+	c, err := os.ReadFile(filepath.Join(image, "c"))
+	require.NoError(t, err)
+	assert.Equal(t, "x\n", string(c))
+}

@@ -87,6 +87,8 @@ func (c stageCopy) link(name, target string, info fs.FileInfo) error {
 		return err
 	}
 
+	c.copied.taken(target)
+
 	if err := c.image.Link(target, text); err != nil {
 		return err
 	}
