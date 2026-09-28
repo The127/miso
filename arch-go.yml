@@ -313,6 +313,17 @@ dependenciesRules:
       standard:
         - os/exec
         - net
+  # the reach connects the host to the agent of its builder VM. It knows
+  # the way there and nothing else of ours, and never starts a process or
+  # touches the network
+  - package: '**.internal.reach$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.vsock$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
   # the initramfs writes the initial ramfs of the builder VM to the writer
   # it is handed. It knows nothing of ours, opens nothing and never touches
   # a process, the network or the kernel
