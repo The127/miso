@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -67,21 +66,6 @@ func (n *Namespace) Mode() (string, error) {
 	mode, _, err := n.ask(modeQuestion)
 
 	return mode, err
-}
-
-// Listen is a vsock socket inside the namespace, listening on a port of
-// it. It stays in the namespace wherever it is used.
-func (n *Namespace) Listen(port uint32) (*os.File, error) {
-	_, files, err := n.ask(listenQuestion + " " + strconv.FormatUint(uint64(port), 10))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(files) != 1 {
-		return nil, fmt.Errorf("the helper handed over %d listeners", len(files))
-	}
-
-	return os.NewFile(uintptr(files[0]), "vsock listener"), nil
 }
 
 // Close ends the helper, and with it the namespace.

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -19,7 +18,6 @@ const helperConn = 3
 
 const (
 	modeQuestion   = "mode"
-	listenQuestion = "listen"
 	socketQuestion = "socket"
 )
 
@@ -61,7 +59,6 @@ type handler func(argument string) (string, []int, error)
 
 var handlers = map[string]handler{
 	modeQuestion:   mode,
-	listenQuestion: listenOn,
 	socketQuestion: socket,
 }
 
@@ -108,21 +105,6 @@ func mode(string) (string, []int, error) {
 	return strings.TrimSpace(string(said)), nil, nil
 }
 
-// listenOn is a listening vsock socket made inside, on the port asked for.
-func listenOn(argument string) (string, []int, error) {
-	port, err := strconv.ParseUint(argument, 10, 32)
-	if err != nil {
-		return "", nil, err
-	}
-
-	listener, err := listen(uint32(port))
-	if err != nil {
-		return "", nil, err
-	}
-
-	return "", []int{listener}, nil
-}
-
 // socket is a fresh vsock socket made inside.
 func socket(string) (string, []int, error) {
 	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
@@ -131,24 +113,4 @@ func socket(string) (string, []int, error) {
 	}
 
 	return "", []int{fd}, nil
-}
-
-func listen(port uint32) (int, error) {
-	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
-	if err != nil {
-		return -1, err
-	}
-
-	err = unix.Bind(fd, &unix.SockaddrVM{CID: unix.VMADDR_CID_ANY, Port: port})
-	if err == nil {
-		err = unix.Listen(fd, unix.SOMAXCONN)
-	}
-
-	if err != nil {
-		_ = unix.Close(fd)
-
-		return -1, err
-	}
-
-	return fd, nil
 }
