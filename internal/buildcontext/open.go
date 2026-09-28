@@ -2,6 +2,7 @@ package buildcontext
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"syscall"
 )
@@ -10,7 +11,7 @@ import (
 // name is may have changed since it was looked at, so the open file is asked
 // again. Opening a pipe would wait for a writer forever, unless it does not
 // block.
-func (d *Dir) open(name string) (*os.File, error) {
+func (d *Dir) open(name string, looked fs.FileInfo) (*os.File, error) {
 	file, err := d.root.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
@@ -27,6 +28,14 @@ func (d *Dir) open(name string) (*os.File, error) {
 		_ = file.Close()
 
 		return nil, fmt.Errorf("%s: %w", name, ErrSpecialFile)
+	}
+
+	// the root follows a link the name became, as long as it stays inside,
+	// and the thing it reaches is not the one looked at
+	if !os.SameFile(looked, info) {
+		_ = file.Close()
+
+		return nil, fmt.Errorf("%s: %w", name, ErrSwapped)
 	}
 
 	return file, nil

@@ -15,7 +15,7 @@ func (d *Dir) Digest(path string) (string, error) {
 		content := ""
 		if found.kind == kindFile {
 			var err error
-			if content, err = d.content(found.name); err != nil {
+			if content, err = d.content(found); err != nil {
 				return err
 			}
 		}
@@ -38,8 +38,8 @@ func (e entry) sum(content string) string {
 
 // content streams a file into its hash, a source may be a disk image of
 // many gigabytes.
-func (d *Dir) content(name string) (string, error) {
-	file, err := d.open(name)
+func (d *Dir) content(found entry) (string, error) {
+	file, err := d.open(found.name, found.looked)
 	if err != nil {
 		return "", err
 	}

@@ -20,6 +20,10 @@ var ErrSpecialFile = errors.New("special file")
 // changed after the build was planned.
 var ErrChanged = errors.New("changed after it was planned")
 
+// ErrSwapped is a file that was swapped for another thing between the look
+// at it and the open.
+var ErrSwapped = errors.New("swapped while it was read")
+
 // Dir is a build context, a directory on the host.
 type Dir struct {
 	// the root keeps every path below the directory, also one that tries

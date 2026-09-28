@@ -32,6 +32,10 @@ type entry struct {
 
 	// where a file's content is, as seen from the build context
 	name string
+
+	// what the look saw of a file, so that the open can tell it is still
+	// the same
+	looked fs.FileInfo
 }
 
 // walk visits the entries of a source in the one order every digest and
@@ -113,7 +117,7 @@ func (d *Dir) look(name string, path string) (entry, error) {
 
 		return entry{kind: kindLink, path: path, target: target}, nil
 	case mode.IsRegular():
-		return entry{kind: kindFile, path: path, mode: permissions(mode), name: name}, nil
+		return entry{kind: kindFile, path: path, mode: permissions(mode), name: name, looked: info}, nil
 	default:
 		// opening a pipe would wait for a writer forever
 		return entry{}, fmt.Errorf("%s: %w", name, ErrSpecialFile)
