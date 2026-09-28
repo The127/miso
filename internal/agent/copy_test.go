@@ -4,9 +4,12 @@ package agent_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/copydigest"
 	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
@@ -35,6 +39,22 @@ func (s *sent) Next() (protocol.Entry, io.Reader, error) {
 	return entry, strings.NewReader(content), nil
 }
 
+// digest is what the plan says of these entries, before any is sent.
+func (s *sent) digest() string {
+	sums := make([]string, 0, len(s.entries))
+	for i, entry := range s.entries {
+		mode := strconv.FormatUint(uint64(entry.Mode), 8)
+		if entry.Kind == "link" {
+			mode = ""
+		}
+
+		content := sha256.Sum256([]byte(s.contents[i]))
+		sums = append(sums, copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: mode, Target: entry.Target}.Sum(hex.EncodeToString(content[:])))
+	}
+
+	return copydigest.Of(sums)
+}
+
 // bareLayers are layers with one empty layer, bare, to build on.
 func bareLayers(t *testing.T) string {
 	t.Helper()
@@ -51,8 +71,8 @@ func TestWhatACopySendsIsTheLayerOfItsKey(t *testing.T) {
 	// arrange
 	layers := bareLayers(t)
 	worker := agent.New(layers, t.TempDir())
-	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd"}, Destination: "/etc/motd"}
 	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd"}, Digests: []string{files.digest()}, Destination: "/etc/motd"}
 
 	// act
 	err := worker.Copy(context.Background(), request, files, io.Discard)
@@ -68,7 +88,6 @@ func TestACopiedTreeKeepsItsDirectoriesAndLinks(t *testing.T) {
 	// arrange
 	layers := bareLayers(t)
 	worker := agent.New(layers, t.TempDir())
-	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"etc"}, Destination: "/etc"}
 	files := &sent{
 		entries: []protocol.Entry{
 			{Kind: "directory", Path: ".", Mode: 0o755},
@@ -77,6 +96,7 @@ func TestACopiedTreeKeepsItsDirectoriesAndLinks(t *testing.T) {
 		},
 		contents: []string{"", "", "hello\n"},
 	}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"etc"}, Digests: []string{files.digest()}, Destination: "/etc"}
 
 	// act
 	err := worker.Copy(context.Background(), request, files, io.Discard)
@@ -121,4 +141,20 @@ func TestACopyWhoseLayerIsThereAlreadyReadsNothing(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Len(t, files.entries, 1)
+}
+
+func TestACopyThatIsNotWhatWasPlannedKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	planned := (&sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 8}}, contents: []string{"goodbye\n"}}).digest()
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd"}, Digests: []string{planned}, Destination: "/etc/motd"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, agent.ErrNotPlanned)
+	assert.NoDirExists(t, filepath.Join(layers, "copy"))
 }

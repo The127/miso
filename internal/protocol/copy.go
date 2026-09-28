@@ -12,6 +12,10 @@ type Copy struct {
 	// paths in the build context, as the build file names them
 	Sources []string
 
+	// what the plan says of each source, in the same order. What arrives
+	// is kept only when it is what was planned
+	Digests []string
+
 	// the absolute path in the image
 	Destination string
 }

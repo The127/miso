@@ -2,14 +2,23 @@ package agent
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
+	"strconv"
 
+	"github.com/The127/miso/internal/copydigest"
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
 )
+
+// ErrNotPlanned is a copy whose entries are not what the plan said of
+// them. Its key would stand for other bytes than the ones planned.
+var ErrNotPlanned = errors.New("not what was planned")
 
 // ErrUnknownKind is an entry that is no file, no directory and no link. A
 // copy carries nothing else.
@@ -29,7 +38,16 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 	}
 
 	err = a.overlaid(request.Layers, work.Dir(), func(root string) (bool, error) {
-		return true, placeAll(place.Open(root), request.Destination, entries)
+		arrived, err := placeAll(place.Open(root), request.Destination, entries)
+		if err != nil {
+			return false, err
+		}
+
+		if !slices.Equal([]string{arrived}, request.Digests) {
+			return false, fmt.Errorf("%s: %w", request.Destination, ErrNotPlanned)
+		}
+
+		return true, nil
 	})
 	if err != nil {
 		_ = work.Discard()
@@ -41,22 +59,42 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 }
 
 // placeAll puts every entry below the destination, the source itself at
-// the destination.
-func placeAll(image *place.Root, destination string, entries protocol.Entries) error {
+// the destination, and hands back the digest of what it put.
+func placeAll(image *place.Root, destination string, entries protocol.Entries) (string, error) {
+	var sums []string
 	for {
 		entry, content, err := entries.Next()
 		if errors.Is(err, io.EOF) {
-			return nil
+			return copydigest.Of(sums), nil
 		}
 
 		if err != nil {
-			return err
+			return "", err
 		}
 
-		if err := placeOne(image, filepath.Join(destination, entry.Path), entry, content); err != nil {
-			return err
+		hash := sha256.New()
+		if err := placeOne(image, filepath.Join(destination, entry.Path), entry, io.TeeReader(content, hash)); err != nil {
+			return "", err
 		}
+
+		// what was not placed is part of the entry too
+		if _, err := io.Copy(hash, content); err != nil {
+			return "", err
+		}
+
+		sums = append(sums, summed(entry).Sum(hex.EncodeToString(hash.Sum(nil))))
 	}
+}
+
+// summed is an entry as its digest sees it.
+func summed(entry protocol.Entry) copydigest.Entry {
+	mode := strconv.FormatUint(uint64(entry.Mode), 8)
+	// a link has no mode of its own
+	if entry.Kind == "link" {
+		mode = ""
+	}
+
+	return copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: mode, Target: entry.Target}
 }
 
 // placeOne puts an entry at a path of the image as what it is.
