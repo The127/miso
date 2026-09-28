@@ -45,5 +45,13 @@ func (r *Root) File(path string, mode uint32, content io.Reader) error {
 		return &os.PathError{Op: "chmod", Path: path, Err: err}
 	}
 
+	// the digest leaves times out, so a layer must not take them from the
+	// moment it was built
+	if err := unix.Futimes(fd, make([]unix.Timeval, 2)); err != nil {
+		_ = file.Close()
+
+		return &os.PathError{Op: "utimes", Path: path, Err: err}
+	}
+
 	return file.Close()
 }
