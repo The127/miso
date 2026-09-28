@@ -31,3 +31,17 @@ func TestAnOutputNameThatLeavesTheOutputDirectoryIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, plan.ErrNotAFileName)
 	assert.ErrorContains(t, err, "line 2")
 }
+
+func TestAnOutputNamedLikeADirectoryIsRejected(t *testing.T) {
+	// arrange
+	parent := parse(t, "FROM debian:sid\nOUTPUT disk ..\n")
+	here := parse(t, "FROM debian:sid\nOUTPUT disk .\n")
+
+	// act
+	parentErr := plan.Validate(parent)
+	hereErr := plan.Validate(here)
+
+	// assert
+	assert.ErrorIs(t, parentErr, plan.ErrNotAFileName)
+	assert.ErrorIs(t, hereErr, plan.ErrNotAFileName)
+}

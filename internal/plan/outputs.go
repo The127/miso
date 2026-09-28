@@ -26,7 +26,7 @@ func checkOutputs(stage imagefile.Stage, written map[string]bool) error {
 			continue
 		}
 
-		if strings.Contains(output.Name, "/") {
+		if strings.Contains(output.Name, "/") || output.Name == "." || output.Name == ".." {
 			return at(output.Line, fmt.Errorf("OUTPUT %q: %w", output.Name, ErrNotAFileName))
 		}
 
