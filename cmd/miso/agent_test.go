@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/The127/miso/internal/kvmtest"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/reach"
 	"github.com/The127/miso/internal/vsock"
 )
 
@@ -40,15 +42,44 @@ func TestAnAgentBootedByTheBuilderKernelSaysWhyItDidNotStart(t *testing.T) {
 	})
 
 	// assert
-	err = ask(t, vm, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
+	dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }
+	err = ask(t, vm, dial, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
 	require.ErrorIs(t, err, protocol.ErrAgentFailed)
 	assert.ErrorContains(t, err, "agent did not start")
 	assert.ErrorContains(t, err, protocol.CacheSerial)
 }
 
-// ask sends the agent a request, dialling until it listens, the VM stops or
-// the time is up.
-func ask(t *testing.T, vm *qemu.VM, request protocol.Message, patience time.Duration) error {
+func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *testing.T) {
+	// arrange
+	init, err := os.ReadFile(miso(t))
+	require.NoError(t, err)
+	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
+	var console bytes.Buffer
+	machine.Console = &console
+	driver := qemu.Driver{Binary: "qemu-system-x86_64", Vsock: filepath.Join(t.TempDir(), "vhost-vsock")}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		// QEMU writes to the console until it is gone
+		<-vm.Done()
+		t.Logf("QEMU: %v, its console:\n%s", vm.Err(), console.String())
+	})
+
+	// assert
+	require.NotNil(t, vm.Port(), "reach falls back to vsock without a port")
+	dial, err := reach.Agent(vm)
+	require.NoError(t, err)
+	err = ask(t, vm, dial, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
+	require.ErrorIs(t, err, protocol.ErrAgentFailed)
+	assert.ErrorContains(t, err, "agent did not start")
+	assert.ErrorContains(t, err, protocol.CacheSerial)
+}
+
+// ask sends the agent a request on a connection the dial makes, dialling
+// until it listens, the VM stops or the time is up.
+func ask(t *testing.T, vm *qemu.VM, dial func() (io.ReadWriteCloser, error), request protocol.Message, patience time.Duration) error {
 	t.Helper()
 
 	deadline := time.After(patience)
@@ -61,7 +92,7 @@ func ask(t *testing.T, vm *qemu.VM, request protocol.Message, patience time.Dura
 		default:
 		}
 
-		conn, err := vsock.Dial(vm.CID(), vsock.AgentPort)
+		conn, err := dial()
 		if err != nil {
 			time.Sleep(100 * time.Millisecond)
 
