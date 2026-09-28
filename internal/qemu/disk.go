@@ -12,6 +12,10 @@ type Disk struct {
 	Format   string
 	Serial   string
 	ReadOnly bool
+
+	// written to during the boot and forgotten after it, so the file stays
+	// as it was
+	Snapshot bool
 }
 
 // serialBytes is all of a serial a virtio disk shows, QEMU cuts a longer
@@ -42,6 +46,10 @@ func drives(machine Machine) ([]string, error) {
 func access(disk Disk) string {
 	if disk.ReadOnly {
 		return "readonly=on"
+	}
+
+	if disk.Snapshot {
+		return "snapshot=on"
 	}
 
 	return "cache=writeback"

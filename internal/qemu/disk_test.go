@@ -81,3 +81,15 @@ func TestASerialOfAllTheBytesAVirtioDiskShowsIsKept(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "virtio-blk-pci,drive=disk0,serial=0123456789abcdef0123", valueOf(t, args, "-device"))
 }
+
+func TestASnapshotDiskIsWrittenToAndForgotten(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/o/image.raw", Format: "raw", Serial: "image", Snapshot: true}}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "file=/o/image.raw,format=raw,if=none,id=disk0,snapshot=on", valueOf(t, args, "-drive"))
+}
