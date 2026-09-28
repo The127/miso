@@ -19,3 +19,15 @@ func TestTwoOutputsWithTheSameFileNameAreRejected(t *testing.T) {
 	assert.ErrorIs(t, err, plan.ErrDuplicateOutput)
 	assert.ErrorContains(t, err, "os.raw")
 }
+
+func TestAnOutputNameThatLeavesTheOutputDirectoryIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT disk ../os.raw\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNotAFileName)
+	assert.ErrorContains(t, err, "line 2")
+}
