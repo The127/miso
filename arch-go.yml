@@ -218,6 +218,17 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the vercmp compares two versions and knows nothing else
+  - package: '**.internal.vercmp$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the kernel finds what boots an image in the file system it is handed.
   # It knows nothing of ours, opens nothing and never touches a process, the
   # network or the kernel it runs on
