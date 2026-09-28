@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,4 +143,26 @@ func TestAListenerOnAnyPortTellsWhichItGot(t *testing.T) {
 	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, port)
 	require.NoError(t, err)
 	assert.NoError(t, dialed.Close())
+}
+
+func TestClosingAListenerEndsTheWaitForAConnection(t *testing.T) {
+	// arrange
+	listener, err := vsock.Listen(unix.VMADDR_PORT_ANY)
+	require.NoError(t, err)
+	waited := make(chan error, 1)
+	go func() {
+		_, err := listener.Accept()
+		waited <- err
+	}()
+
+	// act
+	require.NoError(t, listener.Close())
+
+	// assert
+	select {
+	case err := <-waited:
+		assert.Error(t, err)
+	case <-time.After(time.Second):
+		assert.Fail(t, "the wait for a connection did not end")
+	}
 }

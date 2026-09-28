@@ -39,3 +39,8 @@ func (l *Listener) Port() uint32 {
 	// a vsock listener's address is always a vsock address
 	return l.listener.Addr().(*mdvsock.Addr).Port
 }
+
+// Close stops taking connections, and an Accept waiting for one returns.
+func (l *Listener) Close() error {
+	return l.listener.Close()
+}
