@@ -22,8 +22,9 @@ var ErrNotPlanned = errors.New("not what was planned")
 // copy carries nothing else.
 var ErrUnknownKind = errors.New("unknown kind of entry")
 
-// Copy puts what the host sends on top of layers and keeps it as the layer
-// of the key. A key whose layer is there already needs nothing sent.
+// Copy puts what the host sends, or what an earlier stage's layers hold,
+// on top of layers and keeps it as the layer of the key. A key whose layer
+// is there already needs nothing sent.
 func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.Entries, _ io.Writer) error {
 	there, err := a.layers.Has(request.Key)
 	if err != nil || there {
@@ -36,6 +37,13 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 	}
 
 	err = a.overlaid(request.Layers, empty, work.Dir(), func(root string) (bool, error) {
+		// a stage's files are in its layers, and the plan's key covers them
+		if request.Stage != "" {
+			err := a.copyStage(request, root)
+
+			return err == nil, err
+		}
+
 		arrived, err := placeAll(place.Open(root), request, entries)
 		if err != nil {
 			return false, err

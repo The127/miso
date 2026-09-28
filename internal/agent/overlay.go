@@ -31,15 +31,9 @@ func (a *Agent) overlaid(layers []string, bottom func(scratch string) (string, e
 		}
 	}
 
-	// overlay takes the top layer first
-	lowers := make([]string, 0, len(layers))
-	for _, key := range slices.Backward(layers) {
-		// the store refuses a key that would name something else
-		if _, err := a.layers.Has(key); err != nil {
-			return err
-		}
-
-		lowers = append(lowers, a.layers.Path(key))
+	lowers, err := a.lowers(layers)
+	if err != nil {
+		return err
 	}
 
 	// overlay needs a layer below even on scratch
@@ -95,6 +89,12 @@ func mountOverlay(root string, lowers []string, upper, work string) error {
 		[2]string{"metacopy", "off"},
 	)
 
+	return mount(root, options, 0)
+}
+
+// mount mounts an overlay with the options on root, the mount taking the
+// attributes given.
+func mount(root string, options [][2]string, attributes int) error {
 	overlay, err := unix.Fsopen("overlay", unix.FSOPEN_CLOEXEC)
 	if err != nil {
 		return fmt.Errorf("open overlay: %w", err)
@@ -112,7 +112,7 @@ func mountOverlay(root string, lowers []string, upper, work string) error {
 		return fmt.Errorf("create overlay: %w", err)
 	}
 
-	mount, err := unix.Fsmount(overlay, unix.FSMOUNT_CLOEXEC, 0)
+	mount, err := unix.Fsmount(overlay, unix.FSMOUNT_CLOEXEC, attributes)
 	if err != nil {
 		return fmt.Errorf("mount overlay: %w", err)
 	}
@@ -125,4 +125,30 @@ func mountOverlay(root string, lowers []string, upper, work string) error {
 	}
 
 	return nil
+}
+
+// mountReadOnly mounts on root the layers below, top first, with nothing
+// written anywhere.
+func mountReadOnly(root string, lowers []string) error {
+	options := make([][2]string, 0, len(lowers))
+	for _, lower := range lowers {
+		options = append(options, [2]string{"lowerdir+", lower})
+	}
+
+	return mount(root, options, unix.MOUNT_ATTR_RDONLY)
+}
+
+// lowers are the directories of layers, top first as overlay takes them.
+func (a *Agent) lowers(layers []string) ([]string, error) {
+	lowers := make([]string, 0, len(layers))
+	for _, key := range slices.Backward(layers) {
+		// the store refuses a key that would name something else
+		if _, err := a.layers.Has(key); err != nil {
+			return nil, err
+		}
+
+		lowers = append(lowers, a.layers.Path(key))
+	}
+
+	return lowers, nil
 }
