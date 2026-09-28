@@ -1,12 +1,11 @@
 package vsockns
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
+	"strconv"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -22,18 +21,17 @@ var childModePath = "/proc/sys/net/vsock/child_ns_mode"
 // Namespace is a vsock namespace of local mode, held by its helper.
 type Namespace struct {
 	helper *exec.Cmd
-	conn   *os.File
-	said   *bufio.Reader
+	conn   int
 }
 
 // Open sets up a vsock namespace that only miso's VMs share.
 func Open() (*Namespace, error) {
-	fds, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
+	fds, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, theirs := os.NewFile(uintptr(fds[0]), "vsockns"), os.NewFile(uintptr(fds[1]), "vsockns")
+	theirs := os.NewFile(uintptr(fds[1]), "vsockns")
 	defer func() { _ = theirs.Close() }()
 
 	helper := exec.Command("/proc/self/exe", childModePath)
@@ -47,14 +45,14 @@ func Open() (*Namespace, error) {
 	}
 
 	if err := helper.Start(); err != nil {
-		_ = conn.Close()
+		_ = unix.Close(fds[0])
 
 		return nil, fmt.Errorf("%w: %w", ErrNotPrivate, err)
 	}
 
-	namespace := &Namespace{helper: helper, conn: conn, said: bufio.NewReader(conn)}
+	namespace := &Namespace{helper: helper, conn: fds[0]}
 
-	ready, err := namespace.answer()
+	ready, _, err := hear(namespace.conn)
 	if err == nil && ready != readyWord {
 		err = errors.New(ready)
 	}
@@ -70,25 +68,37 @@ func Open() (*Namespace, error) {
 
 // Mode is the vsock mode inside the namespace.
 func (n *Namespace) Mode() (string, error) {
-	if _, err := fmt.Fprintln(n.conn, modeQuestion); err != nil {
+	if err := say(n.conn, modeQuestion); err != nil {
 		return "", err
 	}
 
-	return n.answer()
+	mode, _, err := hear(n.conn)
+
+	return mode, err
+}
+
+// Listen is a vsock socket inside the namespace, listening on a port of
+// it. It stays in the namespace wherever it is used.
+func (n *Namespace) Listen(port uint32) (*os.File, error) {
+	if err := say(n.conn, listenQuestion+" "+strconv.FormatUint(uint64(port), 10)); err != nil {
+		return nil, err
+	}
+
+	said, files, err := hear(n.conn)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(files) != 1 {
+		return nil, errors.New(said)
+	}
+
+	return os.NewFile(uintptr(files[0]), "vsock listener"), nil
 }
 
 // Close ends the helper, and with it the namespace.
 func (n *Namespace) Close() error {
-	_ = n.conn.Close()
+	_ = unix.Close(n.conn)
 
 	return n.helper.Wait()
-}
-
-func (n *Namespace) answer() (string, error) {
-	line, err := n.said.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSuffix(line, "\n"), nil
 }
