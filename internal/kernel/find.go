@@ -23,10 +23,14 @@ func Find(image fs.FS) (Kernel, error) {
 	}
 
 	version := versions[0].Name()
+	initrd, err := initrdOf(image, version)
+	if err != nil {
+		return Kernel{}, err
+	}
 
 	return Kernel{
 		Version: version,
 		Linux:   path.Join(modules, version, "vmlinuz"),
-		Initrd:  initrdOf(image, version),
+		Initrd:  initrd,
 	}, nil
 }

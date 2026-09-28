@@ -43,3 +43,18 @@ func TestAnInitrdOfDebianIsFoundInBoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "boot/initrd.img-7.2.8+deb14-amd64", found.Initrd)
 }
+
+func TestAKernelWithoutAnInitrdFailsNamingWhereItLooked(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2.8+deb14-amd64/vmlinuz": {},
+	}
+
+	// act
+	_, err := kernel.Find(image)
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoInitrd)
+	assert.ErrorContains(t, err, "/usr/lib/modules/7.2.8+deb14-amd64/initrd")
+	assert.ErrorContains(t, err, "/boot/initrd.img-7.2.8+deb14-amd64")
+}
