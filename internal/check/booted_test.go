@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,4 +61,37 @@ func TestReadyInTheTextOfAStatusIsNoBoot(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Empty(t, said.sent)
+}
+
+// late is a notice sent after the boot, which tells whether it was read to
+// its end before it was closed.
+type late struct {
+	*strings.Reader
+	io.Writer
+
+	closed chan bool
+}
+
+func (l *late) Close() error {
+	l.closed <- l.Len() == 0
+
+	return nil
+}
+
+func TestNoticesAfterTheBootAreStillTaken(t *testing.T) {
+	// arrange
+	said := sending("READY=1")
+	require.NoError(t, check.Booted(said))
+	notice := &late{Reader: strings.NewReader("X_SYSTEMD_UNIT_ACTIVE=getty.target"), Writer: io.Discard, closed: make(chan bool, 1)}
+
+	// act
+	said.sent <- notice
+
+	// assert
+	select {
+	case read := <-notice.closed:
+		assert.True(t, read)
+	case <-time.After(time.Second):
+		assert.Fail(t, "the notice after the boot was never taken")
+	}
 }
