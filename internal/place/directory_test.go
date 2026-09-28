@@ -69,3 +69,17 @@ func TestADirectoryOntoALinkToADirectoryGoesIntoItsTarget(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "dash", target)
 }
+
+func TestADirectoryOntoAFileFailsNamingThePathInTheImage(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "etc"), []byte("a file\n"), 0o600))
+
+	// act
+	err := place.Open(root).Directory("/etc", 0o755)
+
+	// assert
+	require.ErrorIs(t, err, syscall.ENOTDIR)
+	assert.ErrorContains(t, err, " /etc:")
+	assert.FileExists(t, filepath.Join(root, "etc"))
+}
