@@ -16,7 +16,12 @@ func (r *Root) Link(path string, target string) error {
 
 	defer func() { _ = unix.Close(parent) }()
 
-	if err := unix.Symlinkat(target, parent, filepath.Base(path)); err != nil {
+	name := filepath.Base(path)
+	if err := vacate(parent, name, path); err != nil {
+		return err
+	}
+
+	if err := unix.Symlinkat(target, parent, name); err != nil {
 		return &os.PathError{Op: "symlink", Path: path, Err: err}
 	}
 
