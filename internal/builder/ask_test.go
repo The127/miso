@@ -1,7 +1,6 @@
 package builder_test
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -260,7 +259,7 @@ func (d *dying) Err() error { return d.reason }
 func (d *dying) dial() (io.ReadWriteCloser, error) {
 	host, agent := net.Pipe()
 	go func() {
-		_, _ = bufio.NewReader(agent).ReadString('\n')
+		_, _ = protocol.New(agentName, agent, agent).Receive()
 		_ = agent.Close()
 		time.Sleep(50 * time.Millisecond)
 		close(d.done)

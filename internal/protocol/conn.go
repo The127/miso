@@ -1,36 +1,71 @@
 package protocol
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 )
 
+// MaxMessage is the most bytes a message may take on the wire. Bulk data
+// goes as raw bytes after a message, never inside one.
+const MaxMessage = 1 << 20
+
+// ErrMessageTooLong is a message that would take more than MaxMessage.
+var ErrMessageTooLong = errors.New("message too long")
+
 // Conn is the host's or the agent's end of one exchange.
 type Conn struct {
-	agent   string
-	decoder *json.Decoder
-	encoder *json.Encoder
+	agent string
+	r     io.Reader
+	w     io.Writer
 }
 
 // New speaks as the given agent, reads what the other side sends from r and
 // writes to it through w.
 func New(agent string, r io.Reader, w io.Writer) *Conn {
-	return &Conn{agent: agent, decoder: json.NewDecoder(r), encoder: json.NewEncoder(w)}
+	return &Conn{agent: agent, r: r, w: w}
 }
 
-// Send writes a message to the other side.
+// Send writes a message to the other side, its length first.
 func (c *Conn) Send(message Message) error {
 	e := envelope{Agent: c.agent}
 	message.into(&e)
 
-	return c.encoder.Encode(e)
+	body, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+
+	size := len(body)
+	if size > MaxMessage {
+		return fmt.Errorf("%w: %d bytes", ErrMessageTooLong, size)
+	}
+
+	// one write, so a message never reaches the other side in pieces of two
+	// writers
+	frame := binary.BigEndian.AppendUint32(nil, uint32(size))
+	_, err = c.w.Write(append(frame, body...))
+
+	return err
 }
 
-// Receive reads what the other side sent next.
+// Receive reads what the other side sent next, and not a byte further, so
+// that raw bytes may follow a message.
 func (c *Conn) Receive() (Message, error) {
+	var length [4]byte
+	if _, err := io.ReadFull(c.r, length[:]); err != nil {
+		return nil, err
+	}
+
+	body := make([]byte, binary.BigEndian.Uint32(length[:]))
+	if _, err := io.ReadFull(c.r, body); err != nil {
+		return nil, err
+	}
+
 	var e envelope
-	if err := c.decoder.Decode(&e); err != nil {
+	if err := json.Unmarshal(body, &e); err != nil {
 		return nil, err
 	}
 

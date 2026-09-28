@@ -2,6 +2,7 @@ package protocol_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,20 @@ import (
 
 	"github.com/The127/miso/internal/protocol"
 )
+
+// framed is a wire holding one message as the other side writes it, its
+// length first.
+func framed(body string) *bytes.Buffer {
+	size := len(body)
+	if size > protocol.MaxMessage {
+		panic("a frame holds at most protocol.MaxMessage bytes")
+	}
+
+	wire := bytes.NewBuffer(binary.BigEndian.AppendUint32(nil, uint32(size)))
+	wire.WriteString(body)
+
+	return wire
+}
 
 func TestARunSentIsTheRunReceived(t *testing.T) {
 	// arrange
@@ -150,7 +165,7 @@ func TestADoneSentIsTheDoneReceived(t *testing.T) {
 
 func TestAnUnknownMessageIsAnError(t *testing.T) {
 	// arrange
-	wire := bytes.NewBufferString(`{"Agent":"miso 1.2.0","Nope":{}}` + "\n")
+	wire := framed(`{"Agent":"miso 1.2.0","Nope":{}}`)
 	conn := protocol.New("miso 1.2.0", wire, wire)
 
 	// act
@@ -174,4 +189,32 @@ func TestAMessageFromAnotherAgentIsRefused(t *testing.T) {
 	assert.ErrorIs(t, err, protocol.ErrAnotherAgent)
 	assert.ErrorContains(t, err, "miso 1.2.0")
 	assert.ErrorContains(t, err, "miso 1.3.0")
+}
+
+func TestAReceiveReadsNoFurtherThanItsMessage(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	require.NoError(t, conn.Send(protocol.Done{}))
+	wire.WriteString("raw bytes")
+
+	// act
+	_, err := conn.Receive()
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "raw bytes", wire.String())
+}
+
+func TestAMessageLongerThanTheLimitIsNotSent(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+
+	// act
+	err := conn.Send(protocol.Output{Bytes: make([]byte, protocol.MaxMessage)})
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrMessageTooLong)
+	assert.Zero(t, wire.Len())
 }
