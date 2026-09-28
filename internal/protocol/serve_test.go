@@ -45,6 +45,10 @@ func (r runner) Import(_ context.Context, _ protocol.Import, out io.Writer) erro
 	return err
 }
 
+func (r runner) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return r.err
+}
+
 func (r runner) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, _ io.Writer) error {
 	return r.err
 }
@@ -74,6 +78,23 @@ func TestAnImportThatWorksIsDone(t *testing.T) {
 	var requests, replies bytes.Buffer
 	host := protocol.New("miso 1.2.0", &replies, &requests)
 	require.NoError(t, host.Send(protocol.Import{Key: "abc", Digest: "sha256:def"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{})
+
+	// assert
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestADiskThatWorksIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Disk{Key: "abc", Layers: []string{"image"}, Tools: []string{"tools"}}))
 	agent := protocol.New("miso 1.2.0", &requests, &replies)
 
 	// act
@@ -188,6 +209,10 @@ func (w *watched) Import(context.Context, protocol.Import, io.Writer) error {
 	return nil
 }
 
+func (w *watched) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return nil
+}
+
 func (w *watched) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return nil
 }
@@ -226,6 +251,12 @@ func (w *waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, er
 }
 
 func (w *waiting) Import(ctx context.Context, _ protocol.Import, _ io.Writer) error {
+	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
+
+	return err
+}
+
+func (w *waiting) Disk(ctx context.Context, _ protocol.Disk, _ io.Writer) error {
 	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
 
 	return err
@@ -335,6 +366,10 @@ func (r *reading) Import(context.Context, protocol.Import, io.Writer) error {
 	return nil
 }
 
+func (r *reading) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return nil
+}
+
 func (r *reading) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
 	for {
 		entry, content, err := entries.Next()
@@ -392,6 +427,10 @@ func (b breaking) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 }
 
 func (b breaking) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
+}
+
+func (b breaking) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return nil
 }
 
@@ -456,6 +495,10 @@ func (c checking) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 }
 
 func (c checking) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
+}
+
+func (c checking) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return nil
 }
 

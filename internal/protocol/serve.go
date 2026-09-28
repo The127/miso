@@ -13,6 +13,7 @@ type Runner interface {
 	Run(ctx context.Context, run Run, out io.Writer) (code int, err error)
 	Import(ctx context.Context, request Import, out io.Writer) error
 	Copy(ctx context.Context, request Copy, entries Entries, out io.Writer) error
+	Disk(ctx context.Context, request Disk, out io.Writer) error
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -29,6 +30,8 @@ func (c *Conn) Serve(runner Runner) error {
 	switch request := message.(type) {
 	case Copy:
 		return c.serveCopy(runner, request)
+	case Disk:
+		return c.serveDisk(runner, request)
 	case Import:
 		return c.serveImport(runner, request)
 	case Run:
@@ -54,6 +57,13 @@ func (c *Conn) serveCopy(runner Runner, request Copy) error {
 	}
 
 	return c.answer(err)
+}
+
+func (c *Conn) serveDisk(runner Runner, request Disk) error {
+	ctx, cancel := c.watched()
+	defer cancel()
+
+	return c.answer(runner.Disk(ctx, request, outputs{c}))
 }
 
 func (c *Conn) serveImport(runner Runner, request Import) error {

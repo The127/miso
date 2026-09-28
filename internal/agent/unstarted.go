@@ -29,6 +29,11 @@ func (u Unstarted) Copy(context.Context, protocol.Copy, protocol.Entries, io.Wri
 	return u.why()
 }
 
+// Disk fails naming why the agent did not start.
+func (u Unstarted) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return u.why()
+}
+
 func (u Unstarted) why() error {
 	return fmt.Errorf("agent did not start: %w", u.Err)
 }

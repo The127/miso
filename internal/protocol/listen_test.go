@@ -94,6 +94,8 @@ func (blocking) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer
 	return nil
 }
 
+func (blocking) Disk(context.Context, protocol.Disk, io.Writer) error { return nil }
+
 func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {
 	// arrange
 	_, firstConn := asking(t, protocol.Run{Command: "wait"})
