@@ -21,7 +21,7 @@ import (
 
 // dialing is a listener on a port of this machine with a connection made
 // to it that is not accepted yet.
-func dialing(t *testing.T, port uint32) (*vsock.Listener, io.ReadWriteCloser) {
+func dialing(t *testing.T, port uint32) (*vsock.Listener, vsock.Conn) {
 	t.Helper()
 	listener, err := vsock.Listen(port)
 	require.NoError(t, err)

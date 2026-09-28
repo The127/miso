@@ -37,3 +37,27 @@ func TestAFailedDialGivesNoConnection(t *testing.T) {
 	// assert.Nil would take an interface around a nil pointer for nil
 	assert.True(t, conn == nil)
 }
+
+func TestAConnectionClosedForWritingStillHearsTheAnswer(t *testing.T) {
+	// arrange
+	listener, dialed := dialing(t, 1028)
+	accepted, err := listener.Accept()
+	require.NoError(t, err)
+	_, err = io.WriteString(dialed, "command -v sh\n")
+	require.NoError(t, err)
+
+	// act
+	err = dialed.CloseWrite()
+
+	// assert
+	require.NoError(t, err)
+	asked, err := io.ReadAll(accepted)
+	require.NoError(t, err)
+	assert.Equal(t, "command -v sh\n", string(asked))
+	_, err = io.WriteString(accepted, "/usr/bin/sh\n")
+	require.NoError(t, err)
+	require.NoError(t, accepted.Close())
+	answer, err := io.ReadAll(dialed)
+	require.NoError(t, err)
+	assert.Equal(t, "/usr/bin/sh\n", string(answer))
+}
