@@ -19,6 +19,7 @@ const helperConn = 3
 const (
 	modeQuestion   = "mode"
 	socketQuestion = "socket"
+	deviceQuestion = "device"
 )
 
 // Helper holds a vsock namespace when miso was started as its helper, and
@@ -61,6 +62,7 @@ type handler func(argument string, files []int) (string, []int, error)
 var handlers = map[string]handler{
 	modeQuestion:   mode,
 	socketQuestion: socket,
+	deviceQuestion: device,
 }
 
 // serve answers miso until it hangs up.
@@ -118,6 +120,16 @@ func mode(string, []int) (string, []int, error) {
 // socket is a fresh vsock socket made inside.
 func socket(string, []int) (string, []int, error) {
 	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return "", []int{fd}, nil
+}
+
+// device is the host's vhost-vsock device opened inside.
+func device(string, []int) (string, []int, error) {
+	fd, err := unix.Open("/dev/vhost-vsock", unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return "", nil, err
 	}
