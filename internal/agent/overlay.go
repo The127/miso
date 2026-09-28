@@ -135,7 +135,8 @@ func mountReadOnly(root string, lowers []string) error {
 		options = append(options, [2]string{"lowerdir+", lower})
 	}
 
-	return mount(root, options, unix.MOUNT_ATTR_RDONLY)
+	// a stage's files are only read, so none of them may act on the builder
+	return mount(root, options, unix.MOUNT_ATTR_RDONLY|unix.MOUNT_ATTR_NODEV|unix.MOUNT_ATTR_NOSUID|unix.MOUNT_ATTR_NOEXEC)
 }
 
 // lowers are the directories of layers, top first as overlay takes them.
