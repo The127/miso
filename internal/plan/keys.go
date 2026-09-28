@@ -36,7 +36,12 @@ func words(instruction imagefile.Instruction) []string {
 	case imagefile.Output:
 		found = []string{"OUTPUT", step.Kind}
 		for _, name := range slices.Sorted(maps.Keys(step.Options)) {
-			found = append(found, name, step.Options[name])
+			found = append(found, name)
+			// the tools stage's key is among the reads, so a renamed stage
+			// keeps its cache
+			if name != "tools" {
+				found = append(found, step.Options[name])
+			}
 		}
 	case imagefile.Check:
 		found = []string{"CHECK", step.Command}
