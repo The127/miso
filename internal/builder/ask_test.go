@@ -246,6 +246,24 @@ func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	assert.Less(t, time.Since(start), 500*time.Millisecond)
 }
 
+func TestAFileOfTheHostThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
+	// arrange
+	request := protocol.Copy{Key: "step", Sources: []string{"motd"}, Digests: []string{"sha256:aaaa"}, Destination: "/etc/motd"}
+	files := func(protocol.Copy) protocol.Files {
+		return func(func(protocol.Entry, io.Reader) error) error {
+			return errors.New("motd: changed since it was planned")
+		}
+	}
+	start := time.Now()
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(&receiving{}), agentName, requested(request), files, io.Discard)
+
+	// assert
+	require.ErrorContains(t, err, "motd: changed since it was planned")
+	assert.Less(t, time.Since(start), 500*time.Millisecond)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 

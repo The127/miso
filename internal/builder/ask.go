@@ -58,7 +58,7 @@ func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request pro
 
 	var err error
 	if copying, isCopy := request.(protocol.Copy); isCopy {
-		err = protocol.New(agent, conn, conn).AskCopy(copying, files(copying), out)
+		err = protocol.New(agent, conn, conn).AskCopy(copying, hosted(files(copying)), out)
 	} else {
 		err = protocol.New(agent, conn, conn).Ask(request, out)
 	}
@@ -100,6 +100,10 @@ func connect(ctx context.Context, vm VM, dial Dial, booted <-chan time.Time) (io
 func failed(vm VM, err error) error {
 	// the agent answered, so the VM still runs
 	if errors.Is(err, protocol.ErrCommandFailed) || errors.Is(err, protocol.ErrAgentFailed) {
+		return err
+	}
+
+	if errors.As(err, &hostError{}) {
 		return err
 	}
 
