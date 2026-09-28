@@ -310,3 +310,27 @@ func TestAFileWithTwoNamesKeepsItsContentWhenALaterSymlinkTakesItsFirstPlace(t *
 	require.NoError(t, err)
 	assert.Equal(t, "x\n", string(c))
 }
+
+func TestDevicesFifosAndSocketsOfAStageAreMadeAsTheyAre(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, unix.Mknod(filepath.Join(stage, "null"), unix.S_IFCHR|0o600, int(unix.Mkdev(1, 3)))) //nolint:gosec // the kernel keeps device numbers in 32 bits
+	require.NoError(t, unix.Chmod(filepath.Join(stage, "null"), 0o666))
+	require.NoError(t, unix.Mkfifo(filepath.Join(stage, "pipe"), 0o640))
+	require.NoError(t, unix.Mknod(filepath.Join(stage, "sock"), unix.S_IFSOCK|0o600, 0))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/"}, below("/"))
+
+	// assert
+	require.NoError(t, err)
+	var null, pipe, sock unix.Stat_t
+	require.NoError(t, unix.Lstat(filepath.Join(image, "null"), &null))
+	require.NoError(t, unix.Lstat(filepath.Join(image, "pipe"), &pipe))
+	require.NoError(t, unix.Lstat(filepath.Join(image, "sock"), &sock))
+	assert.Equal(t, uint32(unix.S_IFCHR|0o666), null.Mode)
+	assert.Equal(t, unix.Mkdev(1, 3), null.Rdev)
+	assert.Equal(t, uint32(unix.S_IFIFO|0o640), pipe.Mode)
+	assert.Equal(t, uint32(unix.S_IFSOCK|0o600), sock.Mode)
+}

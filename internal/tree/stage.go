@@ -75,6 +75,8 @@ func (c stageCopy) put(name, below string) error {
 		return c.directory(name, below, target, info)
 	case info.Mode()&fs.ModeSymlink != 0:
 		return c.link(name, target, info)
+	case info.Mode()&(fs.ModeDevice|fs.ModeNamedPipe|fs.ModeSocket) != 0:
+		return c.special(name, target, info)
 	}
 
 	return c.file(name, target, info)
@@ -93,12 +95,35 @@ func (c stageCopy) link(name, target string, info fs.FileInfo) error {
 		return err
 	}
 
+	return c.keepAt(name, target, info)
+}
+
+// special makes a device, fifo or socket like the one copied, which has no
+// content and is never opened.
+func (c stageCopy) special(name, target string, info fs.FileInfo) error {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return &fs.PathError{Op: "stat", Path: c.source, Err: fs.ErrInvalid}
+	}
+
+	c.copied.taken(target)
+
+	if err := c.image.Node(target, stat.Mode, stat.Rdev); err != nil {
+		return err
+	}
+
+	return c.keepAt(name, target, info)
+}
+
+// keepAt keeps at the target the owner, mode, attributes and times of what
+// is at a name of the stage. The attributes are read through its directory,
+// since a link, device, fifo or socket is never opened.
+func (c stageCopy) keepAt(name, target string, info fs.FileInfo) error {
 	kept, err := meta(c.source, info)
 	if err != nil {
 		return err
 	}
 
-	// a link cannot be opened, its attributes are read through its directory
 	err = at(c.from, "getxattr", name, func(path string) (err error) {
 		kept.Xattrs, err = read(path)
 
