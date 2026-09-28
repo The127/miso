@@ -1,0 +1,41 @@
+package build_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/build"
+	"github.com/The127/miso/internal/protocol"
+)
+
+// disksOf are the disks among the requests, in their order.
+func disksOf(requests []build.Request) []protocol.Disk {
+	var disks []protocol.Disk
+	for _, request := range requests {
+		if disk, isDisk := request.Message.(protocol.Disk); isDisk {
+			disks = append(disks, disk)
+		}
+	}
+
+	return disks
+}
+
+func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nRUN apt-get install systemd-repart\nFROM debian:13\nRUN apt-get install htop\nOUTPUT disk os.raw --tools=tools\n")
+	tools, image := source.Stages[0], source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, protocol.Disk{
+		Key:    image.Steps[1].Key,
+		Layers: []string{image.BaseKey, image.Steps[0].Key},
+		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+	}, disksOf(requests)[0])
+}

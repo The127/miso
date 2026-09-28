@@ -85,6 +85,8 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 		return run, nil
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
+	case imagefile.Output:
+		return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: ends[instruction.Options["tools"]].layers}, nil
 	}
 
 	return nil, nil
