@@ -2,6 +2,7 @@ package console_test
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -22,4 +23,25 @@ func TestSendTypesTheTextOnTheConsole(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "root\n", keyboard.String())
+}
+
+func TestAConsoleThatFailsToTypeSaysWhy(t *testing.T) {
+	// arrange
+	unplugged := errors.New("the keyboard is unplugged")
+	tty := console.New(strings.NewReader(""), brokenKeyboard{unplugged})
+
+	// act
+	err := tty.Send("root\n")
+
+	// assert
+	assert.ErrorIs(t, err, unplugged)
+	assert.EqualError(t, err, `typing on the console: the keyboard is unplugged`)
+}
+
+type brokenKeyboard struct {
+	err error
+}
+
+func (k brokenKeyboard) Write([]byte) (int, error) {
+	return 0, k.err
 }
