@@ -267,19 +267,24 @@ dependenciesRules:
   - package: '**.internal.kvmtest$'
     shouldOnlyDependsOn:
       internal:
+        - '**.internal.baseimage$'
         - '**.internal.builder$'
         - '**.internal.builderkernel$'
         - '**.internal.download$'
+        - '**.internal.firmware$'
         - '**.internal.qemu$'
     shouldNotDependsOn:
       standard:
         - os/exec
   # the check boots an image miso made and runs its checks in it. It hands
-  # the image what it needs as credentials and never starts a process
+  # the image what it needs as credentials, and starts QEMU only through
+  # the qemu driver
   - package: '**.internal.check$'
     shouldOnlyDependsOn:
       internal:
+        - '**.internal.firmware$'
         - '**.internal.qemu$'
+        - '**.internal.vsock$'
     shouldNotDependsOn:
       standard:
         - os/exec
