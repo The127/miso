@@ -1,31 +1,45 @@
 package console
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 )
 
-// Expect reads the serial console until the pattern matches and returns
-// what came before the match. What came after it is kept for the next
-// Expect, so a ^ in the pattern is where the last match ended. When the
-// pattern never comes, it returns what the console showed since the last
-// match, so a caller can show why.
-func (c *Console) Expect(pattern *regexp.Regexp) (string, error) {
-	chunk := make([]byte, 4096)
+// Expect waits until the pattern matches what the console shows and
+// returns what came before the match. What came after it is kept for the
+// next Expect, so a ^ in the pattern is where the last match ended. When
+// the pattern never comes, it returns what the console showed since the
+// last match, so a caller can show why.
+func (c *Console) Expect(ctx context.Context, pattern *regexp.Regexp) (string, error) {
 	for {
-		if match := pattern.FindIndex(c.seen); match != nil {
-			before := string(c.seen[:match[0]])
-			c.seen = c.seen[match[1]:]
-
-			return before, nil
+		before, found, err := c.match(pattern)
+		if found || err != nil {
+			return before, err
 		}
 
-		if c.end != nil {
-			return string(c.seen), fmt.Errorf("%q never came: %w", pattern, c.end)
+		select {
+		case <-c.more:
+		case <-ctx.Done():
+			return "", fmt.Errorf("%q never came: %w", pattern, ctx.Err())
 		}
-
-		n, err := c.serial.Read(chunk)
-		c.seen = append(c.seen, chunk[:n]...)
-		c.end = err
 	}
+}
+
+func (c *Console) match(pattern *regexp.Regexp) (string, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if match := pattern.FindIndex(c.seen); match != nil {
+		before := string(c.seen[:match[0]])
+		c.seen = c.seen[match[1]:]
+
+		return before, true, nil
+	}
+
+	if c.end != nil {
+		return string(c.seen), false, fmt.Errorf("%q never came: %w", pattern, c.end)
+	}
+
+	return "", false, nil
 }

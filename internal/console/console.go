@@ -1,16 +1,24 @@
 package console
 
-import "io"
+import (
+	"io"
+	"sync"
+)
 
 // Console is a machine's serial console. It keeps what it read past the
-// last match and how the console ended.
+// last match and how the console ended. It serves one caller at a time.
 type Console struct {
-	serial io.Reader
-	seen   []byte
-	end    error
+	mu   sync.Mutex
+	seen []byte
+	end  error
+	more chan struct{}
 }
 
-// New returns the console that the reader carries.
+// New returns the console that the reader carries. It reads until the
+// reader fails or ends.
 func New(serial io.Reader) *Console {
-	return &Console{serial: serial}
+	c := &Console{more: make(chan struct{}, 1)}
+	go c.listen(serial)
+
+	return c
 }

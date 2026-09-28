@@ -1,6 +1,7 @@
 package console_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"regexp"
@@ -19,7 +20,7 @@ func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 	serial := strings.NewReader("booting\nlogin: ")
 
 	// act
-	before, err := console.New(serial).Expect(regexp.MustCompile(`login: `))
+	before, err := console.New(serial).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	require.NoError(t, err)
@@ -31,7 +32,7 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 	serial := strings.NewReader("booting\nKernel panic")
 
 	// act
-	_, err := console.New(serial).Expect(regexp.MustCompile(`login: `))
+	_, err := console.New(serial).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
@@ -41,11 +42,11 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
 	// arrange
 	tty := console.New(io.MultiReader(strings.NewReader("log"), strings.NewReader("in: root\n# ")))
-	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
 	// act
-	before, err := tty.Expect(regexp.MustCompile(`# `))
+	before, err := tty.Expect(t.Context(), regexp.MustCompile(`# `))
 
 	// assert
 	require.NoError(t, err)
@@ -55,11 +56,11 @@ func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
 func TestAConsoleThatEndedIsNotReadAgain(t *testing.T) {
 	// arrange
 	tty := console.New(&lastWords{t: t, words: "login: "})
-	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
 	// act
-	_, err = tty.Expect(regexp.MustCompile(`# `))
+	_, err = tty.Expect(t.Context(), regexp.MustCompile(`# `))
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
@@ -75,7 +76,9 @@ type lastWords struct {
 
 func (w *lastWords) Read(p []byte) (int, error) {
 	if w.said {
-		w.t.Fatal("the console was read after it ended")
+		w.t.Error("the console was read after it ended")
+
+		return 0, io.EOF
 	}
 
 	w.said = true
@@ -89,7 +92,7 @@ func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
 	tty := console.New(iotest.ErrReader(broken))
 
 	// act
-	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	assert.ErrorIs(t, err, broken)
@@ -99,13 +102,28 @@ func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
 func TestAPatternThatNeverCameStillReturnsWhatTheConsoleShowedSinceTheLastMatch(t *testing.T) {
 	// arrange
 	tty := console.New(strings.NewReader("login: root\nKernel panic"))
-	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
 	// act
-	shown, err := tty.Expect(regexp.MustCompile(`# `))
+	shown, err := tty.Expect(t.Context(), regexp.MustCompile(`# `))
 
 	// assert
 	require.Error(t, err)
 	assert.Equal(t, "root\nKernel panic", shown)
+}
+
+func TestExpectReturnsWhenItsContextEnds(t *testing.T) {
+	// arrange
+	silent, speaker := io.Pipe()
+	t.Cleanup(func() { _ = speaker.Close() })
+	tty := console.New(silent)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	// act
+	_, err := tty.Expect(ctx, regexp.MustCompile(`login: `))
+
+	// assert
+	assert.ErrorIs(t, err, context.Canceled)
 }
