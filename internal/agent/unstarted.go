@@ -24,6 +24,11 @@ func (u Unstarted) Import(context.Context, protocol.Import, io.Writer) error {
 	return u.why()
 }
 
+// Copy fails naming why the agent did not start.
+func (u Unstarted) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
+	return u.why()
+}
+
 func (u Unstarted) why() error {
 	return fmt.Errorf("agent did not start: %w", u.Err)
 }
