@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -30,7 +31,8 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	require.NoError(t, err)
 	written, err := os.ReadFile(recorded)
 	require.NoError(t, err)
-	assert.Equal(t, append(want, qemu.Vsock(vm.CID(), 3)...), strings.Split(string(written), "\n"))
+	accelerated, _ := qemu.Accel("/dev/kvm")
+	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3)), strings.Split(string(written), "\n"))
 }
 
 func TestACancelledMachineIsStopped(t *testing.T) {

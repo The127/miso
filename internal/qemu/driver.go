@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"slices"
 )
 
 // vhostVsock is the host's device on which a machine's CID is claimed.
@@ -26,6 +27,9 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 		return nil, err
 	}
 
+	// without KVM the machine still runs, only slower
+	accelerated, _ := accel(kvmDevice)
+
 	device, cid, err := holdCID(vhostVsock)
 	if err != nil {
 		return nil, err
@@ -34,7 +38,7 @@ func (d Driver) Start(ctx context.Context, machine Machine) (*VM, error) {
 	defer func() { _ = device.Close() }()
 
 	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
-	command := exec.CommandContext(ctx, d.Binary, append(args, vsock(cid, deviceFD)...)...)
+	command := exec.CommandContext(ctx, d.Binary, slices.Concat(args, accelerated, vsock(cid, deviceFD))...)
 	// QEMU keeps the device open, and with it the CID, which the host lets
 	// go once QEMU runs
 	command.ExtraFiles = []*os.File{device}

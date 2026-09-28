@@ -1,23 +1,24 @@
 package qemu_test
 
 import (
+	"io/fs"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/qemu"
 )
 
-func TestAMachineRunsOnKVMWithTheHostsCPU(t *testing.T) {
+func TestAHostWithoutKVMRunsTheMachineOnTCGWithTheMostCapableCPU(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{}
+	missing := filepath.Join(t.TempDir(), "kvm")
 
 	// act
-	args, err := qemu.Arguments(machine)
+	args, why := qemu.Accel(missing)
 
 	// assert
-	require.NoError(t, err)
-	assert.Contains(t, args, "-enable-kvm")
-	assert.Equal(t, "host", valueOf(t, args, "-cpu"))
+	assert.ErrorIs(t, why, fs.ErrNotExist)
+	assert.Equal(t, "tcg", valueOf(t, args, "-accel"))
+	assert.Equal(t, "max", valueOf(t, args, "-cpu"))
 }

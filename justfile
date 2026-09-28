@@ -26,7 +26,7 @@ test-vm-one package *args:
 # /dev/vhost-vsock, qemu-system-x86_64 and, the first time, the network
 # for the kernel
 test-kvm *args: build
-    MISO={{justfile_directory()}}/bin/miso CGO_ENABLED=0 go test -tags kvm -count=1 ./internal/qemu/ ./cmd/miso/ -run 'BuilderKernel' {{args}}
+    MISO={{justfile_directory()}}/bin/miso CGO_ENABLED=0 go test -tags kvm -count=1 ./internal/qemu/ ./cmd/miso/ -run 'BuilderKernel|WithKVM' {{args}}
 
 # test the miso binary from the outside, as a user runs it
 test-cli: build
