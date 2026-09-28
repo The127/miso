@@ -13,6 +13,10 @@ import (
 // helperName is the name miso starts itself under to hold a namespace.
 const helperName = "miso-vsockns"
 
+// helperConn is the helper's end of its channel to miso, the first file
+// miso hands it, since those start after stdin, stdout and stderr.
+const helperConn = 3
+
 const (
 	modeQuestion   = "mode"
 	listenQuestion = "listen"
@@ -25,19 +29,17 @@ func Helper() {
 		return
 	}
 
-	const conn = 3
-
 	// the inner namespace is this thread's alone, so everything inside it
 	// is done here
 	runtime.LockOSThread()
 
 	if err := enter(os.Args[1]); err != nil {
-		_ = answerFailed(conn, err)
+		_ = answerFailed(helperConn, err)
 		os.Exit(1)
 	}
 
-	_ = answerOK(conn, "")
-	serve(conn)
+	_ = answerOK(helperConn, "")
+	serve(helperConn)
 	os.Exit(0)
 }
 

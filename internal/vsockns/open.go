@@ -36,6 +36,7 @@ func Open() (*Namespace, error) {
 
 	helper := exec.Command("/proc/self/exe", childModePath)
 	helper.Args[0] = helperName
+	// the first of them becomes helperConn
 	helper.ExtraFiles = []*os.File{theirs}
 	helper.Stderr = os.Stderr
 	helper.SysProcAttr = &syscall.SysProcAttr{
