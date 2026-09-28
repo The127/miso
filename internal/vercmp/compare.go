@@ -91,18 +91,21 @@ func skipped(version string) string {
 // number splits the digits off the front of a version, without the zeros
 // they start with.
 func number(version string) (digits, rest string) {
-	end := 0
-	for end < len(version) && isDigit(version[end]) {
-		end++
-	}
+	digits, rest = front(version, isDigit)
 
-	return strings.TrimLeft(version[:end], "0"), version[end:]
+	return strings.TrimLeft(digits, "0"), rest
 }
 
 // letters splits the letters off the front of a version.
-func letters(version string) (front, rest string) {
+func letters(version string) (word, rest string) {
+	return front(version, isLetter)
+}
+
+// front splits off the front of a version as long as its bytes are of a
+// kind.
+func front(version string, ofKind func(byte) bool) (head, rest string) {
 	end := 0
-	for end < len(version) && isLetter(version[end]) {
+	for end < len(version) && ofKind(version[end]) {
 		end++
 	}
 
