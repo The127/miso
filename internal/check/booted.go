@@ -38,15 +38,26 @@ func Booted(notices Notices) error {
 	}
 }
 
-// take reads the next notice to its end.
+// take reads the next notice to its end. Only a failing Accept ends the
+// taking.
 func take(notices Notices) (string, error) {
 	conn, err := notices.Accept()
 	if err != nil {
 		return "", err
 	}
 
-	said, err := io.ReadAll(conn)
-	_ = conn.Close()
+	defer func() { _ = conn.Close() }()
 
-	return string(said), err
+	return heard(conn), nil
+}
+
+// heard is what a notice said, or nothing for one that broke, since what it
+// said is not known.
+func heard(notice io.Reader) string {
+	said, err := io.ReadAll(notice)
+	if err != nil {
+		return ""
+	}
+
+	return string(said)
 }

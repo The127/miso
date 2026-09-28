@@ -1,6 +1,7 @@
 package check_test
 
 import (
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -93,5 +94,33 @@ func TestNoticesAfterTheBootAreStillTaken(t *testing.T) {
 		assert.True(t, read)
 	case <-time.After(time.Second):
 		assert.Fail(t, "the notice after the boot was never taken")
+	}
+}
+
+// broken is a notice whose connection fails while it is read.
+type broken struct {
+	io.Writer
+}
+
+func (broken) Read([]byte) (int, error) { return 0, errors.New("connection reset by peer") }
+
+func (broken) Close() error { return nil }
+
+func TestANoticeThatBreaksAfterTheBootDoesNotEndTheTaking(t *testing.T) {
+	// arrange
+	said := sending("READY=1")
+	require.NoError(t, check.Booted(said))
+	notice := &late{Reader: strings.NewReader("X_SYSTEMD_UNIT_ACTIVE=getty.target"), Writer: io.Discard, closed: make(chan bool, 1)}
+
+	// act
+	said.sent <- broken{io.Discard}
+	said.sent <- notice
+
+	// assert
+	select {
+	case read := <-notice.closed:
+		assert.True(t, read)
+	case <-time.After(time.Second):
+		assert.Fail(t, "the notice after the broken one was never taken")
 	}
 }
