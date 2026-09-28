@@ -11,10 +11,18 @@ import (
 // diskRequest is what an output asks for on the root file system under it,
 // with the tools taken from where their stage ends.
 func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs) (protocol.Disk, error) {
-	if instruction.Kind != "disk" {
+	var refused error
+	switch _, hasTools := instruction.Options["tools"]; {
+	case instruction.Kind != "disk":
+		refused = ErrUnknownKind
+	case !hasTools:
+		refused = ErrNoTools
+	}
+
+	if refused != nil {
 		line, written := imagefile.Written(instruction)
 
-		return protocol.Disk{}, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, ErrUnknownKind)}
+		return protocol.Disk{}, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers}, nil

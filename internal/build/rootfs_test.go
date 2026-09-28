@@ -99,7 +99,7 @@ func TestAnOutputMakesNoLayer(t *testing.T) {
 		BaseDigest: "sha256:image",
 		BaseKey:    "base",
 		Steps: []plan.Step{
-			{Instruction: imagefile.Output{Line: 2, Kind: "disk", Name: "x.raw"}, Key: "k1", BuiltOn: []string{"base"}},
+			{Instruction: imagefile.Output{Line: 2, Kind: "disk", Name: "x.raw", Options: map[string]string{"tools": "tools"}}, Key: "k1", BuiltOn: []string{"base"}},
 			{Instruction: imagefile.Run{Line: 3, Command: "echo hi"}, Key: "k2", BuiltOn: []string{"k1"}},
 		},
 	}}}

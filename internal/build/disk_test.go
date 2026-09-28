@@ -52,3 +52,15 @@ func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	assert.ErrorContains(t, err, "line 2")
 	assert.ErrorContains(t, err, "portable")
 }
+
+func TestADiskWithoutToolsFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrNoTools)
+	assert.ErrorContains(t, err, "line 2")
+}
