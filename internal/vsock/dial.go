@@ -1,9 +1,13 @@
 package vsock
 
 import (
+	"context"
 	"io"
+	"os"
 
+	mdsocket "github.com/mdlayher/socket"
 	mdvsock "github.com/mdlayher/vsock"
+	"golang.org/x/sys/unix"
 )
 
 // Conn is a connection to a port of a machine.
@@ -22,4 +26,31 @@ func Dial(cid, port uint32) (Conn, error) {
 	}
 
 	return conn, nil
+}
+
+// DialOn connects a socket made elsewhere to a port of the machine with a
+// context ID. The connection has a copy of the socket of its own, so the
+// socket stays the caller's to close.
+func DialOn(socket *os.File, cid, port uint32) (Conn, error) {
+	conn, err := mdsocket.FileConn(socket, "vsock")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := conn.Connect(context.Background(), &unix.SockaddrVM{CID: cid, Port: port}); err != nil {
+		_ = conn.Close()
+
+		return nil, err
+	}
+
+	return handed{conn}, nil
+}
+
+// handed is a connection dialed on a socket made elsewhere.
+type handed struct {
+	*mdsocket.Conn
+}
+
+func (h handed) CloseWrite() error {
+	return h.Shutdown(unix.SHUT_WR)
 }
