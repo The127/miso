@@ -59,22 +59,9 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 				message = run
 			case imagefile.Copy:
-				copying := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: instruction.Sources, Destination: instruction.Destination}
-				if instruction.From != "" {
-					for _, source := range instruction.Sources {
-						if !strings.HasPrefix(source, "/") {
-							line, written := imagefile.Written(instruction)
-
-							return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, ErrOutputNotBuilt)}
-						}
-					}
-
-					copying.Stage = instruction.From
-					copying.From = ends[instruction.From].layers
-				}
-
-				for _, file := range step.Files {
-					copying.Digests = append(copying.Digests, file.Digest)
+				copying, err := copyRequest(step, instruction, under, ends[instruction.From])
+				if err != nil {
+					return nil, err
 				}
 
 				message = copying
