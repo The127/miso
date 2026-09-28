@@ -20,7 +20,7 @@ func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 	serial := strings.NewReader("booting\nlogin: ")
 
 	// act
-	before, err := console.New(serial).Expect(t.Context(), regexp.MustCompile(`login: `))
+	before, err := console.New(serial, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 	serial := strings.NewReader("booting\nKernel panic")
 
 	// act
-	_, err := console.New(serial).Expect(t.Context(), regexp.MustCompile(`login: `))
+	_, err := console.New(serial, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
@@ -41,7 +41,7 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 
 func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
 	// arrange
-	tty := console.New(io.MultiReader(strings.NewReader("log"), strings.NewReader("in: root\n# ")))
+	tty := console.New(io.MultiReader(strings.NewReader("log"), strings.NewReader("in: root\n# ")), io.Discard)
 	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
@@ -55,7 +55,7 @@ func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
 
 func TestAConsoleThatEndedIsNotReadAgain(t *testing.T) {
 	// arrange
-	tty := console.New(&lastWords{t: t, words: "login: "})
+	tty := console.New(&lastWords{t: t, words: "login: "}, io.Discard)
 	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func (w *lastWords) Read(p []byte) (int, error) {
 func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
 	// arrange
 	broken := errors.New("the serial port broke")
-	tty := console.New(iotest.ErrReader(broken))
+	tty := console.New(iotest.ErrReader(broken), io.Discard)
 
 	// act
 	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
@@ -101,7 +101,7 @@ func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
 
 func TestAPatternThatNeverCameStillReturnsWhatTheConsoleShowedSinceTheLastMatch(t *testing.T) {
 	// arrange
-	tty := console.New(strings.NewReader("login: root\nKernel panic"))
+	tty := console.New(strings.NewReader("login: root\nKernel panic"), io.Discard)
 	_, err := tty.Expect(t.Context(), regexp.MustCompile(`login: `))
 	require.NoError(t, err)
 
@@ -117,7 +117,7 @@ func TestExpectReturnsWhenItsContextEnds(t *testing.T) {
 	// arrange
 	silent, speaker := io.Pipe()
 	t.Cleanup(func() { _ = speaker.Close() })
-	tty := console.New(silent)
+	tty := console.New(silent, io.Discard)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -133,7 +133,7 @@ func TestAContextThatEndsStillReturnsWhatTheConsoleShowedSinceTheLastMatch(t *te
 	silent, speaker := io.Pipe()
 	t.Cleanup(func() { _ = speaker.Close() })
 	go func() { _, _ = speaker.Write([]byte("booting\nstill booting")) }()
-	tty := console.New(silent)
+	tty := console.New(silent, io.Discard)
 	_, err := tty.Expect(t.Context(), regexp.MustCompile(`booting\n`))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
