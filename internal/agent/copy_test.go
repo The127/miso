@@ -158,3 +158,18 @@ func TestACopyThatIsNotWhatWasPlannedKeepsNoLayer(t *testing.T) {
 	require.ErrorIs(t, err, agent.ErrNotPlanned)
 	assert.NoDirExists(t, filepath.Join(layers, "copy"))
 }
+
+func TestAnEntryOfASourceTheCopyDoesNotNameFailsTheCopy(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	files := &sent{entries: []protocol.Entry{{Source: 1, Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd"}, Digests: []string{files.digest()}, Destination: "/etc/"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, agent.ErrUnknownSource)
+	assert.NoDirExists(t, filepath.Join(layers, "copy"))
+}
