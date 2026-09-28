@@ -1,4 +1,4 @@
-# Claude sessions
+# Cloud sessions
 
 - Trunk based: work directly on `main`. Rebase onto `origin/main` before
   every push, and push only when the contributor says so.
