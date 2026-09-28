@@ -25,5 +25,10 @@ func (r *Root) Link(path string, target string) error {
 		return &os.PathError{Op: "symlink", Path: path, Err: err}
 	}
 
+	// the link itself, a chown that follows it would reach its target
+	if err := unix.Fchownat(parent, name, 0, 0, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+		return &os.PathError{Op: "chown", Path: path, Err: err}
+	}
+
 	return nil
 }

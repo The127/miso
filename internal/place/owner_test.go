@@ -43,3 +43,19 @@ func owner(t *testing.T, name string) [2]uint32 {
 
 	return [2]uint32{stat.Uid, stat.Gid}
 }
+
+func TestALinkIsRootsEvenInADirectoryThatHandsOnItsGroup(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	srv := filepath.Join(root, "srv")
+	require.NoError(t, os.Mkdir(srv, 0o700))
+	require.NoError(t, os.Chown(srv, 1000, 1000))
+	require.NoError(t, os.Chmod(srv, 0o2775|os.ModeSetgid))
+
+	// act
+	err := place.Open(root).Link("/srv/issue", "motd")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, [2]uint32{0, 0}, owner(t, filepath.Join(srv, "issue")))
+}
