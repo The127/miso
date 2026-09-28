@@ -31,6 +31,10 @@ func (s *Store) Path(key string) string {
 
 // Has tells whether the layer of a key is finished.
 func (s *Store) Has(key string) (bool, error) {
+	if err := checked(key); err != nil {
+		return false, err
+	}
+
 	_, err := os.Stat(s.Path(key))
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
@@ -41,6 +45,10 @@ func (s *Store) Has(key string) (bool, error) {
 
 // Begin starts the layer of a key in a directory of its own.
 func (s *Store) Begin(key string) (*Work, error) {
+	if err := checked(key); err != nil {
+		return nil, err
+	}
+
 	dir, err := os.MkdirTemp(s.dir, working)
 	if err != nil {
 		return nil, err
