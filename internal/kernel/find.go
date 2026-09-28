@@ -27,6 +27,6 @@ func Find(image fs.FS) (Kernel, error) {
 	return Kernel{
 		Version: version,
 		Linux:   path.Join(modules, version, "vmlinuz"),
-		Initrd:  path.Join(modules, version, "initrd"),
+		Initrd:  initrdOf(image, version),
 	}, nil
 }
