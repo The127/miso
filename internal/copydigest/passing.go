@@ -17,9 +17,9 @@ type Passing struct {
 
 // Pass hashes a content as it is read.
 func Pass(content io.Reader) *Passing {
-	hash := sha256.New()
+	sha256hash := sha256.New()
 
-	return &Passing{content: io.TeeReader(content, hash), hash: hash}
+	return &Passing{content: io.TeeReader(content, sha256hash), hash: sha256hash}
 }
 
 func (p *Passing) Read(b []byte) (int, error) {
