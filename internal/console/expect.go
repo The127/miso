@@ -18,11 +18,12 @@ func (c *Console) Expect(pattern *regexp.Regexp) (string, error) {
 			return before, nil
 		}
 
+		if c.end != nil {
+			return "", fmt.Errorf("the console ended before %q came: %w", pattern, c.end)
+		}
+
 		n, err := c.serial.Read(chunk)
 		c.seen = append(c.seen, chunk[:n]...)
-
-		if n == 0 && err != nil {
-			return "", fmt.Errorf("the console ended before %q came: %w", pattern, err)
-		}
+		c.end = err
 	}
 }
