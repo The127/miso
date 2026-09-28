@@ -11,3 +11,10 @@ func NoChildMode(t *testing.T) {
 	childModePath = "/nonexistent/child_ns_mode"
 	t.Cleanup(func() { childModePath = was })
 }
+
+// Ask puts any question to the helper.
+func Ask(n *Namespace, question string) (string, error) {
+	text, _, err := n.ask(question)
+
+	return text, err
+}

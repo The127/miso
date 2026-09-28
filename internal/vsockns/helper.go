@@ -1,6 +1,7 @@
 package vsockns
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
@@ -71,6 +72,9 @@ func serve(conn int) {
 		question, argument, _ := strings.Cut(asked, " ")
 		handle, known := handlers[question]
 		if !known {
+			// miso would wait for an answer forever
+			_ = answerFailed(conn, fmt.Errorf("unknown question %s", question))
+
 			continue
 		}
 
