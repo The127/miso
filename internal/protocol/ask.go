@@ -50,6 +50,8 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 			return fmt.Errorf("%w: exit code %d", ErrCommandFailed, m.Code)
 		case Failed:
 			return fmt.Errorf("%w: %s", ErrAgentFailed, m.Reason)
+		default:
+			return fmt.Errorf("%T is no answer to %T", m, request)
 		}
 	}
 }
