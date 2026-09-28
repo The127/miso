@@ -21,7 +21,12 @@ func Connect(port io.ReadWriteCloser) (*Dialer, error) {
 	return &Dialer{session: session}, nil
 }
 
-// Dial opens a connection to the VM.
+// Dial opens a connection to the VM's agent, and fails while nothing
+// serves the VM's side of the port.
 func (d *Dialer) Dial() (io.ReadWriteCloser, error) {
+	if err := answered(d.session); err != nil {
+		return nil, err
+	}
+
 	return d.session.Open()
 }

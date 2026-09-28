@@ -11,7 +11,8 @@ type Listener struct {
 	session *yamux.Session
 }
 
-// Listen opens the VM's side of the port it is handed.
+// Listen opens the VM's side of the port it is handed. From then on the
+// host's Dial succeeds, so the agent listens only once it accepts.
 func Listen(port io.ReadWriteCloser) (*Listener, error) {
 	session, err := yamux.Server(port, config())
 	if err != nil {

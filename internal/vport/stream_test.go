@@ -45,3 +45,21 @@ func TestWhatTheHostWritesOnAStreamReachesTheGuest(t *testing.T) {
 	// assert
 	assert.Equal(t, "hello", got)
 }
+
+func TestDialingAPortWithNoAgentBehindItFails(t *testing.T) {
+	// arrange
+	host, silent := net.Pipe()
+	t.Cleanup(func() {
+		_ = host.Close()
+		_ = silent.Close()
+	})
+	go func() { _, _ = io.Copy(io.Discard, silent) }()
+	dialer, err := vport.Connect(host)
+	require.NoError(t, err)
+
+	// act
+	_, err = dialer.Dial()
+
+	// assert
+	assert.Error(t, err)
+}
