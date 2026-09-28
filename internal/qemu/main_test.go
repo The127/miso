@@ -108,6 +108,13 @@ func fakeQEMU(recorded string) {
 		os.Exit(2)
 	}
 
+	if temp := os.Getenv("MISO_FAKE_QEMU_TMPDIR"); temp != "" {
+		//nolint:gosec // the test that started this binary names the file
+		if err := os.WriteFile(temp, []byte(os.Getenv("TMPDIR")), 0o600); err != nil {
+			os.Exit(2)
+		}
+	}
+
 	fmt.Println("fake QEMU console")
 
 	if refusal := os.Getenv("MISO_FAKE_QEMU_FAIL"); refusal != "" {

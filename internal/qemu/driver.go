@@ -53,6 +53,10 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 	command.ExtraFiles = []*os.File{device}
 	command.Stdout = machine.Console
 
+	if machine.Temp != "" {
+		command.Env = append(os.Environ(), "TMPDIR="+machine.Temp)
+	}
+
 	vm, err := run(command, cid)
 	if err != nil {
 		return nil, err

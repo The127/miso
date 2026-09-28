@@ -20,7 +20,7 @@ type Boot struct {
 	Firmware firmware.Firmware
 	Image    qemu.Disk
 
-	// holds what the firmware writes, a boot's own
+	// holds what the firmware and the boot write, a boot's own
 	Dir     string
 	Console io.Writer
 }
@@ -50,6 +50,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		Disks:       []qemu.Disk{b.Image},
 		Console:     b.Console,
 		Credentials: Credentials(notices.Port()),
+		Temp:        b.Dir,
 	})
 	if err != nil {
 		return nil, err

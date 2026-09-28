@@ -164,3 +164,40 @@ func TestAMachineOnAHostWithoutKVMSaysSo(t *testing.T) {
 	<-vm.Done()
 	assert.True(t, vm.WithoutKVM())
 }
+
+func TestQEMUKeepsItsTemporaryFilesWhereTheMachineSays(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	told := filepath.Join(t.TempDir(), "tmpdir")
+	t.Setenv("MISO_FAKE_QEMU_TMPDIR", told)
+	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1, Temp: "/c/boot"}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	temp, err := os.ReadFile(told)
+	require.NoError(t, err)
+	assert.Equal(t, "/c/boot", string(temp))
+}
+
+func TestAMachineWithoutATempDirLeavesQEMUTheHostsOwn(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	told := filepath.Join(t.TempDir(), "tmpdir")
+	t.Setenv("MISO_FAKE_QEMU_TMPDIR", told)
+	t.Setenv("TMPDIR", "/host/tmp")
+	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	temp, err := os.ReadFile(told)
+	require.NoError(t, err)
+	assert.Equal(t, "/host/tmp", string(temp))
+}

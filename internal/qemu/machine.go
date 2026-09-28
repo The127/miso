@@ -15,4 +15,8 @@ type Machine struct {
 	Card        *Card
 	Console     io.Writer
 	Credentials []Credential
+
+	// where QEMU keeps its temporary files, such as what a snapshot disk
+	// took of a boot, the host's temporary directory if empty
+	Temp string
 }
