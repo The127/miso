@@ -81,7 +81,7 @@ func separator(a, b, among string) (compared int, found bool) {
 func skipped(version string) string {
 	// byte by byte, every byte of a character beyond ASCII is skipped
 	start := 0
-	for start < len(version) && !isDigit(version[start]) && !isLetter(version[start]) && strings.IndexByte("-.~^", version[start]) < 0 {
+	for start < len(version) && !isDigit(version[start]) && !isLetter(version[start]) && strings.IndexByte(tilde+separators, version[start]) < 0 {
 		start++
 	}
 
