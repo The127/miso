@@ -30,6 +30,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 	var requests []Request
 	roots := map[string]rootfs{}
+	ends := map[string]rootfs{}
 	for _, stage := range planned.Stages {
 		// only a stage on an image has a digest. A stage on an earlier stage
 		// carries on where that one ended, and scratch needs no entry, a
@@ -40,6 +41,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			requests = append(requests, Request{Line: stage.Line, Written: "FROM " + stage.Base, Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
 		}
 
+		end := roots[stage.BaseKey]
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
@@ -53,15 +55,17 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 				message = run
 			case imagefile.Copy:
-				// a copy from a stage takes nothing from the build context
-				if instruction.From == "" {
-					copying := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: instruction.Sources, Destination: instruction.Destination}
-					for _, file := range step.Files {
-						copying.Digests = append(copying.Digests, file.Digest)
-					}
-
-					message = copying
+				copying := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: instruction.Sources, Destination: instruction.Destination}
+				if instruction.From != "" {
+					copying.Stage = instruction.From
+					copying.From = ends[instruction.From].layers
 				}
+
+				for _, file := range step.Files {
+					copying.Digests = append(copying.Digests, file.Digest)
+				}
+
+				message = copying
 			}
 
 			if message != nil {
@@ -70,7 +74,17 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			}
 
 			roots[step.Key] = under.after(step)
+
+			// outputs and checks leave the root file system unchanged, as the
+			// plan has it
+			switch step.Instruction.(type) {
+			case imagefile.Output, imagefile.Check:
+			default:
+				end = roots[step.Key]
+			}
 		}
+
+		ends[stage.Name] = end
 	}
 
 	return requests, nil

@@ -59,25 +59,53 @@ func TestACopyOfTheBuildContextBecomesARequestWithItsFiles(t *testing.T) {
 	}, copiesOf(requests)[0].Message)
 }
 
-func TestACopyFromAStageTakesNothingFromTheBuildContext(t *testing.T) {
+func TestACopyFromAStageIsBuiltFromTheLayersOfThatStage(t *testing.T) {
 	// arrange
-	planned := plan.Plan{Stages: []plan.Stage{{
-		Base:       "debian:13",
-		BaseDigest: "sha256:image",
-		BaseKey:    "base",
-		Steps: []plan.Step{{
-			Instruction: imagefile.Copy{Line: 2, From: "build", Sources: []string{"rootfs"}, Destination: "/"},
-			Key:         "k1",
-			BuiltOn:     []string{"base"},
-		}},
-	}}}
+	source := planned(t, "FROM debian:13 AS build\nRUN make\nFROM scratch\nCOPY --from=build /usr /usr\n")
+	built := source.Stages[0]
 
 	// act
-	requests, err := build.Requests(planned, network)
+	requests, err := build.Requests(source, network)
 
 	// assert
 	require.NoError(t, err)
-	assert.Empty(t, copiesOf(requests))
+	require.Len(t, copiesOf(requests), 1)
+	assert.Equal(t, protocol.Copy{
+		Key:         source.Stages[1].Steps[0].Key,
+		Stage:       "build",
+		From:        []string{built.BaseKey, built.Steps[0].Key},
+		Sources:     []string{"/usr"},
+		Destination: "/usr",
+	}, copiesOf(requests)[0].Message)
+}
+
+func TestACopyFromAStageIsBuiltFromWhereThatStageEndsPastItsOutputsAndChecks(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS build\nRUN a\nOUTPUT disk a.raw\nRUN b\nCHECK c\nFROM scratch\nCOPY --from=build /usr /usr\n")
+	built := source.Stages[0]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, copiesOf(requests), 1)
+	copying, _ := copiesOf(requests)[0].Message.(protocol.Copy)
+	assert.Equal(t, []string{built.BaseKey, built.Steps[0].Key, built.Steps[2].Key}, copying.From)
+}
+
+func TestACopyFromAStageWithoutStepsIsBuiltFromItsBase(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS build\nFROM scratch\nCOPY --from=build /usr /usr\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, copiesOf(requests), 1)
+	copying, _ := copiesOf(requests)[0].Message.(protocol.Copy)
+	assert.Equal(t, []string{source.Stages[0].BaseKey}, copying.From)
 }
 
 func TestACopyRequestKnowsItsLineOfTheBuildFile(t *testing.T) {
