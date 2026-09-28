@@ -110,6 +110,37 @@ func TestAWantedKernelThatIsNotInstalledFailsNamingTheInstalledOnes(t *testing.T
 	assert.ErrorContains(t, err, "7.2.8+deb14-amd64")
 }
 
+func TestAKernelNameOfTheImageIsQuotedWhenItsInitrdIsMissing(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2\x1b[2J/vmlinuz": {},
+	}
+
+	// act
+	_, err := kernel.Find(image, "")
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoInitrd)
+	assert.NotContains(t, err.Error(), "\x1b")
+	assert.ErrorContains(t, err, `"7.2\x1b[2J"`)
+}
+
+func TestTheKernelNamesOfTheImageAreQuotedWhenTheWantedOneIsMissing(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2\x1b[2J/vmlinuz": {},
+		"usr/lib/modules/7.2\x1b[2J/initrd":  {},
+	}
+
+	// act
+	_, err := kernel.Find(image, "7.9")
+
+	// assert
+	require.ErrorIs(t, err, kernel.ErrNoKernel)
+	assert.NotContains(t, err.Error(), "\x1b")
+	assert.ErrorContains(t, err, `"7.2\x1b[2J"`)
+}
+
 func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{

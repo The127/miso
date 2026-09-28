@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/The127/miso/internal/vercmp"
@@ -41,7 +42,7 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 	if wanted != "" {
 		// a version only ever names a kernel the image has, never a path
 		if !slices.Contains(installed, wanted) {
-			return Kernel{}, fmt.Errorf("%w %s, the image has %s", ErrNoKernel, wanted, strings.Join(installed, ", "))
+			return Kernel{}, fmt.Errorf("%w %s, the image has %s", ErrNoKernel, wanted, quoted(installed))
 		}
 
 		version = wanted
@@ -57,6 +58,17 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 		Linux:   path.Join(modules, version, "vmlinuz"),
 		Initrd:  initrd,
 	}, nil
+}
+
+// quoted lists names from an image, which may come from anyone, with what
+// could move a terminal's cursor or colour it escaped.
+func quoted(names []string) string {
+	each := make([]string, 0, len(names))
+	for _, name := range names {
+		each = append(each, strconv.Quote(name))
+	}
+
+	return strings.Join(each, ", ")
 }
 
 // installedIn are the versions of the kernels an image has. Modules a

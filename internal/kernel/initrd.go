@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
-	"strings"
 )
 
 // ErrNoInitrd is a kernel without an initrd in any place miso knows.
@@ -30,5 +29,5 @@ func initrdOf(image fs.FS, version string) (string, error) {
 		looked = append(looked, "/"+place(version))
 	}
 
-	return "", fmt.Errorf("%w for kernel %s, looked at %s", ErrNoInitrd, version, strings.Join(looked, ", "))
+	return "", fmt.Errorf("%w for kernel %q, looked at %s", ErrNoInitrd, version, quoted(looked))
 }
