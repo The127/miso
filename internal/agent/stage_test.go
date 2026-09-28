@@ -5,6 +5,7 @@ package agent_test
 import (
 	"context"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -82,4 +83,21 @@ func TestACopyFromAStageLeavesOutWhatAHigherLayerOfThatStageRemoved(t *testing.T
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(layers, "copy", "etc", "issue"))
 	assert.NoFileExists(t, filepath.Join(layers, "copy", "etc", "motd"))
+}
+
+func TestACopyFromAStageThatFailsKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	built(t, layers, map[string]string{"etc/motd": "hello\n"})
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Stage: "build", From: []string{"built"}, Sources: []string{"/nope"}, Destination: "/nope"}
+
+	// act
+	err := worker.Copy(context.Background(), request, unasked{t}, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, fs.ErrNotExist)
+	kept, err := layer.Open(layers).Has("copy")
+	require.NoError(t, err)
+	assert.False(t, kept)
 }
