@@ -62,8 +62,8 @@ func enter(childMode string) error {
 	return unix.Unshare(unix.CLONE_NEWNET)
 }
 
-// handler answers one kind of question, with the files it hands over. It
-// owns the files miso handed with the question.
+// handler answers one kind of question, with the files it hands over. The
+// files miso handed with the question are only lent to it.
 type handler func(argument string, files []int) (string, []int, error)
 
 var handlers = map[string]handler{
@@ -80,28 +80,37 @@ func serve(conn int) {
 			return
 		}
 
-		question, argument, _ := strings.Cut(asked, " ")
-		handle, known := handlers[question]
-		if !known {
-			// miso would wait for an answer forever
-			_ = answerFailed(conn, fmt.Errorf("unknown question %s", question))
+		respond(conn, asked, received)
 
-			continue
-		}
-
-		text, files, err := handle(argument, received)
-		if err != nil {
-			_ = answerFailed(conn, err)
-
-			continue
-		}
-
-		_ = answerOK(conn, text, files...)
-
-		// miso holds its own copies now
-		for _, file := range files {
+		for _, file := range received {
 			_ = unix.Close(file)
 		}
+	}
+}
+
+// respond answers one question, with the files miso handed with it.
+func respond(conn int, asked string, received []int) {
+	question, argument, _ := strings.Cut(asked, " ")
+	handle, known := handlers[question]
+	if !known {
+		// miso would wait for an answer forever
+		_ = answerFailed(conn, fmt.Errorf("unknown question %s", question))
+
+		return
+	}
+
+	text, files, err := handle(argument, received)
+	if err != nil {
+		_ = answerFailed(conn, err)
+
+		return
+	}
+
+	_ = answerOK(conn, text, files...)
+
+	// miso holds its own copies now
+	for _, file := range files {
+		_ = unix.Close(file)
 	}
 }
 
@@ -132,7 +141,14 @@ func run(argument string, files []int) (string, []int, error) {
 		return "", nil, fmt.Errorf("a program needs its stdout, it got %d files", len(files))
 	}
 
-	stdout := os.NewFile(uintptr(files[0]), "stdout")
+	// a copy of its own, since the file is only lent, and one the program
+	// does not inherit beside its stdout
+	own, err := unix.FcntlInt(uintptr(files[0]), unix.F_DUPFD_CLOEXEC, 0)
+	if err != nil {
+		return "", nil, err
+	}
+
+	stdout := os.NewFile(uintptr(own), "stdout")
 	defer func() { _ = stdout.Close() }()
 
 	var args []string
