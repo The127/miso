@@ -1,10 +1,12 @@
 package console_test
 
 import (
+	"errors"
 	"io"
 	"regexp"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
-	assert.ErrorContains(t, err, "login: ")
+	assert.EqualError(t, err, `"login: " never came: EOF`)
 }
 
 func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
@@ -79,4 +81,17 @@ func (w *lastWords) Read(p []byte) (int, error) {
 	w.said = true
 
 	return copy(p, w.words), io.EOF
+}
+
+func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
+	// arrange
+	broken := errors.New("the serial port broke")
+	tty := console.New(iotest.ErrReader(broken))
+
+	// act
+	_, err := tty.Expect(regexp.MustCompile(`login: `))
+
+	// assert
+	assert.ErrorIs(t, err, broken)
+	assert.EqualError(t, err, `"login: " never came: the serial port broke`)
 }

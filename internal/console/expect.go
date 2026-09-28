@@ -19,7 +19,7 @@ func (c *Console) Expect(pattern *regexp.Regexp) (string, error) {
 		}
 
 		if c.end != nil {
-			return "", fmt.Errorf("the console ended before %q came: %w", pattern, c.end)
+			return "", fmt.Errorf("%q never came: %w", pattern, c.end)
 		}
 
 		n, err := c.serial.Read(chunk)
