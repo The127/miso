@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
+	github.com/hashicorp/yamux v0.1.2
 	github.com/mdlayher/vsock v1.3.0
 	github.com/stretchr/testify v1.12.1
 	github.com/therootcompany/xz v1.0.1

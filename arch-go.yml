@@ -95,6 +95,20 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the port carries connections over one stream it is handed, one virtio
+  # serial port of the VM. It knows nothing of ours, opens nothing and never
+  # touches a process, the network or the kernel, so it is tested without a
+  # machine
+  - package: '**.internal.vport$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the listing writes a plan out for eyes and for diff. It knows the plan
   # and the language, writes to the writer it is handed and opens nothing
   - package: '**.internal.listing$'
