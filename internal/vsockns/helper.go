@@ -25,7 +25,6 @@ const helperConn = 3
 const (
 	modeQuestion   = "mode"
 	socketQuestion = "socket"
-	runQuestion    = "run"
 	startQuestion  = "start"
 
 	// what miso sends on a program's report to stop it
@@ -81,7 +80,6 @@ type handler func(argument string, files []int) (string, []int, error)
 var handlers = map[string]handler{
 	modeQuestion:   mode,
 	socketQuestion: socket,
-	runQuestion:    run,
 	startQuestion:  start,
 }
 
@@ -145,39 +143,6 @@ func socket(string, []int) (string, []int, error) {
 	}
 
 	return "", []int{fd}, nil
-}
-
-// run runs a program to its end, from this thread, so in the namespace, with
-// the file miso handed as its stdout.
-func run(argument string, files []int) (string, []int, error) {
-	if len(files) != 1 {
-		return "", nil, fmt.Errorf("a program needs its stdout, it got %d files", len(files))
-	}
-
-	// a copy of its own, since the file is only lent, and one the program
-	// does not inherit beside its stdout
-	own, err := unix.FcntlInt(uintptr(files[0]), unix.F_DUPFD_CLOEXEC, 0)
-	if err != nil {
-		return "", nil, err
-	}
-
-	stdout := os.NewFile(uintptr(own), "stdout")
-	defer func() { _ = stdout.Close() }()
-
-	var args []string
-	if err := json.Unmarshal([]byte(argument), &args); err != nil {
-		return "", nil, err
-	}
-
-	if len(args) == 0 {
-		return "", nil, errors.New("a program needs a name")
-	}
-
-	//nolint:gosec // miso names the program it runs in its own namespace
-	program := exec.Command(args[0], args[1:]...)
-	program.Stdout = stdout
-
-	return "", nil, program.Run()
 }
 
 // start starts a program from this thread, so in the namespace, with the
