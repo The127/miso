@@ -11,7 +11,9 @@ import (
 
 	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/build"
+	"github.com/The127/miso/internal/buildcontext"
 	"github.com/The127/miso/internal/builder"
+	"github.com/The127/miso/internal/contextfiles"
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
@@ -41,7 +43,17 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	requests, err := planned(ctx, command, bases, network)
+	// one open context for plan and build, so the build reads the directory
+	// the plan hashed even if its path changes in between
+	contextDir, _ := located(command)
+	files, err := buildcontext.Open(contextDir)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = files.Close() }()
+
+	requests, err := planned(ctx, command, files, bases, network)
 	if err != nil {
 		return err
 	}
@@ -78,14 +90,14 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 		_, file := located(command)
 
-		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, nil, command.Root().Writer))
+		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), command.Root().Writer))
 	})
 }
 
 // planned is what the agent is asked for the build file, with every base
 // image it names fetched.
-func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, network protocol.Network) ([]build.Request, error) {
-	planning, err := planOf(command, bases)
+func planned(ctx context.Context, command *cli.Command, files *buildcontext.Dir, bases *baseimage.Cache, network protocol.Network) ([]build.Request, error) {
+	planning, err := planOf(command, files, bases)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +109,7 @@ func planned(ctx context.Context, command *cli.Command, bases *baseimage.Cache, 
 			}
 		}
 
-		planning, err = planOf(command, bases)
+		planning, err = planOf(command, files, bases)
 		if err != nil {
 			return nil, err
 		}

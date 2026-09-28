@@ -31,7 +31,15 @@ func listPlan(_ context.Context, command *cli.Command) error {
 
 	_, bases := baseImages(cache)
 
-	planned, err := planOf(command, bases)
+	dir, _ := located(command)
+	files, err := buildcontext.Open(dir)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = files.Close() }()
+
+	planned, err := planOf(command, files, bases)
 	if err != nil {
 		return err
 	}
@@ -39,22 +47,15 @@ func listPlan(_ context.Context, command *cli.Command) error {
 	return listing.Write(command.Root().Writer, planned)
 }
 
-// planOf is the plan of the build file the command names, on the base
-// images bases knows.
-func planOf(command *cli.Command, bases plan.Bases) (plan.Plan, error) {
-	dir, file := located(command)
+// planOf is the plan of the build file the command names, on the files of
+// its build context and the base images bases knows.
+func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (plan.Plan, error) {
+	_, file := located(command)
 
 	stages, err := parsed(file)
 	if err != nil {
 		return plan.Plan{}, err
 	}
-
-	files, err := buildcontext.Open(dir)
-	if err != nil {
-		return plan.Plan{}, err
-	}
-
-	defer func() { _ = files.Close() }()
 
 	planned, err := plan.New(stages, agentName(), files, bases)
 	if err != nil {

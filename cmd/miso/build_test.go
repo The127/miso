@@ -42,3 +42,20 @@ func TestAFailingStepOnTheBuilderKernelNamesItsLineOfTheBuildFile(t *testing.T) 
 	require.Error(t, err)
 	assert.Contains(t, string(said), file+":2: RUN false: command failed")
 }
+
+func TestACopiedFileOfTheContextIsInTheImageOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	// content of its own, or a cache from an earlier run holds both steps
+	// and the build prints nothing
+	motd := "hello " + rand.Text() + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "motd"), []byte(motd), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nCOPY motd /etc/motd\nRUN cat /etc/motd\n"), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), motd)
+}
