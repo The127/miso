@@ -60,9 +60,15 @@ func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Wr
 	running, stop := context.WithCancel(ctx)
 	defer stop()
 
-	driver := qemu.Driver{Binary: "qemu-system-x86_64", WithoutKVM: func(why error) {
-		_, _ = fmt.Fprintln(said, "miso: without KVM the builder VM runs much slower:", why)
-	}}
+	driver := qemu.Driver{
+		Binary: "qemu-system-x86_64",
+		WithoutKVM: func(why error) {
+			_, _ = fmt.Fprintln(said, "miso: without KVM the builder VM runs much slower:", why)
+		},
+		WithoutVsock: func(why error) {
+			_, _ = fmt.Fprintln(said, "miso: without vsock the builder VM is reached over a virtio port:", why)
+		},
+	}
 
 	vm, err := driver.Start(running, machine)
 	if err != nil {
