@@ -15,10 +15,22 @@ func Compare(a, b string) int {
 			continue
 		}
 
-		var numberA, numberB string
-		numberA, a = number(a)
-		numberB, b = number(b)
-		if compared := compareNumbers(numberA, numberB); compared != 0 {
+		if isDigit(a[0]) || isDigit(b[0]) {
+			var numberA, numberB string
+			numberA, a = number(a)
+			numberB, b = number(b)
+			if compared := compareNumbers(numberA, numberB); compared != 0 {
+				return compared
+			}
+
+			continue
+		}
+
+		var lettersA, lettersB string
+		lettersA, a = letters(a)
+		lettersB, b = letters(b)
+		// byte order puts capitals first, as the specification wants
+		if compared := strings.Compare(lettersA, lettersB); compared != 0 {
 			return compared
 		}
 	}
@@ -30,11 +42,29 @@ func Compare(a, b string) int {
 // they start with.
 func number(version string) (digits, rest string) {
 	end := 0
-	for end < len(version) && '0' <= version[end] && version[end] <= '9' {
+	for end < len(version) && isDigit(version[end]) {
 		end++
 	}
 
 	return strings.TrimLeft(version[:end], "0"), version[end:]
+}
+
+// letters splits the letters off the front of a version.
+func letters(version string) (front, rest string) {
+	end := 0
+	for end < len(version) && isLetter(version[end]) {
+		end++
+	}
+
+	return version[:end], version[end:]
+}
+
+func isDigit(c byte) bool {
+	return '0' <= c && c <= '9'
+}
+
+func isLetter(c byte) bool {
+	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
 }
 
 func compareNumbers(a, b string) int {
