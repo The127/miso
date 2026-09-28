@@ -35,10 +35,10 @@ func (a *Agent) Run(ctx context.Context, run protocol.Run, out io.Writer) (int, 
 // directory, which is no longer mounted once it returns.
 func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out io.Writer) (int, error) {
 	code := 0
-	var ceiling func(scratch string) (string, error)
+	var ceiling func(scratch string, below []string) (string, error)
 	if run.Network != nil {
-		ceiling = func(scratch string) (string, error) {
-			return sandbox.Ceiling(scratch, run.Network)
+		ceiling = func(scratch string, below []string) (string, error) {
+			return sandbox.Ceiling(scratch, below, run.Network)
 		}
 	}
 
