@@ -124,3 +124,31 @@ func TestANoticeThatBreaksAfterTheBootDoesNotEndTheTaking(t *testing.T) {
 		assert.Fail(t, "the notice after the broken one was never taken")
 	}
 }
+
+// cut is a notice that breaks after it said something.
+type cut struct {
+	said *strings.Reader
+	io.Writer
+}
+
+func (c cut) Read(p []byte) (int, error) {
+	if c.said.Len() == 0 {
+		return 0, errors.New("connection reset by peer")
+	}
+
+	return c.said.Read(p)
+}
+
+func (cut) Close() error { return nil }
+
+func TestReadyInANoticeThatBreaksAfterwardsStillCounts(t *testing.T) {
+	// arrange
+	said := &notices{sent: make(chan io.ReadWriteCloser, 1)}
+	said.sent <- cut{strings.NewReader("READY=1\nSTATUS=Rea"), io.Discard}
+
+	// act
+	err := check.Booted(said)
+
+	// assert
+	require.NoError(t, err)
+}

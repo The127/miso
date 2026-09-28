@@ -51,13 +51,10 @@ func take(notices Notices) (string, error) {
 	return heard(conn), nil
 }
 
-// heard is what a notice said, or nothing for one that broke, since what it
-// said is not known.
+// heard is what a notice said, up to where it broke. A line cut off there
+// is never a whole READY=1.
 func heard(notice io.Reader) string {
-	said, err := io.ReadAll(notice)
-	if err != nil {
-		return ""
-	}
+	said, _ := io.ReadAll(notice)
 
 	return string(said)
 }
