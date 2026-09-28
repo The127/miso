@@ -3,7 +3,9 @@ package qemu_test
 import (
 	"bytes"
 	"context"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -113,4 +115,39 @@ func TestAMachineQEMUStoppedWithoutAWordSaysOnlyHow(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, vm.Err(), "QEMU stopped: signal: killed")
+}
+
+// startOn starts the machine of the driver as if the host's KVM device
+// were kvm, and waits for it to stop at the end of the test.
+func startOn(t *testing.T, driver qemu.Driver, kvm string) {
+	t.Helper()
+
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm)
+	if err == nil {
+		t.Cleanup(func() { <-vm.Done() })
+	}
+}
+
+func TestAHostWithoutKVMIsToldWhyTheMachineRunsOnTCG(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	var told error
+	driver.WithoutKVM = func(why error) { told = why }
+
+	// act
+	startOn(t, driver, filepath.Join(t.TempDir(), "kvm"))
+
+	// assert
+	assert.ErrorIs(t, told, fs.ErrNotExist)
+}
+
+func TestAHostWithoutKVMStartsTheMachineWithNobodyToTell(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+
+	// act
+	start := func() { startOn(t, driver, filepath.Join(t.TempDir(), "kvm")) }
+
+	// assert
+	assert.NotPanics(t, start)
 }
