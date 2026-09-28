@@ -59,3 +59,20 @@ func TestACopiedFileOfTheContextIsInTheImageOnTheBuilderKernel(t *testing.T) {
 	require.NoError(t, err, string(said))
 	assert.Contains(t, string(said), motd)
 }
+
+func TestAFileCopiedFromAnEarlierStageIsInTheImageOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	// a word of its own, or a cache from an earlier run holds every step and
+	// the build prints nothing
+	word := rand.Text()
+	build := "FROM debian:13 AS a\nRUN echo " + word + " > /x\nFROM debian:13\nCOPY --from=a /x /y\nRUN cat /y\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(build), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), word+"\n")
+}
