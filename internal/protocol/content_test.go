@@ -64,3 +64,17 @@ func TestAnEntryWhoseContentEndsEarlyIsNotSentWhole(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
 }
+
+func TestAnEntryWithANegativeSizeIsRefused(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	host := protocol.New("miso 1.2.0", &wire, &wire)
+	agent := protocol.New("miso 1.2.0", &wire, &wire)
+	require.NoError(t, host.Send(protocol.Entry{Kind: "file", Path: "motd", Size: -1}))
+
+	// act
+	_, err := agent.Receive()
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrNegativeSize)
+}

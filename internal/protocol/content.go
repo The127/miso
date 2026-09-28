@@ -1,6 +1,12 @@
 package protocol
 
-import "io"
+import (
+	"errors"
+	"io"
+)
+
+// ErrNegativeSize is an entry that says less than nothing follows it.
+var ErrNegativeSize = errors.New("negative size")
 
 // SendEntry writes an entry to the other side and its content right after
 // it, as raw bytes.

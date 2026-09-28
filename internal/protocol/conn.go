@@ -97,6 +97,12 @@ func (c *Conn) Receive() (Message, error) {
 	}
 
 	if entry, isEntry := message.(Entry); isEntry {
+		// the content would be read as nothing, and the stream no longer
+		// say where the next message starts
+		if entry.Size < 0 {
+			return nil, fmt.Errorf("%s: %w: %d", entry.Path, ErrNegativeSize, entry.Size)
+		}
+
 		c.content = io.LimitReader(c.r, entry.Size)
 	}
 
