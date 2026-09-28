@@ -2,8 +2,6 @@ package kvmtest
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,9 +15,7 @@ import (
 func Firmware(t *testing.T) firmware.Firmware {
 	t.Helper()
 
-	cache, err := os.UserCacheDir()
-	require.NoError(t, err)
-	found, err := firmware.Ready(t.Context(), download.Open(filepath.Join(cache, "miso", "bases"), http.DefaultClient))
+	found, err := firmware.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient))
 	require.NoError(t, err)
 
 	return found
