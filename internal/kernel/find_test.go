@@ -44,6 +44,21 @@ func TestAnInitrdOfDebianIsFoundInBoot(t *testing.T) {
 	assert.Equal(t, "boot/initrd.img-7.2.8+deb14-amd64", found.Initrd)
 }
 
+func TestAnInitrdOfFedoraIsFoundInBoot(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/6.17.1-300.fc43.x86_64/vmlinuz": {},
+		"boot/initramfs-6.17.1-300.fc43.x86_64.img":      {},
+	}
+
+	// act
+	found, err := kernel.Find(image)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "boot/initramfs-6.17.1-300.fc43.x86_64.img", found.Initrd)
+}
+
 func TestAKernelWithoutAnInitrdFailsNamingWhereItLooked(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{

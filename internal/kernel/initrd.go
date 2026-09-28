@@ -16,6 +16,7 @@ var ErrNoInitrd = errors.New("no initrd")
 var initrds = []func(version string) string{
 	func(version string) string { return path.Join(modules, version, "initrd") },
 	func(version string) string { return "boot/initrd.img-" + version },
+	func(version string) string { return "boot/initramfs-" + version + ".img" },
 }
 
 // initrdOf is the first place of an initrd for the kernel that the image has.
