@@ -11,6 +11,11 @@ import (
 // parent opens the directory a path of the image lives in, and makes it
 // when it is missing.
 func (r *Root) parent(path string) (int, error) {
+	return r.at(filepath.Dir(path))
+}
+
+// at opens a directory of the image, and makes it when it is missing.
+func (r *Root) at(dir string) (int, error) {
 	root, err := unix.Open(r.dir, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return -1, &os.PathError{Op: "open", Path: r.dir, Err: err}
@@ -18,7 +23,7 @@ func (r *Root) parent(path string) (int, error) {
 
 	defer func() { _ = unix.Close(root) }()
 
-	return directory(root, filepath.Dir(path))
+	return directory(root, dir)
 }
 
 // directory opens a directory of the image, made open to all and root's

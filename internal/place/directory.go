@@ -1,6 +1,7 @@
 package place
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -17,6 +18,12 @@ func (r *Root) Directory(path string, mode uint32) error {
 	defer func() { _ = unix.Close(parent) }()
 
 	fd, err := makeDirectory(parent, filepath.Base(path), path, mode)
+	// one that is there keeps its mode, owner and time, so that COPY rootfs/
+	// / does not hand the host's modes to /, /etc and the rest
+	if errors.Is(err, unix.EEXIST) {
+		fd, err = r.at(path)
+	}
+
 	if err != nil {
 		return err
 	}

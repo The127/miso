@@ -29,3 +29,21 @@ func TestANewDirectoryHasTheModeOfItsEntry(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, os.ModeDir|os.ModeSticky|0o775, info.Mode())
 }
+
+func TestADirectoryThatIsThereKeepsItsModeAndOwner(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	etc := filepath.Join(root, "etc")
+	require.NoError(t, os.Mkdir(etc, 0o700))
+	require.NoError(t, os.Chown(etc, 1000, 1000))
+
+	// act
+	err := place.Open(root).Directory("/etc", 0o775)
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Lstat(etc)
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|0o700, info.Mode())
+	assert.Equal(t, [2]uint32{1000, 1000}, owner(t, etc))
+}
