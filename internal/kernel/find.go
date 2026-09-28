@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
+
+	"github.com/The127/miso/internal/vercmp"
 )
 
 // modules holds a directory per installed kernel, named by its version.
@@ -38,7 +41,8 @@ func Find(image fs.FS) (Kernel, error) {
 		return Kernel{}, fmt.Errorf("%w, looked at /%s/*/vmlinuz", ErrNoKernel, modules)
 	}
 
-	version := installed[0]
+	// the kernel systemd-boot would start first
+	version := slices.MaxFunc(installed, vercmp.Compare)
 	initrd, err := initrdOf(image, version)
 	if err != nil {
 		return Kernel{}, err

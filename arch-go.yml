@@ -229,14 +229,14 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
-  # the kernel finds what boots an image in the file system it is handed.
-  # It knows nothing of ours, opens nothing and never touches a process, the
+  # the kernel finds what boots an image in the file system it is handed,
+  # the newest by vercmp. It opens nothing and never touches a process, the
   # network or the kernel it runs on
   - package: '**.internal.kernel$'
-    shouldNotDependsOn:
+    shouldOnlyDependsOn:
       internal:
-        - '**.internal.**'
-        - '**.cmd.**'
+        - '**.internal.vercmp$'
+    shouldNotDependsOn:
       standard:
         - os
         - os/exec

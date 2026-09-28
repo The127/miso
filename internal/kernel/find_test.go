@@ -60,6 +60,23 @@ func TestModulesLeftOfARemovedKernelAreNoKernel(t *testing.T) {
 	assert.Equal(t, "7.2.8+deb14-amd64", found.Version)
 }
 
+func TestTheNewestOfSeveralKernelsIsFound(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2.8+deb14-amd64/vmlinuz": {},
+		"usr/lib/modules/7.2.8+deb14-amd64/initrd":  {},
+		"usr/lib/modules/7.3.1+deb14-amd64/vmlinuz": {},
+		"usr/lib/modules/7.3.1+deb14-amd64/initrd":  {},
+	}
+
+	// act
+	found, err := kernel.Find(image)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "7.3.1+deb14-amd64", found.Version)
+}
+
 func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
 	// arrange
 	image := fstest.MapFS{
