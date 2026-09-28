@@ -78,3 +78,20 @@ func TestAnEntryWithANegativeSizeIsRefused(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, protocol.ErrNegativeSize)
 }
+
+func TestContentThatEndsBeforeItsSizeIsAnError(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	host := protocol.New("miso 1.2.0", &wire, &wire)
+	agent := protocol.New("miso 1.2.0", &wire, &wire)
+	require.NoError(t, host.Send(protocol.Entry{Kind: "file", Path: "motd", Mode: 0o644, Size: 6}))
+	wire.WriteString("hel")
+	_, err := agent.Receive()
+	require.NoError(t, err)
+
+	// act
+	_, err = io.ReadAll(agent.Content())
+
+	// assert
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}

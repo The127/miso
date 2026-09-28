@@ -25,3 +25,30 @@ func (c *Conn) SendEntry(entry Entry, content io.Reader) error {
 func (c *Conn) Content() io.Reader {
 	return c.content
 }
+
+// sized reads the content of one entry. Unlike io.LimitReader it does not
+// end quietly when the wire ends early, which would pass a cut file as
+// whole.
+type sized struct {
+	r    io.Reader
+	left int64
+}
+
+func (s *sized) Read(p []byte) (int, error) {
+	if s.left == 0 {
+		return 0, io.EOF
+	}
+
+	if int64(len(p)) > s.left {
+		p = p[:s.left]
+	}
+
+	n, err := s.r.Read(p)
+	s.left -= int64(n)
+
+	if errors.Is(err, io.EOF) && s.left > 0 {
+		return n, io.ErrUnexpectedEOF
+	}
+
+	return n, err
+}

@@ -109,7 +109,7 @@ func (c *Conn) Receive() (Message, error) {
 			return nil, fmt.Errorf("%s: %w: %d", entry.Path, ErrNegativeSize, entry.Size)
 		}
 
-		c.content = io.LimitReader(c.r, entry.Size)
+		c.content = &sized{r: c.r, left: entry.Size}
 	}
 
 	return message, nil
