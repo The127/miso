@@ -30,3 +30,16 @@ func TestAnAbsoluteLinkInTheImageStaysInTheImage(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(outside, "motd"))
 	assert.FileExists(t, filepath.Join(root, outside, "motd"))
 }
+
+func TestALookupThatARenameRacedIsTriedAgain(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	place.RaceOnce(t)
+
+	// act
+	err := place.Open(root).File("/motd", 0o644, strings.NewReader("hello\n"))
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(root, "motd"))
+}
