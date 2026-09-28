@@ -276,6 +276,24 @@ func TestAFileOfTheHostThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T
 	assert.Less(t, time.Since(start), 500*time.Millisecond)
 }
 
+func TestAnAgentThatAsksForFilesOfACopyFromAStageGetsNone(t *testing.T) {
+	// arrange
+	request := protocol.Copy{Key: "step", Stage: "a", From: []string{"base"}, Sources: []string{"/motd"}, Destination: "/etc/motd"}
+	var asked []protocol.Copy
+	files := func(copying protocol.Copy) protocol.Files {
+		asked = append(asked, copying)
+
+		return func(func(protocol.Entry, io.Reader) error) error { return nil }
+	}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(&receiving{}), agentName, requested(request), files, io.Discard)
+
+	// assert
+	require.ErrorContains(t, err, "protocol.Send is no answer to protocol.Copy")
+	assert.Empty(t, asked)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 

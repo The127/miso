@@ -69,7 +69,8 @@ func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request pro
 	closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
 
 	var err error
-	if copying, isCopy := request.(protocol.Copy); isCopy {
+	// a stage's files are in the builder, so the host has none to send
+	if copying, isCopy := request.(protocol.Copy); isCopy && copying.Stage == "" {
 		err = protocol.New(agent, conn, conn).AskCopy(copying, hosted(files(copying)), out)
 	} else {
 		err = protocol.New(agent, conn, conn).Ask(request, out)
