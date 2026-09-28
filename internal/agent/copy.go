@@ -43,8 +43,20 @@ func placeAll(image *place.Root, destination string, entries protocol.Entries) e
 			return err
 		}
 
-		if err := image.File(filepath.Join(destination, entry.Path), entry.Mode, content); err != nil {
+		if err := placeOne(image, filepath.Join(destination, entry.Path), entry, content); err != nil {
 			return err
 		}
+	}
+}
+
+// placeOne puts an entry at a path of the image as what it is.
+func placeOne(image *place.Root, path string, entry protocol.Entry, content io.Reader) error {
+	switch entry.Kind {
+	case "directory":
+		return image.Directory(path, entry.Mode)
+	case "link":
+		return image.Link(path, entry.Target)
+	default:
+		return image.File(path, entry.Mode, content)
 	}
 }

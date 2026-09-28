@@ -63,3 +63,29 @@ func TestWhatACopySendsIsTheLayerOfItsKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello\n", string(written))
 }
+
+func TestACopiedTreeKeepsItsDirectoriesAndLinks(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"etc"}, Destination: "/etc"}
+	files := &sent{
+		entries: []protocol.Entry{
+			{Kind: "directory", Path: ".", Mode: 0o755},
+			{Kind: "link", Path: "issue", Target: "motd"},
+			{Kind: "file", Path: "motd", Mode: 0o644, Size: 6},
+		},
+		contents: []string{"", "", "hello\n"},
+	}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.DirExists(t, filepath.Join(layers, "copy", "etc"))
+	target, err := os.Readlink(filepath.Join(layers, "copy", "etc", "issue"))
+	require.NoError(t, err)
+	assert.Equal(t, "motd", target)
+	assert.FileExists(t, filepath.Join(layers, "copy", "etc", "motd"))
+}
