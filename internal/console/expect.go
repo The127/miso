@@ -21,7 +21,7 @@ func (c *Console) Expect(ctx context.Context, pattern *regexp.Regexp) (string, e
 		select {
 		case <-c.more:
 		case <-ctx.Done():
-			return "", fmt.Errorf("%q never came: %w", pattern, ctx.Err())
+			return c.shown(), fmt.Errorf("%q never came: %w", pattern, ctx.Err())
 		}
 	}
 }
@@ -42,4 +42,11 @@ func (c *Console) match(pattern *regexp.Regexp) (string, bool, error) {
 	}
 
 	return "", false, nil
+}
+
+func (c *Console) shown() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return string(c.seen)
 }

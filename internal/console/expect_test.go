@@ -127,3 +127,22 @@ func TestExpectReturnsWhenItsContextEnds(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
 }
+
+func TestAContextThatEndsStillReturnsWhatTheConsoleShowedSinceTheLastMatch(t *testing.T) {
+	// arrange
+	silent, speaker := io.Pipe()
+	t.Cleanup(func() { _ = speaker.Close() })
+	go func() { _, _ = speaker.Write([]byte("booting\nstill booting")) }()
+	tty := console.New(silent)
+	_, err := tty.Expect(t.Context(), regexp.MustCompile(`booting\n`))
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	// act
+	shown, err := tty.Expect(ctx, regexp.MustCompile(`login: `))
+
+	// assert
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, "still booting", shown)
+}
