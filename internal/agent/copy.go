@@ -29,6 +29,9 @@ var ErrUnknownSource = errors.New("of a source the copy does not name")
 // names them.
 var ErrOutOfOrder = errors.New("out of order")
 
+// ErrNotLocal is an entry whose path leaves its source.
+var ErrNotLocal = errors.New("leaves its source")
+
 // ErrUnknownKind is an entry that is no file, no directory and no link. A
 // copy carries nothing else.
 var ErrUnknownKind = errors.New("unknown kind of entry")
@@ -96,6 +99,10 @@ func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries
 
 		if entry.Source < 0 || entry.Source >= len(request.Sources) {
 			return nil, fmt.Errorf("%s: %w: %d", entry.Path, ErrUnknownSource, entry.Source)
+		}
+
+		if !filepath.IsLocal(entry.Path) {
+			return nil, fmt.Errorf("%s: %w", entry.Path, ErrNotLocal)
 		}
 
 		// each source is checked on its own, so its place among the others is
