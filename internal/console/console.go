@@ -19,9 +19,9 @@ type Console struct {
 
 // New returns the console whose output the reader carries and whose input
 // the writer takes. It reads until the reader fails or ends.
-func New(serial io.Reader, keyboard io.Writer) *Console {
+func New(screen io.Reader, keyboard io.Writer) *Console {
 	c := &Console{more: make(chan struct{}, 1), keyboard: keyboard}
-	go c.listen(serial)
+	go c.listen(screen)
 
 	return c
 }

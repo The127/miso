@@ -17,10 +17,10 @@ import (
 
 func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 	// arrange
-	serial := strings.NewReader("booting\nlogin: ")
+	screen := strings.NewReader("booting\nlogin: ")
 
 	// act
-	before, err := console.New(serial, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
+	before, err := console.New(screen, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	require.NoError(t, err)
@@ -29,10 +29,10 @@ func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 
 func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 	// arrange
-	serial := strings.NewReader("booting\nKernel panic")
+	screen := strings.NewReader("booting\nKernel panic")
 
 	// act
-	_, err := console.New(serial, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
+	_, err := console.New(screen, io.Discard).Expect(t.Context(), regexp.MustCompile(`login: `))
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
