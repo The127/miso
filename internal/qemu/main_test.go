@@ -2,8 +2,10 @@ package qemu_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/boot"
+	"github.com/The127/miso/internal/guestport"
+	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/vport"
 	"github.com/The127/miso/internal/vsock"
 )
 
@@ -64,7 +69,8 @@ func TestMain(m *testing.M) {
 const guestPort = 1024
 
 // guest readies the VM it is the init of, answers one connection from the
-// host over vsock with miso, and powers the VM off.
+// host with miso, over its virtio port when it has one as the agent does,
+// else over vsock, and powers the VM off.
 func guest() {
 	defer boot.PowerOff()
 
@@ -74,7 +80,7 @@ func guest() {
 		return
 	}
 
-	listener, err := vsock.Listen(guestPort)
+	listener, err := guestListener()
 	if err != nil {
 		fmt.Println(err)
 
@@ -90,6 +96,26 @@ func guest() {
 
 	_, _ = fmt.Fprintln(conn, "miso")
 	_ = conn.Close()
+}
+
+// guestListener mirrors how miso's agent listens, so the guest answers on
+// a machine without vsock the way the agent must.
+func guestListener() (protocol.Listener, error) {
+	device, err := guestport.Find("/sys", "/dev", qemu.AgentPort)
+	if errors.Is(err, fs.ErrNotExist) {
+		return vsock.Listen(guestPort)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	port, err := os.OpenFile(device, os.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return vport.Listen(port)
 }
 
 // fakeDriver runs this test binary as its QEMU, which writes the arguments it
