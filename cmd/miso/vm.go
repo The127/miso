@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/The127/miso/internal/builder"
@@ -44,8 +45,9 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 }
 
 // inBuilder does the work with the builder VM booted, its console in a log
-// file, and stops the VM afterwards.
-func inBuilder(ctx context.Context, machine qemu.Machine, log string, work func(vm *qemu.VM) error) error {
+// file, and stops the VM afterwards. What the user should know about how
+// it runs goes to said.
+func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Writer, work func(vm *qemu.VM) error) error {
 	console, err := os.Create(log)
 	if err != nil {
 		return err
@@ -58,7 +60,11 @@ func inBuilder(ctx context.Context, machine qemu.Machine, log string, work func(
 	running, stop := context.WithCancel(ctx)
 	defer stop()
 
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64"}.Start(running, machine)
+	driver := qemu.Driver{Binary: "qemu-system-x86_64", WithoutKVM: func(why error) {
+		_, _ = fmt.Fprintln(said, "miso: without KVM the builder VM runs much slower:", why)
+	}}
+
+	vm, err := driver.Start(running, machine)
 	if err != nil {
 		return err
 	}
