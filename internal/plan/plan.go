@@ -23,6 +23,10 @@ type Stage struct {
 	// fetched yet
 	BaseKey string
 	Steps   []Step
+
+	// the key its root file system ends on. Outputs and checks leave it as
+	// it is
+	End string
 }
 
 // Step is an instruction with the key of the layer it makes. The key is

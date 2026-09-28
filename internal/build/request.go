@@ -45,7 +45,6 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			requests = append(requests, Request{Line: stage.Line, Written: "FROM " + stage.Base, Message: protocol.Import{Key: stage.BaseKey, Digest: stage.BaseDigest}})
 		}
 
-		end := roots[stage.BaseKey]
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
@@ -73,17 +72,9 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			}
 
 			roots[step.Key] = under.after(step)
-
-			// outputs and checks leave the root file system unchanged, as the
-			// plan has it
-			switch step.Instruction.(type) {
-			case imagefile.Output, imagefile.Check:
-			default:
-				end = roots[step.Key]
-			}
 		}
 
-		ends[stage.Name] = end
+		ends[stage.Name] = roots[stage.End]
 	}
 
 	return requests, nil
