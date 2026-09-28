@@ -69,7 +69,7 @@ func TestAMachineWithoutVsockBootsTheBuilderKernelAndAnswersOverItsVirtioPort(t 
 
 	// assert
 	require.NotNil(t, vm.Port(), "reach falls back to vsock without a port")
-	dial, err := reach.Agent(vm)
+	dial, err := reach.Agent(vm, nil)
 	require.NoError(t, err)
 	said, err := answer(vm, dial, 30*time.Second)
 	require.NoError(t, err)

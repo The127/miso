@@ -22,6 +22,7 @@ import (
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/reach"
 	"github.com/The127/miso/internal/vsock"
+	"github.com/The127/miso/internal/vsockns"
 )
 
 func TestAnAgentBootedByTheBuilderKernelSaysWhyItDidNotStart(t *testing.T) {
@@ -69,12 +70,44 @@ func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *
 
 	// assert
 	require.NotNil(t, vm.Port(), "reach falls back to vsock without a port")
-	dial, err := reach.Agent(vm)
+	dial, err := reach.Agent(vm, nil)
 	require.NoError(t, err)
 	err = ask(t, vm, dial, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
 	require.ErrorIs(t, err, protocol.ErrAgentFailed)
 	assert.ErrorContains(t, err, "agent did not start")
 	assert.ErrorContains(t, err, protocol.CacheSerial)
+}
+
+func TestAnAgentBootedByTheBuilderKernelInAVsockNamespaceIsReachedThroughIt(t *testing.T) {
+	// arrange
+	namespace, err := vsockns.Open()
+	if errors.Is(err, vsockns.ErrNotPrivate) {
+		t.Skip("this host cannot keep vsock private")
+	}
+
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, namespace.Close()) })
+	init, err := os.ReadFile(miso(t))
+	require.NoError(t, err)
+	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
+	var console bytes.Buffer
+	machine.Console = &console
+	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: namespace.Device}.Start(t.Context(), machine)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		// QEMU writes to the console until it is gone
+		<-vm.Done()
+		t.Logf("QEMU: %v, its console:\n%s", vm.Err(), console.String())
+	})
+
+	// act
+	dial, err := reach.Agent(vm, namespace.Socket)
+
+	// assert
+	require.NoError(t, err)
+	err = ask(t, vm, dial, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
+	require.ErrorIs(t, err, protocol.ErrAgentFailed)
+	assert.ErrorContains(t, err, "agent did not start")
 }
 
 // ask sends the agent a request on a connection the dial makes, dialling

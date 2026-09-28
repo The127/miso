@@ -85,7 +85,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	}
 
 	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM) error {
-		dial, err := reach.Agent(vm)
+		dial, err := reach.Agent(vm, nil)
 		if err != nil {
 			return err
 		}

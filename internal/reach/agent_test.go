@@ -44,7 +44,7 @@ func TestTheAgentOfAVMWithAVirtioPortIsReachedOverIt(t *testing.T) {
 	host, machine := port(t)
 	agent, err := vport.Listen(machine)
 	require.NoError(t, err)
-	dial, err := reach.Agent(onPort{host})
+	dial, err := reach.Agent(onPort{host}, nil)
 	require.NoError(t, err)
 
 	// act

@@ -19,8 +19,9 @@ type VM interface {
 }
 
 // Agent is how the host connects to the agent of the VM, once for each
-// request.
-func Agent(vm VM) (func() (io.ReadWriteCloser, error), error) {
+// request. Socket makes the sockets the host dials on, in the vsock
+// namespace the VM runs in. The host's own vsock when nil.
+func Agent(vm VM, socket func() (*os.File, error)) (func() (io.ReadWriteCloser, error), error) {
 	if port := vm.Port(); port != nil {
 		dialer, err := vport.Connect(port)
 		if err != nil {
@@ -30,5 +31,18 @@ func Agent(vm VM) (func() (io.ReadWriteCloser, error), error) {
 		return dialer.Dial, nil
 	}
 
-	return func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }, nil
+	if socket == nil {
+		return func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }, nil
+	}
+
+	return func() (io.ReadWriteCloser, error) {
+		dialing, err := socket()
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() { _ = dialing.Close() }()
+
+		return vsock.DialOn(dialing, vm.CID(), vsock.AgentPort)
+	}, nil
 }
