@@ -60,3 +60,14 @@ func TestWhatACheckPrintedComesBackWithItsExitCode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, check.Result{Output: "hello\n", Code: 3}, result)
 }
+
+func TestAnAnswerThatEndsWithoutAnExitCodeIsAnError(t *testing.T) {
+	// arrange
+	conn := answering("Reading package lists...")
+
+	// act
+	_, err := check.Run(conn, "apt-get update")
+
+	// assert
+	assert.ErrorContains(t, err, "the check's answer ended without an exit code")
+}

@@ -1,6 +1,7 @@
 package check
 
 import (
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -37,6 +38,9 @@ func Run(conn Conn, command string) (Result, error) {
 
 	// the service's echo ends the output with the line break before the marker
 	at := strings.LastIndex(string(answer), "\n"+exitMarker+" ")
+	if at == -1 {
+		return Result{}, errors.New("the check's answer ended without an exit code")
+	}
 
 	code, err := strconv.Atoi(strings.TrimSpace(string(answer[at+len(exitMarker)+2:])))
 	if err != nil {
