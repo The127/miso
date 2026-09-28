@@ -42,25 +42,31 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
-			if run, isRun := step.Instruction.(imagefile.Run); isRun {
-				request := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: run.Command}
-				if !run.Offline {
-					request.Network = &network
+
+			var message protocol.Message
+			switch instruction := step.Instruction.(type) {
+			case imagefile.Run:
+				run := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command}
+				if !instruction.Offline {
+					run.Network = &network
 				}
 
-				line, written := imagefile.Written(run)
-				requests = append(requests, Request{Line: line, Written: written, Message: request})
+				message = run
+			case imagefile.Copy:
+				// a copy from a stage takes nothing from the build context
+				if instruction.From == "" {
+					copying := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: instruction.Sources, Destination: instruction.Destination}
+					for _, file := range step.Files {
+						copying.Digests = append(copying.Digests, file.Digest)
+					}
+
+					message = copying
+				}
 			}
 
-			// a copy from a stage takes nothing from the build context
-			if copying, isCopy := step.Instruction.(imagefile.Copy); isCopy && copying.From == "" {
-				request := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: copying.Sources, Destination: copying.Destination}
-				for _, file := range step.Files {
-					request.Digests = append(request.Digests, file.Digest)
-				}
-
-				line, written := imagefile.Written(copying)
-				requests = append(requests, Request{Line: line, Written: written, Message: request})
+			if message != nil {
+				line, written := imagefile.Written(step.Instruction)
+				requests = append(requests, Request{Line: line, Written: written, Message: message})
 			}
 
 			roots[step.Key] = under.after(step)
