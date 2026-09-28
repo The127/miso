@@ -17,7 +17,7 @@ func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 	serial := strings.NewReader("booting\nlogin: ")
 
 	// act
-	before, err := console.Expect(serial, regexp.MustCompile(`login: `))
+	before, err := console.New(serial).Expect(regexp.MustCompile(`login: `))
 
 	// assert
 	require.NoError(t, err)
@@ -29,9 +29,23 @@ func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
 	serial := strings.NewReader("booting\nKernel panic")
 
 	// act
-	_, err := console.Expect(serial, regexp.MustCompile(`login: `))
+	_, err := console.New(serial).Expect(regexp.MustCompile(`login: `))
 
 	// assert
 	assert.ErrorIs(t, err, io.EOF)
 	assert.ErrorContains(t, err, "login: ")
+}
+
+func TestTextAfterAMatchReachesTheNextExpect(t *testing.T) {
+	// arrange
+	tty := console.New(io.MultiReader(strings.NewReader("log"), strings.NewReader("in: root\n# ")))
+	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	require.NoError(t, err)
+
+	// act
+	before, err := tty.Expect(regexp.MustCompile(`# `))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "root\n", before)
 }
