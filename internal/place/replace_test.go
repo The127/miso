@@ -47,3 +47,19 @@ func TestAFileOntoADirectoryFailsNamingThePathInTheImage(t *testing.T) {
 	assert.ErrorContains(t, err, " /etc:")
 	assert.DirExists(t, filepath.Join(root, "etc"))
 }
+
+func TestAFileDoesNotWriteThroughToItsOtherNames(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "a"), []byte("old\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(root, "a"), filepath.Join(root, "b")))
+
+	// act
+	err := place.Open(root).File("/a", 0o644, strings.NewReader("new\n"))
+
+	// assert
+	require.NoError(t, err)
+	other, err := os.ReadFile(filepath.Join(root, "b"))
+	require.NoError(t, err)
+	assert.Equal(t, "old\n", string(other))
+}
