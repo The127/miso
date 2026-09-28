@@ -3,6 +3,9 @@ package protocol
 // Entry is one file, directory or link of a copy, as the digest of the
 // build context covers it. A file's content follows as raw bytes.
 type Entry struct {
+	// the position of its source among the sources of the copy
+	Source int
+
 	// "file", "directory" or "link"
 	Kind string
 

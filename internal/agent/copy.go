@@ -42,7 +42,7 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 			return false, err
 		}
 
-		if !slices.Equal([]string{arrived}, request.Digests) {
+		if !slices.Equal(arrived, request.Digests) {
 			return false, fmt.Errorf("%s: %w", request.Destination, ErrNotPlanned)
 		}
 
@@ -58,31 +58,38 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 }
 
 // placeAll puts every entry where it lands, and hands back the digest of
-// what it put.
-func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries) (string, error) {
-	var sums []string
+// what it put of each source.
+func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries) ([]string, error) {
+	sums := make([][]string, len(request.Sources))
 	for {
 		entry, content, err := entries.Next()
 		if errors.Is(err, io.EOF) {
-			return copydigest.Of(sums), nil
+			break
 		}
 
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		hash := sha256.New()
 		if err := placeOne(image, target(request, entry), entry, io.TeeReader(content, hash)); err != nil {
-			return "", err
+			return nil, err
 		}
 
 		// what was not placed is part of the entry too
 		if _, err := io.Copy(hash, content); err != nil {
-			return "", err
+			return nil, err
 		}
 
-		sums = append(sums, summed(entry).Sum(hex.EncodeToString(hash.Sum(nil))))
+		sums[entry.Source] = append(sums[entry.Source], summed(entry).Sum(hex.EncodeToString(hash.Sum(nil))))
 	}
+
+	digests := make([]string, 0, len(sums))
+	for _, source := range sums {
+		digests = append(digests, copydigest.Of(source))
+	}
+
+	return digests, nil
 }
 
 // summed is an entry as its digest sees it.

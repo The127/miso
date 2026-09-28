@@ -13,7 +13,7 @@ import (
 // otherwise.
 func target(request protocol.Copy, entry protocol.Entry) string {
 	if entry.Kind != "directory" && strings.HasSuffix(request.Destination, "/") {
-		return filepath.Join(request.Destination, filepath.Base(request.Sources[0]), entry.Path)
+		return filepath.Join(request.Destination, filepath.Base(request.Sources[entry.Source]), entry.Path)
 	}
 
 	return filepath.Join(request.Destination, entry.Path)
