@@ -119,3 +119,15 @@ func TestACopyFromAStageTakesNothingFromTheBuildContext(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, contextfiles.ErrFromAStage)
 }
+
+func TestACopyWithoutADigestForEachSourceIsRefused(t *testing.T) {
+	// arrange
+	context, _ := opened(t, map[string]string{"x": "hello\n"})
+	request := protocol.Copy{Key: "copy", Sources: []string{"x"}, Destination: "/x"}
+
+	// act
+	_, err := sending(t, contextfiles.Of(context)(request))
+
+	// assert
+	assert.ErrorIs(t, err, contextfiles.ErrNotPlanned)
+}
