@@ -19,7 +19,10 @@ func TestPackingAFileHandsItsEntryAndItsContent(t *testing.T) {
 	var contents []string
 
 	// act
-	err := open(t, dir).Pack("motd", func(entry buildcontext.Entry, content io.Reader) error {
+	context := open(t, dir)
+	digest, err := context.Digest("motd")
+	require.NoError(t, err)
+	err = context.Pack("motd", digest, func(entry buildcontext.Entry, content io.Reader) error {
 		read, err := io.ReadAll(content)
 		entries = append(entries, entry)
 		contents = append(contents, string(read))
@@ -45,7 +48,10 @@ func TestPackingATreeHandsItsEntriesInTheOrderOfItsDigest(t *testing.T) {
 	var contents []string
 
 	// act
-	err := open(t, dir).Pack("etc", func(entry buildcontext.Entry, content io.Reader) error {
+	context := open(t, dir)
+	digest, err := context.Digest("etc")
+	require.NoError(t, err)
+	err = context.Pack("etc", digest, func(entry buildcontext.Entry, content io.Reader) error {
 		read, err := io.ReadAll(content)
 		entries = append(entries, entry)
 		contents = append(contents, string(read))
@@ -61,4 +67,24 @@ func TestPackingATreeHandsItsEntriesInTheOrderOfItsDigest(t *testing.T) {
 		{Kind: "file", Path: "motd", Mode: 0o644, Size: 6},
 	}, entries)
 	assert.Equal(t, []string{"", "", "hello\n"}, contents)
+}
+
+func TestPackingAFileThatChangedSincePlanningFails(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	write(t, dir, "motd", "hello\n")
+	context := open(t, dir)
+	planned, err := context.Digest("motd")
+	require.NoError(t, err)
+	write(t, dir, "motd", "goodbye\n")
+
+	// act
+	err = context.Pack("motd", planned, func(_ buildcontext.Entry, content io.Reader) error {
+		_, err := io.Copy(io.Discard, content)
+
+		return err
+	})
+
+	// assert
+	assert.ErrorIs(t, err, buildcontext.ErrChanged)
 }

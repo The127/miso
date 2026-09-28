@@ -16,6 +16,10 @@ var ErrThroughLink = errors.New("goes through a link")
 // directory and no link, such as a pipe or a device. A copy cannot carry it.
 var ErrSpecialFile = errors.New("special file")
 
+// ErrChanged is a source that is not what its digest says any more, it
+// changed after the build was planned.
+var ErrChanged = errors.New("changed after it was planned")
+
 // Dir is a build context, a directory on the host.
 type Dir struct {
 	// the root keeps every path below the directory, also one that tries
