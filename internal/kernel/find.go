@@ -22,7 +22,14 @@ func Find(image fs.FS) (Kernel, error) {
 		return Kernel{}, err
 	}
 
-	version := versions[0].Name()
+	var installed []string
+	for _, entry := range versions {
+		if _, err := fs.Stat(image, path.Join(modules, entry.Name(), "vmlinuz")); err == nil {
+			installed = append(installed, entry.Name())
+		}
+	}
+
+	version := installed[0]
 	initrd, err := initrdOf(image, version)
 	if err != nil {
 		return Kernel{}, err
