@@ -229,3 +229,20 @@ func TestTwoNamesOfOneFileOfAStageStayOneFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, os.SameFile(a, b), "a and b are two files")
 }
+
+func TestAFileWithTwoNamesThatTwoSourcesNameIsStillCopied(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "a"), []byte("one\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(stage, "a"), filepath.Join(stage, "b")))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/a", "/a"}, named)
+
+	// assert
+	require.NoError(t, err)
+	got, err := os.ReadFile(filepath.Join(image, "a"))
+	require.NoError(t, err)
+	assert.Equal(t, "one\n", string(got))
+}

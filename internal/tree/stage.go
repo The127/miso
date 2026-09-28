@@ -152,6 +152,11 @@ func (c stageCopy) file(name, target string, info fs.FileInfo) error {
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok && stat.Nlink > 1 {
 		file := inode{device: stat.Dev, number: stat.Ino}
 		if first, seen := c.copied[file]; seen {
+			// a source named twice lands on itself, and is there already
+			if first == target {
+				return nil
+			}
+
 			return c.image.HardLink(target, first)
 		}
 
