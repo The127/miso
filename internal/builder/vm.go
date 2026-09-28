@@ -9,6 +9,9 @@ type VM interface {
 
 	// Err is why the VM stopped, once Done is closed.
 	Err() error
+
+	// WithoutKVM is whether the VM runs on a host without KVM, much slower.
+	WithoutKVM() bool
 }
 
 // stopped says that the VM stopped and when, and why if it says.

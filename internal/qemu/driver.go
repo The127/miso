@@ -53,7 +53,14 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 	command.ExtraFiles = []*os.File{device}
 	command.Stdout = machine.Console
 
-	return run(command, cid)
+	vm, err := run(command, cid)
+	if err != nil {
+		return nil, err
+	}
+
+	vm.withoutKVM = why != nil
+
+	return vm, nil
 }
 
 // withoutKVM is only a notice, the machine still runs, only slower.

@@ -11,9 +11,10 @@ import (
 
 // VM is a started builder VM.
 type VM struct {
-	cid  uint32
-	done chan struct{}
-	err  error
+	cid        uint32
+	done       chan struct{}
+	err        error
+	withoutKVM bool
 }
 
 // run starts QEMU and gives the VM that lasts as long as it does.
@@ -69,6 +70,11 @@ func stopped(err error, said string) error {
 // CID is where the host reaches the VM over vsock.
 func (vm *VM) CID() uint32 {
 	return vm.cid
+}
+
+// WithoutKVM is whether the VM runs on TCG, because the host has no KVM.
+func (vm *VM) WithoutKVM() bool {
+	return vm.withoutKVM
 }
 
 // Done is closed once the VM has stopped.

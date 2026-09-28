@@ -151,3 +151,16 @@ func TestAHostWithoutKVMStartsTheMachineWithNobodyToTell(t *testing.T) {
 	// assert
 	assert.NotPanics(t, start)
 }
+
+func TestAMachineOnAHostWithoutKVMSaysSo(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+
+	// act
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, filepath.Join(t.TempDir(), "kvm"))
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	assert.True(t, vm.WithoutKVM())
+}

@@ -23,12 +23,24 @@ const settle = time.Second
 // than a builder VM takes to boot, for one that hangs without stopping.
 var patience = time.Minute
 
+// slower is how many times longer a VM without KVM takes to boot, at most.
+const slower = 10
+
+// patienceFor is how long Ask waits for the agent of the VM to listen.
+func patienceFor(vm VM) time.Duration {
+	if vm.WithoutKVM() {
+		return slower * patience
+	}
+
+	return patience
+}
+
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
 // writes goes to out, and a copy takes what it carries from files. Once ctx
 // is done the running step is cancelled.
 func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, out io.Writer) error {
-	booted := time.After(patience)
+	booted := time.After(patienceFor(vm))
 	for _, request := range requests {
 		conn, err := connect(ctx, vm, dial, booted)
 		if err != nil {
@@ -89,7 +101,7 @@ func connect(ctx context.Context, vm VM, dial Dial, booted <-chan time.Time) (io
 
 			return nil, stopped(vm, "before its agent listened")
 		case <-booted:
-			return nil, fmt.Errorf("the agent did not listen within %s", patience)
+			return nil, fmt.Errorf("the agent did not listen within %s", patienceFor(vm))
 		case <-time.After(redial):
 		}
 	}

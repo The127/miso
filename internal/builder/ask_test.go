@@ -206,6 +206,18 @@ func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
 	assert.ErrorContains(t, err, "the agent did not listen within 100ms")
 }
 
+func TestAnAgentOnAVMWithoutKVMIsWaitedForTenTimesAsLong(t *testing.T) {
+	// arrange
+	builder.Patience(t, 20*time.Millisecond)
+	requests := oneImport()
+
+	// act
+	err := builder.Ask(t.Context(), onTCG{}, unreachable, agentName, requests, nil, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "the agent did not listen within 200ms")
+}
+
 func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
 	dial := dialling(exiting{code: 1})
@@ -271,6 +283,15 @@ func (running) Done() <-chan struct{} { return nil }
 
 func (running) Err() error { return nil }
 
+func (running) WithoutKVM() bool { return false }
+
+// onTCG is a VM that keeps running on a host without KVM.
+type onTCG struct {
+	running
+}
+
+func (onTCG) WithoutKVM() bool { return true }
+
 // stopped is a VM that has stopped for a reason.
 type stopped struct {
 	reason error
@@ -285,6 +306,8 @@ func (s stopped) Done() <-chan struct{} {
 
 func (s stopped) Err() error { return s.reason }
 
+func (stopped) WithoutKVM() bool { return false }
+
 // dying is a VM that dies while its agent works on a request. Its
 // connection breaks first and the VM counts as stopped a moment later, as
 // when QEMU is killed.
@@ -296,6 +319,8 @@ type dying struct {
 func (d *dying) Done() <-chan struct{} { return d.done }
 
 func (d *dying) Err() error { return d.reason }
+
+func (*dying) WithoutKVM() bool { return false }
 
 func (d *dying) dial() (io.ReadWriteCloser, error) {
 	host, agent := net.Pipe()
