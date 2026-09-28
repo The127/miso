@@ -40,8 +40,8 @@ func (c *Conn) Serve(runner Runner) error {
 	if isCopy {
 		if err := runner.Copy(ctx, copying, c, outputs{c}); err != nil {
 			// the host sends every entry before it reads an answer, so it
-			// would wait on us while we wait on it
-			for {
+			// would wait on us while we wait on it. Unasked, it sends none
+			for c.asked {
 				if _, _, err := c.Next(); err != nil {
 					break
 				}

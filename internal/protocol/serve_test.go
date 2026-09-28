@@ -46,7 +46,7 @@ func (r runner) Import(_ context.Context, _ protocol.Import, out io.Writer) erro
 }
 
 func (r runner) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, _ io.Writer) error {
-	return nil
+	return r.err
 }
 
 func TestARunThatWorksIsDone(t *testing.T) {
@@ -488,4 +488,21 @@ func TestACopyThatFailsAfterItsLastEntryDoesNotWaitForMore(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.False(t, requests.readPast)
+}
+
+func TestACopyThatFailsBeforeItReadsDoesNotAskForItsEntries(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Copy{Key: "abc", Sources: []string{"motd"}, Destination: "/etc/motd"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{err: errors.New("mount layer abc: no such file or directory")})
+
+	// assert
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Failed{Reason: "mount layer abc: no such file or directory"}, failed)
 }
