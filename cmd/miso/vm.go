@@ -11,6 +11,8 @@ import (
 	"github.com/The127/miso/internal/builderkernel"
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/reach"
+	"github.com/The127/miso/internal/vsockns"
 )
 
 // bootFiles writes the builder kernel and an initramfs with this very miso
@@ -45,9 +47,9 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 }
 
 // inBuilder does the work with the builder VM booted, its console in a log
-// file, and stops the VM afterwards. What the user should know about how
-// it runs goes to said.
-func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Writer, work func(vm *qemu.VM) error) error {
+// file, and stops the VM afterwards. The work dials the VM's agent. What the
+// user should know about how it runs goes to said.
+func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Writer, work func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error) error {
 	console, err := os.Create(log)
 	if err != nil {
 		return err
@@ -70,12 +72,32 @@ func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Wr
 		},
 	}
 
+	var socket func() (*os.File, error)
+
+	namespace, opening := vsockns.Open()
+	switch {
+	case errors.Is(opening, vsockns.ErrNotPrivate):
+		// the driver then reaches the VM over its virtio port and says why
+		driver.OpenVsock = func() (*os.File, error) { return nil, opening }
+	case opening != nil:
+		return opening
+	default:
+		defer func() { _ = namespace.Close() }()
+
+		driver.OpenVsock = namespace.Device
+		socket = namespace.Socket
+	}
+
 	vm, err := driver.Start(running, machine)
 	if err != nil {
 		return err
 	}
 
-	err = work(vm)
+	dial, err := reach.Agent(vm, socket)
+	if err == nil {
+		err = work(vm, dial)
+	}
+
 	stop()
 	<-vm.Done()
 

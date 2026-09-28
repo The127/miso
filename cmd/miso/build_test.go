@@ -76,3 +76,22 @@ func TestAFileCopiedFromAnEarlierStageIsInTheImageOnTheBuilderKernel(t *testing.
 	require.NoError(t, err, string(said))
 	assert.Contains(t, string(said), word+"\n")
 }
+
+func TestABuildOnAHostThatCannotKeepVsockPrivateSaysSoAndStillRunsOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	// a word of its own, or a cache from an earlier run holds the step and
+	// the build prints nothing
+	word := rand.Text()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nRUN echo "+word+"\n"), 0o600))
+	// a host that refuses miso a user namespace, as some distributions do
+	refusing := `echo 0 > /proc/sys/user/max_user_namespaces && exec "$0" build "$1"`
+
+	// act
+	said, err := exec.CommandContext(t.Context(), "unshare", "--user", "--map-root-user", "sh", "-c", refusing, miso(t), dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), "vsock cannot be kept private on this host")
+	assert.Contains(t, string(said), word+"\n")
+}
