@@ -24,8 +24,11 @@ func Into(stage string, image *place.Root, sources []string, land Land) error {
 
 	defer func() { _ = unix.Close(root) }()
 
+	// one for all sources, so that a file named by two of them stays one
+	copied := map[inode]string{}
+
 	for _, source := range sources {
-		if err := into(root, image, source, land); err != nil {
+		if err := into(root, image, source, land, copied); err != nil {
 			return err
 		}
 	}
@@ -33,7 +36,7 @@ func Into(stage string, image *place.Root, sources []string, land Land) error {
 	return nil
 }
 
-func into(stage int, image *place.Root, source string, land Land) error {
+func into(stage int, image *place.Root, source string, land Land, copied map[inode]string) error {
 	from, name, err := sourceRoot(stage, source)
 	if err != nil {
 		return err
@@ -41,7 +44,7 @@ func into(stage int, image *place.Root, source string, land Land) error {
 
 	defer func() { _ = from.Close() }()
 
-	return stageCopy{from: from, image: image, source: source, land: land}.put(name, ".")
+	return stageCopy{from: from, image: image, source: source, land: land, copied: copied}.put(name, ".")
 }
 
 // stageCopy is one source of a stage on its way into the image.
@@ -50,6 +53,9 @@ type stageCopy struct {
 	image  *place.Root
 	source string
 	land   Land
+
+	// where each file with several names first landed in the image
+	copied map[inode]string
 }
 
 // put copies what is at a name of the stage, which is at a path below the
@@ -143,6 +149,15 @@ func (c stageCopy) directory(name, below, target string, info fs.FileInfo) error
 }
 
 func (c stageCopy) file(name, target string, info fs.FileInfo) error {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok && stat.Nlink > 1 {
+		file := inode{device: stat.Dev, number: stat.Ino}
+		if first, seen := c.copied[file]; seen {
+			return c.image.HardLink(target, first)
+		}
+
+		c.copied[file] = target
+	}
+
 	in, err := c.from.Open(name)
 	if err != nil {
 		return err

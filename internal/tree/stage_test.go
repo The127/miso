@@ -205,3 +205,27 @@ func TestTheWholeStageIsCopiedFromItsRoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "usr/bin", text)
 }
+
+// named lands each source under its own name in the root of the image.
+func named(source, below string, _ bool) (string, error) {
+	return filepath.Join("/", filepath.Base(source), below), nil
+}
+
+func TestTwoNamesOfOneFileOfAStageStayOneFile(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "a"), []byte("one\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(stage, "a"), filepath.Join(stage, "b")))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/a", "/b"}, named)
+
+	// assert
+	require.NoError(t, err)
+	a, err := os.Stat(filepath.Join(image, "a"))
+	require.NoError(t, err)
+	b, err := os.Stat(filepath.Join(image, "b"))
+	require.NoError(t, err)
+	assert.True(t, os.SameFile(a, b), "a and b are two files")
+}
