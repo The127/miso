@@ -34,6 +34,11 @@ func (a *Agent) overlaid(layers []string, bottom func(scratch string) (string, e
 	// overlay takes the top layer first
 	lowers := make([]string, 0, len(layers))
 	for _, key := range slices.Backward(layers) {
+		// the store refuses a key that would name something else
+		if _, err := a.layers.Has(key); err != nil {
+			return err
+		}
+
 		lowers = append(lowers, a.layers.Path(key))
 	}
 

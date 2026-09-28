@@ -231,3 +231,18 @@ func TestAnEntryThatLeavesItsSourceFailsTheCopy(t *testing.T) {
 	require.ErrorIs(t, err, agent.ErrNotLocal)
 	assert.NoDirExists(t, filepath.Join(layers, "copy"))
 }
+
+func TestALayerBelowThatIsNoPlainNameFailsTheCopy(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	request := protocol.Copy{Key: "copy", Layers: []string{"../.."}, Sources: []string{"motd"}, Digests: []string{files.digest()}, Destination: "/motd"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, layer.ErrBadKey)
+	assert.NoDirExists(t, filepath.Join(layers, "copy"))
+}
