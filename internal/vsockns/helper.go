@@ -13,7 +13,6 @@ import (
 const helperName = "miso-vsockns"
 
 const (
-	readyWord      = "ready"
 	modeQuestion   = "mode"
 	listenQuestion = "listen"
 )
@@ -32,11 +31,11 @@ func Helper() {
 	runtime.LockOSThread()
 
 	if err := enter(os.Args[1]); err != nil {
-		_ = say(conn, err.Error())
+		_ = answerFailed(conn, err)
 		os.Exit(1)
 	}
 
-	_ = say(conn, readyWord)
+	_ = answerOK(conn, "")
 	serve(conn)
 	os.Exit(0)
 }
@@ -70,7 +69,7 @@ func serve(conn int) {
 				return
 			}
 
-			_ = say(conn, strings.TrimSpace(string(mode)))
+			_ = answerOK(conn, strings.TrimSpace(string(mode)))
 		case listenQuestion:
 			answerListen(conn, argument)
 		}
@@ -81,19 +80,19 @@ func serve(conn int) {
 func answerListen(conn int, argument string) {
 	port, err := strconv.ParseUint(argument, 10, 32)
 	if err != nil {
-		_ = say(conn, err.Error())
+		_ = answerFailed(conn, err)
 
 		return
 	}
 
 	listener, err := listen(uint32(port))
 	if err != nil {
-		_ = say(conn, err.Error())
+		_ = answerFailed(conn, err)
 
 		return
 	}
 
-	_ = say(conn, "", listener)
+	_ = answerOK(conn, "", listener)
 	_ = unix.Close(listener)
 }
 

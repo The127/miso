@@ -52,12 +52,7 @@ func Open() (*Namespace, error) {
 
 	namespace := &Namespace{helper: helper, conn: fds[0]}
 
-	ready, _, err := hear(namespace.conn)
-	if err == nil && ready != readyWord {
-		err = errors.New(ready)
-	}
-
-	if err != nil {
+	if _, _, err := namespace.answer(); err != nil {
 		_ = namespace.Close()
 
 		return nil, fmt.Errorf("%w: %w", ErrNotPrivate, err)
@@ -68,11 +63,7 @@ func Open() (*Namespace, error) {
 
 // Mode is the vsock mode inside the namespace.
 func (n *Namespace) Mode() (string, error) {
-	if err := say(n.conn, modeQuestion); err != nil {
-		return "", err
-	}
-
-	mode, _, err := hear(n.conn)
+	mode, _, err := n.ask(modeQuestion)
 
 	return mode, err
 }
@@ -80,17 +71,13 @@ func (n *Namespace) Mode() (string, error) {
 // Listen is a vsock socket inside the namespace, listening on a port of
 // it. It stays in the namespace wherever it is used.
 func (n *Namespace) Listen(port uint32) (*os.File, error) {
-	if err := say(n.conn, listenQuestion+" "+strconv.FormatUint(uint64(port), 10)); err != nil {
-		return nil, err
-	}
-
-	said, files, err := hear(n.conn)
+	_, files, err := n.ask(listenQuestion + " " + strconv.FormatUint(uint64(port), 10))
 	if err != nil {
 		return nil, err
 	}
 
 	if len(files) != 1 {
-		return nil, errors.New(said)
+		return nil, fmt.Errorf("the helper handed over %d listeners", len(files))
 	}
 
 	return os.NewFile(uintptr(files[0]), "vsock listener"), nil
