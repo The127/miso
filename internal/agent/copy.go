@@ -36,7 +36,7 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 		return err
 	}
 
-	err = a.overlaid(request.Layers, empty, work.Dir(), func(root string) (bool, error) {
+	err = a.overlaid(request.Layers, empty, nil, work.Dir(), func(root string) (bool, error) {
 		// a stage's files are in its layers, and the plan's key covers them
 		if request.Stage != "" {
 			err := a.copyStage(request, root)

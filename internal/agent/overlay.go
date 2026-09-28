@@ -10,11 +10,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// overlaid mounts layers, lowest first, on top of a bottom made in scratch
-// and under a directory, and hands the root to work, whose writes go into
-// the directory. The directory is no longer mounted once it returns. Work
-// tells whether what it wrote is kept.
-func (a *Agent) overlaid(layers []string, bottom func(scratch string) (string, error), upper string, work func(root string) (keep bool, err error)) error {
+// overlaid mounts layers, lowest first, on top of a bottom made in scratch,
+// below a ceiling made there when there is one, and under a directory, and
+// hands the root to work, whose writes go into the directory. The
+// directory is no longer mounted once it returns. Work tells whether what
+// it wrote is kept.
+func (a *Agent) overlaid(layers []string, bottom, ceiling func(scratch string) (string, error), upper string, work func(root string) (keep bool, err error)) error {
 	// overlay wants its work directory on the file system of the upper one
 	scratch, err := a.layers.Scratch()
 	if err != nil {
@@ -43,6 +44,15 @@ func (a *Agent) overlaid(layers []string, bottom func(scratch string) (string, e
 	}
 
 	lowers = append(lowers, lowest)
+
+	if ceiling != nil {
+		top, err := ceiling(scratch)
+		if err != nil {
+			return err
+		}
+
+		lowers = append([]string{top}, lowers...)
+	}
 
 	if err := mountOverlay(root, lowers, upper, overlayWork); err != nil {
 		return err
