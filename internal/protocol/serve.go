@@ -36,6 +36,15 @@ func (c *Conn) Serve(runner Runner) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// a copy reads its entries from the host, so no one else may read
+	if isCopy {
+		if err := runner.Copy(ctx, copying, c, outputs{c}); err != nil {
+			return c.Send(Failed{Reason: err.Error()})
+		}
+
+		return c.Send(Done{})
+	}
+
 	// the host sends nothing more in an exchange, so whatever ends this read
 	// is the host going away
 	go func() {
@@ -46,14 +55,6 @@ func (c *Conn) Serve(runner Runner) error {
 
 	if isImport {
 		if err := runner.Import(ctx, request, outputs{c}); err != nil {
-			return c.Send(Failed{Reason: err.Error()})
-		}
-
-		return c.Send(Done{})
-	}
-
-	if isCopy {
-		if err := runner.Copy(ctx, copying, nil, outputs{c}); err != nil {
 			return c.Send(Failed{Reason: err.Error()})
 		}
 

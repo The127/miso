@@ -319,3 +319,65 @@ func TestACopyWhoseLayerIsCachedIsDoneWithoutAskingForEntries(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Done{}, done)
 }
+
+// reading is an agent that reads every entry of a copy and keeps them with
+// their content.
+type reading struct {
+	entries  []protocol.Entry
+	contents []string
+}
+
+func (r *reading) Run(context.Context, protocol.Run, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (r *reading) Import(context.Context, protocol.Import, io.Writer) error {
+	return nil
+}
+
+func (r *reading) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
+	for {
+		entry, content, err := entries.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		read, err := io.ReadAll(content)
+		if err != nil {
+			return err
+		}
+
+		r.entries = append(r.entries, entry)
+		r.contents = append(r.contents, string(read))
+	}
+}
+
+func TestACopyAsksForItsEntriesAndReadsThemUntilSent(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	entry := protocol.Entry{Kind: "file", Path: ".", Mode: 0o644, Size: 6}
+	require.NoError(t, host.Send(protocol.Copy{Key: "abc", Sources: []string{"motd"}, Destination: "/etc/motd"}))
+	require.NoError(t, host.SendEntry(entry, strings.NewReader("hello\n")))
+	require.NoError(t, host.Send(protocol.Sent{}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+	runner := &reading{}
+
+	// act
+	err := agent.Serve(runner)
+
+	// assert
+	require.NoError(t, err)
+	send, err := host.Receive()
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Send{}, send)
+	assert.Equal(t, protocol.Done{}, done)
+	assert.Equal(t, []protocol.Entry{entry}, runner.entries)
+	assert.Equal(t, []string{"hello\n"}, runner.contents)
+}
