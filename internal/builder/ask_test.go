@@ -294,6 +294,19 @@ func TestAnAgentThatAsksForFilesOfACopyFromAStageGetsNone(t *testing.T) {
 	assert.Empty(t, asked)
 }
 
+func TestAnAgentThatAnswersOutOfTurnFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
+	// arrange
+	request := protocol.Copy{Key: "step", Stage: "a", From: []string{"base"}, Sources: []string{"/motd"}, Destination: "/etc/motd"}
+	start := time.Now()
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(&receiving{}), agentName, requested(request), nil, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, protocol.ErrNoAnswer)
+	assert.Less(t, time.Since(start), 500*time.Millisecond)
+}
+
 // running is a VM that keeps running.
 type running struct{}
 

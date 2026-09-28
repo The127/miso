@@ -6,6 +6,9 @@ import (
 	"io"
 )
 
+// ErrNoAnswer is a message the agent sent that does not answer the request.
+var ErrNoAnswer = errors.New("no answer")
+
 // Ask has the agent carry out a request and writes what the request writes
 // to out until the agent tells how it ended.
 func (c *Conn) Ask(request Message, out io.Writer) error {
@@ -58,5 +61,5 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 
 // noAnswer is the error for a message the request does not expect.
 func noAnswer(message, request Message) error {
-	return fmt.Errorf("%T is no answer to %T", message, request)
+	return fmt.Errorf("%T is %w to %T", message, ErrNoAnswer, request)
 }

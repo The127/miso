@@ -111,8 +111,8 @@ func connect(ctx context.Context, vm VM, dial Dial, booted <-chan time.Time) (io
 // failed is why a step failed: what the agent answered, or else why its VM
 // stopped.
 func failed(vm VM, err error) error {
-	// the agent answered, so the VM still runs
-	if errors.Is(err, protocol.ErrCommandFailed) || errors.Is(err, protocol.ErrAgentFailed) {
+	// the agent sent a message, so the VM still runs
+	if errors.Is(err, protocol.ErrCommandFailed) || errors.Is(err, protocol.ErrAgentFailed) || errors.Is(err, protocol.ErrNoAnswer) {
 		return err
 	}
 
