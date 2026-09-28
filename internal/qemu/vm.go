@@ -20,7 +20,7 @@ type VM struct {
 }
 
 // run starts QEMU and gives the VM that lasts as long as it does.
-func run(command *exec.Cmd, cid uint32) (*VM, error) {
+func run(command *exec.Cmd, cid uint32, port *os.File) (*VM, error) {
 	// a QEMU left behind by a miso that was killed would hold its CID and
 	// its cache disk for good. In a process group of its own it never sees
 	// a Ctrl-C meant for miso, which stops it by its context instead
@@ -30,7 +30,7 @@ func run(command *exec.Cmd, cid uint32) (*VM, error) {
 	var refusal bytes.Buffer
 	command.Stderr = &refusal
 
-	vm := &VM{cid: cid, done: make(chan struct{})}
+	vm := &VM{cid: cid, port: port, done: make(chan struct{})}
 	started := make(chan error)
 
 	go func() {
@@ -48,6 +48,12 @@ func run(command *exec.Cmd, cid uint32) (*VM, error) {
 
 		if err := command.Wait(); err != nil {
 			vm.err = stopped(err, refusal.String())
+		}
+
+		// the machine's end is gone with QEMU, the host's end has nothing to
+		// reach any more
+		if port != nil {
+			_ = port.Close()
 		}
 
 		close(vm.done)
@@ -75,7 +81,7 @@ func (vm *VM) CID() uint32 {
 }
 
 // Port is the host's end of the machine's virtio port for its agent. It is
-// nil on a host with vsock.
+// nil on a host with vsock, and closed once Done is closed.
 func (vm *VM) Port() *os.File {
 	return vm.port
 }

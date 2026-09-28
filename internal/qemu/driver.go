@@ -66,14 +66,12 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm, vsockDevice str
 		command.Env = append(os.Environ(), "TMPDIR="+machine.Temp)
 	}
 
-	vm, err := run(command, reach.cid)
+	vm, err := run(command, reach.cid, reach.host)
 	if err != nil {
 		_ = reach.close()
 
 		return nil, err
 	}
-
-	vm.port = reach.host
 
 	vm.withoutKVM = why != nil
 

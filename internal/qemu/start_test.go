@@ -255,3 +255,17 @@ func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(back))
 }
+
+func TestAStoppedMachineLetsGoOfItsVirtioPort(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	require.NoError(t, err)
+
+	// act
+	<-vm.Done()
+
+	// assert
+	_, err = vm.Port().Write([]byte("hello"))
+	assert.ErrorIs(t, err, os.ErrClosed)
+}
