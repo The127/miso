@@ -1,6 +1,7 @@
 package console_test
 
 import (
+	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,4 +22,16 @@ func TestExpectReturnsWhatCameBeforeTheMatch(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "booting\n", before)
+}
+
+func TestAConsoleEndingBeforeThePatternNamesThePattern(t *testing.T) {
+	// arrange
+	serial := strings.NewReader("booting\nKernel panic")
+
+	// act
+	_, err := console.Expect(serial, regexp.MustCompile(`login: `))
+
+	// assert
+	assert.ErrorIs(t, err, io.EOF)
+	assert.ErrorContains(t, err, "login: ")
 }

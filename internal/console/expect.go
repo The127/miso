@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"io"
 	"regexp"
 )
@@ -20,7 +21,7 @@ func Expect(serial io.Reader, pattern *regexp.Regexp) (string, error) {
 		}
 
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("the console ended before %q came: %w", pattern, err)
 		}
 	}
 }
