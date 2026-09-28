@@ -41,12 +41,13 @@ func (c *Conn) Serve(runner Runner) error {
 // serveCopy has the runner copy what the host sends. A copy reads its
 // entries from the host, so no one else may read.
 func (c *Conn) serveCopy(runner Runner, request Copy) error {
-	err := runner.Copy(context.Background(), request, c, outputs{c})
+	entries := &reader{conn: c}
+	err := runner.Copy(context.Background(), request, entries, outputs{c})
 	if err != nil {
 		// the host sends every entry before it reads an answer, so it
 		// would wait on us while we wait on it. Unasked, it sends none
-		for c.asked {
-			if _, _, err := c.Next(); err != nil {
+		for entries.asked {
+			if _, _, err := entries.Next(); err != nil {
 				break
 			}
 		}

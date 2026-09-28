@@ -23,12 +23,6 @@ type Conn struct {
 
 	// what follows the entry received last, as far as it is not read yet
 	content io.Reader
-
-	// whether the entries of the copy were asked for
-	asked bool
-
-	// whether the host said all entries are sent
-	sent bool
 }
 
 // New speaks as the given agent, reads what the other side sends from r and

@@ -19,7 +19,7 @@ func TestAMessageThatIsNoEntryIsAnErrorAndNotTheEnd(t *testing.T) {
 	agent := protocol.New("miso 1.2.0", &requests, io.Discard)
 
 	// act
-	_, _, err := agent.Next()
+	_, _, err := protocol.EntriesOf(agent).Next()
 
 	// assert
 	assert.NotErrorIs(t, err, io.EOF)
