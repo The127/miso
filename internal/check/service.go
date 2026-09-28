@@ -15,7 +15,7 @@ const exitMarker = "miso-exit"
 // The echo puts the marker on a line of its own after output that does not
 // end in one.
 func service() qemu.Credential {
-	return qemu.Credential{Name: "systemd.extra-unit.miso-check@.service", Value: fmt.Appendf(nil, `[Unit]
+	return qemu.Credential{Name: "systemd.extra-unit." + unit + "@.service", Value: fmt.Appendf(nil, `[Unit]
 Description=miso check
 
 [Service]
