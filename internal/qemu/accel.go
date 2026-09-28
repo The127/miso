@@ -28,7 +28,7 @@ func accel(device string) ([]string, error) {
 	defer func() { _ = kvm.Close() }()
 
 	if _, err := unix.IoctlRetInt(int(kvm.Fd()), kvmGetAPIVersion); err != nil {
-		return tcg, err
+		return tcg, &os.PathError{Op: "ask KVM", Path: device, Err: err}
 	}
 
 	return []string{"-accel", "kvm", "-cpu", "host"}, nil

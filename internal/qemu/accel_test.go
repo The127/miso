@@ -38,3 +38,15 @@ func TestAHostWhoseKVMDeviceIsNoKVMRunsTheMachineOnTCG(t *testing.T) {
 	assert.ErrorIs(t, why, unix.ENOTTY)
 	assert.Equal(t, "tcg", valueOf(t, args, "-accel"))
 }
+
+func TestAKVMDeviceThatIsNoKVMIsNamedInTheReason(t *testing.T) {
+	// arrange
+	device := filepath.Join(t.TempDir(), "kvm")
+	require.NoError(t, os.WriteFile(device, nil, 0o600))
+
+	// act
+	_, why := qemu.Accel(device)
+
+	// assert
+	assert.ErrorContains(t, why, device)
+}
