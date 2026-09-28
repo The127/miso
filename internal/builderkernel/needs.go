@@ -14,6 +14,10 @@ var needs = []string{
 	"virtio_blk",
 	// the host's side of a build talks to the agent over vsock
 	"vmw_vsock_virtio_transport",
+	// or, on a host without vsock, over a virtio port. Distributions build
+	// its driver as a module, and without it the agent waits on vsock for a
+	// host that dials the port
+	"virtio_console",
 	// the file system the layers live on
 	"xxhash_generic",
 	"blake2b_generic",

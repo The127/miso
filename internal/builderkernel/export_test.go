@@ -38,3 +38,6 @@ func Unpack(held Contents, want ...string) ([]initramfs.Module, error) {
 func ReadyFrom(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
 	return ready(ctx, store, url, digest, want...)
 }
+
+// Needs are the modules the builder VM loads.
+var Needs = needs
