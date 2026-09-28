@@ -107,3 +107,15 @@ func TestASourceChangedAfterItWasPlannedFailsTheCopy(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, buildcontext.ErrChanged)
 }
+
+func TestACopyFromAStageTakesNothingFromTheBuildContext(t *testing.T) {
+	// arrange
+	context, _ := opened(t, map[string]string{"x": "hello\n"})
+	request := protocol.Copy{Key: "copy", Stage: "a", From: []string{"base"}, Sources: []string{"/x"}, Destination: "/x"}
+
+	// act
+	_, err := sending(t, contextfiles.Of(context)(request))
+
+	// assert
+	assert.ErrorIs(t, err, contextfiles.ErrFromAStage)
+}
