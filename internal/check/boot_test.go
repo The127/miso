@@ -5,6 +5,8 @@ package check_test
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ func TestChecksRunInABootedImageAndGiveTheirExitCodesWithKVM(t *testing.T) {
 		Image:    kvmtest.Image(t, "debian:sid"),
 		Dir:      t.TempDir(),
 		Console:  io.Discard,
+		Patience: time.Minute,
 	}
 
 	// act
@@ -42,6 +45,7 @@ func TestAnImageThatCannotBeBootedFailsItsChecksWithQEMUsReasonWithKVM(t *testin
 		Image:    qemu.Disk{Path: "/nonexistent/image.qcow2", Format: "qcow2", Serial: "image", Snapshot: true},
 		Dir:      t.TempDir(),
 		Console:  io.Discard,
+		Patience: time.Minute,
 	}
 	failed := make(chan error, 1)
 
@@ -69,6 +73,7 @@ func TestChecksGivenUpBeforeTheBootSayTheyWereGivenUpWithKVM(t *testing.T) {
 		Image:    kvmtest.Image(t, "debian:sid"),
 		Dir:      t.TempDir(),
 		Console:  io.Discard,
+		Patience: time.Minute,
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
@@ -78,4 +83,33 @@ func TestChecksGivenUpBeforeTheBootSayTheyWereGivenUpWithKVM(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestAnImageTheFirmwareCannotBootFailsItsChecksOnceThePatienceIsUpWithKVM(t *testing.T) {
+	// arrange
+	blank := filepath.Join(t.TempDir(), "blank.raw")
+	require.NoError(t, os.WriteFile(blank, make([]byte, 1<<20), 0o600))
+	boot := check.Boot{
+		Driver:   qemu.Driver{Binary: "qemu-system-x86_64"},
+		Firmware: kvmtest.Firmware(t),
+		Image:    qemu.Disk{Path: blank, Format: "raw", Serial: "image", Snapshot: true},
+		Dir:      t.TempDir(),
+		Console:  io.Discard,
+		Patience: 5 * time.Second,
+	}
+	failed := make(chan error, 1)
+
+	// act
+	go func() {
+		_, err := boot.Run(t.Context(), []string{"true"})
+		failed <- err
+	}()
+
+	// assert
+	select {
+	case err := <-failed:
+		assert.ErrorContains(t, err, "the image did not boot within 5s")
+	case <-time.After(30 * time.Second):
+		assert.Fail(t, "the checks of an image the firmware cannot boot never ended")
+	}
 }

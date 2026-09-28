@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -23,6 +24,10 @@ type Boot struct {
 	// holds what the firmware and the boot write, a boot's own
 	Dir     string
 	Console io.Writer
+
+	// how long the boot may take, which callers must state. A firmware
+	// that finds nothing to boot waits in its menu and never stops the VM
+	Patience time.Duration
 }
 
 // Run boots the image and runs each check in it, one after the other.
@@ -67,8 +72,24 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		_ = notices.Close()
 	}()
 
+	late := make(chan struct{})
+	patience := time.AfterFunc(b.Patience, func() {
+		close(late)
+
+		_ = notices.Close()
+	})
+	defer patience.Stop()
+
 	if err := Booted(notices); err != nil {
-		return nil, notBooted(ctx, vm, err)
+		return nil, b.notBooted(ctx, vm, late, err)
+	}
+
+	// the notices after the boot were closed with it. Stop only says the
+	// timer started, so it is waited for
+	if !patience.Stop() {
+		<-late
+
+		return nil, b.notBooted(ctx, vm, late, nil)
 	}
 
 	var results []Result
@@ -92,10 +113,16 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 }
 
 // notBooted is why a wait for the boot ended without it: the caller gave
-// up, or the VM's own reason once it stopped.
-func notBooted(ctx context.Context, vm *qemu.VM, err error) error {
+// up, the patience ran out, or the VM's own reason once it stopped.
+func (b Boot) notBooted(ctx context.Context, vm *qemu.VM, late <-chan struct{}, err error) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
+	}
+
+	select {
+	case <-late:
+		return fmt.Errorf("the image did not boot within %s", b.Patience)
+	default:
 	}
 
 	select {
