@@ -9,9 +9,18 @@ import (
 )
 
 // parent opens the directory a path of the image lives in, and makes it
-// when it is missing.
-func (r *Root) parent(path string) (int, error) {
-	return r.at(filepath.Dir(path))
+// when it is missing. It hands back the name the path has there, which is
+// always one plain part, never /, . or .., since a name like that would
+// reach past the directory. The root has no name and no parent.
+func (r *Root) parent(path string) (int, string, error) {
+	clean := filepath.Clean("/" + path)
+	if clean == "/" {
+		return -1, "", nil
+	}
+
+	fd, err := r.at(filepath.Dir(clean))
+
+	return fd, filepath.Base(clean), err
 }
 
 // at opens a directory of the image, and makes it when it is missing.

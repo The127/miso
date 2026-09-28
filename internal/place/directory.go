@@ -3,21 +3,25 @@ package place
 import (
 	"errors"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
 
 // Directory puts a directory with a mode at a path of the image.
 func (r *Root) Directory(path string, mode uint32) error {
-	parent, err := r.parent(path)
+	parent, name, err := r.parent(path)
 	if err != nil {
 		return err
 	}
 
+	// the root is always there, and keeps what it has as any other would
+	if name == "" {
+		return nil
+	}
+
 	defer func() { _ = unix.Close(parent) }()
 
-	fd, err := makeDirectory(parent, filepath.Base(path), path, mode)
+	fd, err := makeDirectory(parent, name, path, mode)
 	// one that is there keeps its mode, owner and time, so that COPY rootfs/
 	// / does not hand the host's modes to /, /etc and the rest
 	if errors.Is(err, unix.EEXIST) {

@@ -3,21 +3,23 @@ package place
 import (
 	"io"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
 
 // File puts a file with a content at a path of the image.
 func (r *Root) File(path string, mode uint32, content io.Reader) error {
-	parent, err := r.parent(path)
+	parent, name, err := r.parent(path)
 	if err != nil {
 		return err
 	}
 
+	if name == "" {
+		return &os.PathError{Op: "create", Path: path, Err: unix.EISDIR}
+	}
+
 	defer func() { _ = unix.Close(parent) }()
 
-	name := filepath.Base(path)
 	if err := vacate(parent, name, path); err != nil {
 		return err
 	}
