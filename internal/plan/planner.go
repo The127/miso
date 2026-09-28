@@ -139,6 +139,12 @@ func (p *planner) reads(instruction imagefile.Instruction, files []File) []strin
 		return p.stageReads(step)
 	}
 
+	if step, isOutput := instruction.(imagefile.Output); isOutput {
+		if tools, hasTools := step.Options["tools"]; hasTools {
+			return []string{p.ends[tools]}
+		}
+	}
+
 	var digests []string
 	for _, file := range files {
 		digests = append(digests, file.Digest)

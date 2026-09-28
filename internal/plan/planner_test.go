@@ -35,6 +35,19 @@ func TestACopyFromAChangedStageGetsADifferentKey(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, vimKeys), lastKey(t, nanoKeys))
 }
 
+func TestAnOutputWithChangedToolsGetsADifferentKey(t *testing.T) {
+	// arrange
+	older := parse(t, "FROM debian:sid AS tools\nRUN apt-get install systemd-repart\nFROM scratch\nOUTPUT disk os.img --tools=tools\n")
+	newer := parse(t, "FROM debian:sid AS tools\nRUN apt-get install systemd-repart systemd-ukify\nFROM scratch\nOUTPUT disk os.img --tools=tools\n")
+
+	// act
+	olderKeys := keys(t, older, anyAgent, noFiles, debianImages)
+	newerKeys := keys(t, newer, anyAgent, noFiles, debianImages)
+
+	// assert
+	assert.NotEqual(t, lastKey(t, olderKeys), lastKey(t, newerKeys))
+}
+
 func TestACopyFromTheContextIgnoresTheStagesBeforeIt(t *testing.T) {
 	// arrange
 	vim := parse(t, "FROM debian:sid\nRUN make vim\nFROM scratch\nCOPY motd /etc/\n")
