@@ -21,6 +21,9 @@ var ErrOutputNotBuilt = errors.New("output not built yet")
 // ErrUnknownKind is an output of a kind miso cannot make.
 var ErrUnknownKind = errors.New("unknown kind of output")
 
+// ErrUnknownOption is an option an output of its kind does not take.
+var ErrUnknownOption = errors.New("unknown option")
+
 // ErrNoTools is a disk without a stage that brings the tools to make it.
 var ErrNoTools = errors.New("needs --tools=<stage>")
 

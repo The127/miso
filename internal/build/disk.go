@@ -2,6 +2,8 @@ package build
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
@@ -12,9 +14,13 @@ import (
 // with the tools taken from where their stage ends.
 func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs) (protocol.Disk, error) {
 	var refused error
-	switch _, hasTools := instruction.Options[plan.Tools]; {
+	_, hasTools := instruction.Options[plan.Tools]
+	unknown, hasUnknown := unknownOption(instruction.Options)
+	switch {
 	case instruction.Kind != "disk":
 		refused = ErrUnknownKind
+	case hasUnknown:
+		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case !hasTools:
 		refused = ErrNoTools
 	}
@@ -26,4 +32,16 @@ func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, too
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers}, nil
+}
+
+// unknownOption is the first option in sorted order that a disk does not
+// take, so the same build file always names the same one.
+func unknownOption(options map[string]string) (string, bool) {
+	for _, name := range slices.Sorted(maps.Keys(options)) {
+		if name != plan.Tools {
+			return name, true
+		}
+	}
+
+	return "", false
 }
