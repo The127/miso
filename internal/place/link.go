@@ -30,5 +30,9 @@ func (r *Root) Link(path string, target string) error {
 		return &os.PathError{Op: "chown", Path: path, Err: err}
 	}
 
+	if err := unix.UtimesNanoAt(parent, name, make([]unix.Timespec, 2), unix.AT_SYMLINK_NOFOLLOW); err != nil {
+		return &os.PathError{Op: "utimes", Path: path, Err: err}
+	}
+
 	return nil
 }

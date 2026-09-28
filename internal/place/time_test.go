@@ -28,3 +28,17 @@ func TestAFilesTimeIsTheSameWhenEverItWasPlaced(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, time.Unix(0, 0).UTC(), info.ModTime().UTC())
 }
+
+func TestALinksTimeIsTheSameWhenEverItWasPlaced(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+
+	// act
+	err := place.Open(root).Link("/issue", "motd")
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Lstat(filepath.Join(root, "issue"))
+	require.NoError(t, err)
+	assert.Equal(t, time.Unix(0, 0).UTC(), info.ModTime().UTC())
+}
