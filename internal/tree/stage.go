@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"strings"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -18,21 +17,31 @@ type Land func(source, below string, directory bool) (string, error)
 // Into copies the sources of the stage whose root is at stage into the
 // image, each where land says.
 func Into(stage string, image *place.Root, sources []string, land Land) error {
-	from, err := os.OpenRoot(stage)
+	root, err := unix.Open(stage, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return &fs.PathError{Op: "open", Path: stage, Err: err}
+	}
+
+	defer func() { _ = unix.Close(root) }()
+
+	for _, source := range sources {
+		if err := into(root, image, source, land); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func into(stage int, image *place.Root, source string, land Land) error {
+	from, name, err := sourceRoot(stage, source)
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = from.Close() }()
 
-	for _, source := range sources {
-		copying := stageCopy{from: from, image: image, source: source, land: land}
-		if err := copying.put(strings.TrimPrefix(source, "/"), "."); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return stageCopy{from: from, image: image, source: source, land: land}.put(name, ".")
 }
 
 // stageCopy is one source of a stage on its way into the image.
