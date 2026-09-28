@@ -14,6 +14,13 @@ func Compare(a, b string) int {
 			return cmp.Compare(len(a), len(b))
 		}
 
+		switch {
+		case a[0] == '-':
+			return -1
+		case b[0] == '-':
+			return 1
+		}
+
 		if a[0] == '.' && b[0] == '.' {
 			a, b = a[1:], b[1:]
 
