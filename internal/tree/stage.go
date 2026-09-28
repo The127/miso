@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -62,6 +63,13 @@ type stageCopy struct {
 func (c stageCopy) put(name, below string) error {
 	info, err := c.from.Lstat(name)
 	if err != nil {
+		// named as the build file names it, below its source, rather than
+		// below the directory the source lives in
+		var failed *fs.PathError
+		if errors.As(err, &failed) {
+			return &fs.PathError{Op: failed.Op, Path: path.Join(c.source, below), Err: failed.Err}
+		}
+
 		return err
 	}
 

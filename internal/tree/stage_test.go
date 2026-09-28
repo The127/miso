@@ -3,6 +3,7 @@
 package tree_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -386,4 +387,17 @@ func TestExtendedAttributesOfEveryNamespaceOfAStageAreKept(t *testing.T) {
 	assert.Equal(t, aclReadForUser1234, xattr(t, filepath.Join(image, "f"), "system.posix_acl_access"))
 	assert.Equal(t, "trusted", string(xattr(t, filepath.Join(image, "f"), "trusted.note")))
 	assert.Equal(t, "link", string(xattr(t, filepath.Join(image, "l"), "trusted.note")))
+}
+
+func TestAMissingSourceOfAStageFailsNamingIt(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/nope"}, onto("/nope"))
+
+	// assert
+	assert.ErrorIs(t, err, fs.ErrNotExist)
+	assert.ErrorContains(t, err, "/nope")
 }
