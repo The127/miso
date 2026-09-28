@@ -1,12 +1,26 @@
 package vercmp_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/The127/miso/internal/vercmp"
 )
+
+func TestVersionsSortInTheOrderOfTheSpecification(t *testing.T) {
+	// arrange
+	specified := []string{"122.1", "123~rc1-1", "123", "123-a", "123-a.1", "123-1", "123-1.1", "123^post1", "123.a-1", "123.1-1", "123a-1", "124-1"}
+	versions := slices.Clone(specified)
+	slices.Reverse(versions)
+
+	// act
+	slices.SortFunc(versions, vercmp.Compare)
+
+	// assert
+	assert.Equal(t, specified, versions)
+}
 
 func TestTheBiggerNumberComparesHigher(t *testing.T) {
 	// act
