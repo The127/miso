@@ -35,8 +35,8 @@ func Unpack(held Contents, want ...string) ([]initramfs.Module, error) {
 }
 
 // ReadyFrom takes the package a pin names apart into what a VM boots.
-func ReadyFrom(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
-	return ready(ctx, store, url, digest, want...)
+func ReadyFrom(ctx context.Context, store *download.Store, pin download.Pin, want ...string) (Kernel, error) {
+	return ready(ctx, store, pin, want...)
 }
 
 // Needs are the modules the builder VM loads.

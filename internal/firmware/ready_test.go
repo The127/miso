@@ -42,7 +42,7 @@ func TestTheFirmwareIsReadiedFromThePinnedPackage(t *testing.T) {
 	store := download.Open(dir, http.DefaultClient)
 
 	// act
-	found, err := firmware.ReadyFrom(context.Background(), store, "https://snapshot.invalid/ovmf.deb", digest)
+	found, err := firmware.ReadyFrom(context.Background(), store, download.Pin{URL: "https://snapshot.invalid/ovmf.deb", Digest: digest})
 
 	// assert
 	require.NoError(t, err)

@@ -2,7 +2,6 @@ package builderkernel
 
 import (
 	"context"
-	"os"
 
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/initramfs"
@@ -19,17 +18,12 @@ type Kernel struct {
 // Ready fetches miso's pinned kernel package, through the store, and takes
 // it apart into what the builder VM boots.
 func Ready(ctx context.Context, store *download.Store) (Kernel, error) {
-	return ready(ctx, store, pinURL, pinDigest, needs...)
+	return ready(ctx, store, pin, needs...)
 }
 
 // ready takes the package a pin names apart into what a VM boots.
-func ready(ctx context.Context, store *download.Store, url, digest string, want ...string) (Kernel, error) {
-	path, err := store.Pinned(ctx, url, digest)
-	if err != nil {
-		return Kernel{}, err
-	}
-
-	deb, err := os.Open(path)
+func ready(ctx context.Context, store *download.Store, pin download.Pin, want ...string) (Kernel, error) {
+	deb, err := store.OpenPinned(ctx, pin)
 	if err != nil {
 		return Kernel{}, err
 	}

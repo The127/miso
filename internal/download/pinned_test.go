@@ -58,7 +58,7 @@ func TestAPinnedFileThatIsThereIsAnsweredWithoutARequest(t *testing.T) {
 	store := download.Open(dir, server.Client())
 
 	// act
-	path, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
+	path, err := store.Pinned(context.Background(), download.Pin{URL: server.URL + "/kernel.deb", Digest: digest})
 
 	// assert
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestAPinnedFileThatIsNotThereIsDownloadedAndKept(t *testing.T) {
 	digest := arrived(t, "the kernel")
 
 	// act
-	path, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
+	path, err := store.Pinned(context.Background(), download.Pin{URL: server.URL + "/kernel.deb", Digest: digest})
 
 	// assert
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestADownloadThatDoesNotMatchThePinIsRefused(t *testing.T) {
 	digest := arrived(t, "the kernel")
 
 	// act
-	_, err := store.Pinned(context.Background(), server.URL+"/kernel.deb", digest)
+	_, err := store.Pinned(context.Background(), download.Pin{URL: server.URL + "/kernel.deb", Digest: digest})
 
 	// assert
 	require.Error(t, err)
