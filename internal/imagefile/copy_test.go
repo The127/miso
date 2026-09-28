@@ -122,3 +122,15 @@ func TestCopyToARelativeDestinationIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, imagefile.ErrArguments)
 	assert.ErrorContains(t, err, "line 2: COPY needs an absolute destination")
 }
+
+func TestACopyOfSeveralSourcesToADestinationWithoutASlashIsRejected(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nCOPY motd issue /etc\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "line 2: COPY of several sources needs a destination ending in /")
+}

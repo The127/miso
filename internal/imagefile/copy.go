@@ -50,5 +50,11 @@ func readCopy(line int, arguments string) ([]Instruction, error) {
 		return nil, errors.New("needs an absolute destination")
 	}
 
+	// as in Docker, so that where the sources land never depends on the
+	// image
+	if len(sources) > 1 && !strings.HasSuffix(destination, "/") {
+		return nil, errors.New("of several sources needs a destination ending in /")
+	}
+
 	return []Instruction{Copy{Line: line, From: from, Sources: sources, Destination: destination}}, nil
 }

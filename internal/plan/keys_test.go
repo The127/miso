@@ -73,8 +73,8 @@ func TestAChangedCopyDestinationChangesItsKey(t *testing.T) {
 
 func TestOneCopySourceWithASpaceIsNotTwoSources(t *testing.T) {
 	// arrange
-	one := parse(t, "FROM scratch\nCOPY \"a b\" /c\n")
-	two := parse(t, "FROM scratch\nCOPY a b /c\n")
+	one := parse(t, "FROM scratch\nCOPY \"a b\" /c/\n")
+	two := parse(t, "FROM scratch\nCOPY a b /c/\n")
 
 	// act
 	oneKeys := keys(t, one, anyAgent, files{"a b": "one", "a": "one", "b": "one"}, noImages)
