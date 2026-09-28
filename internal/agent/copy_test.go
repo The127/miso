@@ -104,3 +104,21 @@ func TestAnEntryOfAnUnknownKindFailsTheCopyAndKeepsNoLayer(t *testing.T) {
 	require.ErrorContains(t, err, "device")
 	assert.NoDirExists(t, filepath.Join(layers, "copy"))
 }
+
+func TestACopyWhoseLayerIsThereAlreadyReadsNothing(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	work, err := layer.Open(layers).Begin("copy")
+	require.NoError(t, err)
+	require.NoError(t, work.Finish())
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd"}, Destination: "/etc/motd"}
+	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+
+	// act
+	err = worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Len(t, files.entries, 1)
+}

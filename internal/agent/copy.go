@@ -16,8 +16,13 @@ import (
 var ErrUnknownKind = errors.New("unknown kind of entry")
 
 // Copy puts what the host sends on top of layers and keeps it as the layer
-// of the key.
+// of the key. A key whose layer is there already needs nothing sent.
 func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.Entries, _ io.Writer) error {
+	there, err := a.layers.Has(request.Key)
+	if err != nil || there {
+		return err
+	}
+
 	work, err := a.layers.Begin(request.Key)
 	if err != nil {
 		return err
