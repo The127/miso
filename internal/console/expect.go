@@ -7,7 +7,9 @@ import (
 
 // Expect reads the serial console until the pattern matches and returns
 // what came before the match. What came after it is kept for the next
-// Expect, so a ^ in the pattern is where the last match ended.
+// Expect, so a ^ in the pattern is where the last match ended. When the
+// pattern never comes, it returns what the console showed since the last
+// match, so a caller can show why.
 func (c *Console) Expect(pattern *regexp.Regexp) (string, error) {
 	chunk := make([]byte, 4096)
 	for {
@@ -19,7 +21,7 @@ func (c *Console) Expect(pattern *regexp.Regexp) (string, error) {
 		}
 
 		if c.end != nil {
-			return "", fmt.Errorf("%q never came: %w", pattern, c.end)
+			return string(c.seen), fmt.Errorf("%q never came: %w", pattern, c.end)
 		}
 
 		n, err := c.serial.Read(chunk)

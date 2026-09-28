@@ -95,3 +95,17 @@ func TestAConsoleThatFailsToReadSaysWhy(t *testing.T) {
 	assert.ErrorIs(t, err, broken)
 	assert.EqualError(t, err, `"login: " never came: the serial port broke`)
 }
+
+func TestAPatternThatNeverCameStillReturnsWhatTheConsoleShowedSinceTheLastMatch(t *testing.T) {
+	// arrange
+	tty := console.New(strings.NewReader("login: root\nKernel panic"))
+	_, err := tty.Expect(regexp.MustCompile(`login: `))
+	require.NoError(t, err)
+
+	// act
+	shown, err := tty.Expect(regexp.MustCompile(`# `))
+
+	// assert
+	require.Error(t, err)
+	assert.Equal(t, "root\nKernel panic", shown)
+}
