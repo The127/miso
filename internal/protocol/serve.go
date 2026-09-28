@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 )
 
 // Runner does the work the host asks for on the agent's side.
@@ -66,10 +67,19 @@ type outputs struct {
 	conn *Conn
 }
 
+// outputPiece is the most bytes one Output carries. JSON grows them by a
+// third, and the message must stay under MaxMessage.
+const outputPiece = MaxMessage / 4
+
 func (o outputs) Write(p []byte) (int, error) {
-	if err := o.conn.Send(Output{Bytes: p}); err != nil {
-		return 0, err
+	sent := 0
+	for piece := range slices.Chunk(p, outputPiece) {
+		if err := o.conn.Send(Output{Bytes: piece}); err != nil {
+			return sent, err
+		}
+
+		sent += len(piece)
 	}
 
-	return len(p), nil
+	return sent, nil
 }

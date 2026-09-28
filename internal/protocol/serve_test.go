@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -258,4 +259,34 @@ func TestClosingTheConnectionCancelsTheImport(t *testing.T) {
 
 	// assert
 	assert.True(t, runner.cancelled)
+}
+
+func TestAWriteLongerThanAMessageReachesTheHostWhole(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Run{Command: "cat big"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+	big := strings.Repeat("x", 2*protocol.MaxMessage)
+
+	// act
+	err := agent.Serve(runner{writes: big})
+
+	// assert
+	require.NoError(t, err)
+	var received strings.Builder
+	for {
+		message, err := host.Receive()
+		require.NoError(t, err)
+		output, isOutput := message.(protocol.Output)
+		if !isOutput {
+			assert.Equal(t, protocol.Done{}, message)
+
+			break
+		}
+
+		received.Write(output.Bytes)
+	}
+
+	assert.Equal(t, big, received.String())
 }
