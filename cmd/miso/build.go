@@ -85,9 +85,14 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	}
 
 	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM) error {
+		dial, err := reach.Agent(vm)
+		if err != nil {
+			return err
+		}
+
 		_, file := located(command)
 
-		return imagefile.InFile(file, builder.Ask(ctx, vm, reach.Agent(vm), agentName(), requests, contextfiles.Of(files), command.Root().Writer))
+		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), command.Root().Writer))
 	})
 }
 

@@ -313,13 +313,14 @@ dependenciesRules:
       standard:
         - os/exec
         - net
-  # the reach connects the host to the agent of its builder VM. It knows
-  # the way there and nothing else of ours, and never starts a process or
-  # touches the network
+  # the reach connects the host to the agent of its builder VM, over vsock
+  # or over the VM's virtio port. It knows the two ways and nothing else of
+  # ours, and never starts a process or touches the network
   - package: '**.internal.reach$'
     shouldOnlyDependsOn:
       internal:
         - '**.internal.vsock$'
+        - '**.internal.vport$'
     shouldNotDependsOn:
       standard:
         - os/exec
