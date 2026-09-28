@@ -3,6 +3,7 @@ package qemu_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,7 +25,9 @@ import (
 // error and fails, the way QEMU refuses what it cannot run. With
 // MISO_FAKE_QEMU_PID it writes its process ID there. With
 // MISO_FAKE_QEMU_HANG it then hangs like a running machine, for a while
-// only, so a failed test leaves nothing behind for long.
+// only, so a failed test leaves nothing behind for long. With
+// MISO_FAKE_QEMU_ECHO it sends back what reaches it on its first extra file
+// until that ends, the way a machine's agent would.
 //
 // With MISO_FAKE_MISO it stands in for miso instead, starting a fake QEMU
 // and hanging for a while.
@@ -127,6 +130,11 @@ func fakeQEMU(recorded string) {
 		if err := os.WriteFile(pid, []byte(strconv.Itoa(os.Getpid())), 0o600); err != nil {
 			os.Exit(2)
 		}
+	}
+
+	if os.Getenv("MISO_FAKE_QEMU_ECHO") != "" {
+		machine := os.NewFile(3, "agent port of QEMU")
+		_, _ = io.Copy(machine, machine)
 	}
 
 	if os.Getenv("MISO_FAKE_QEMU_HANG") != "" {

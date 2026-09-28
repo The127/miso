@@ -3,6 +3,7 @@ package qemu_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -232,4 +233,25 @@ func TestAHostWithoutVsockIsToldWhyItsMachineHasAVirtioPort(t *testing.T) {
 	require.NoError(t, err)
 	<-vm.Done()
 	assert.ErrorIs(t, told, fs.ErrNotExist)
+}
+
+func TestTheHostsEndOfAVirtioPortReachesTheMachine(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	t.Setenv("MISO_FAKE_QEMU_ECHO", "1")
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, "/dev/kvm", filepath.Join(t.TempDir(), "vhost-vsock"))
+	require.NoError(t, err)
+	t.Cleanup(func() { <-vm.Done() })
+	port := vm.Port()
+
+	// act
+	_, err = port.Write([]byte("hello"))
+	require.NoError(t, err)
+	back := make([]byte, 5)
+	_, err = io.ReadFull(port, back)
+	_ = port.Close()
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(back))
 }

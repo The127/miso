@@ -74,6 +74,12 @@ func (vm *VM) CID() uint32 {
 	return vm.cid
 }
 
+// Port is the host's end of the machine's virtio port for its agent. It is
+// nil on a host with vsock.
+func (vm *VM) Port() *os.File {
+	return vm.port
+}
+
 // WithoutKVM is whether the VM runs on TCG, because the host has no KVM.
 func (vm *VM) WithoutKVM() bool {
 	return vm.withoutKVM
