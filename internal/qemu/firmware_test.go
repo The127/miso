@@ -11,7 +11,7 @@ import (
 
 func TestAMachineWithFirmwareBootsThroughItInsteadOfAKernel(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Firmware: &qemu.Firmware{Code: "/f/OVMF_CODE.fd", Vars: "/f/vars.fd"}}
+	machine := qemu.Machine{Boot: qemu.Firmware{Code: "/f/OVMF_CODE.fd", Vars: "/f/vars.fd"}}
 
 	// act
 	args, err := qemu.Arguments(machine)

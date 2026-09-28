@@ -29,10 +29,8 @@ func Machine(t *testing.T, init []byte, commandLine string) qemu.Machine {
 	require.NoError(t, err)
 
 	return qemu.Machine{
-		Kernel:      boot.Kernel,
-		Initramfs:   boot.Initramfs,
-		CommandLine: commandLine,
-		MemoryMiB:   512,
-		CPUs:        1,
+		Boot:      qemu.Kernel{Image: boot.Kernel, Initramfs: boot.Initramfs, CommandLine: commandLine},
+		MemoryMiB: 512,
+		CPUs:      1,
 	}
 }

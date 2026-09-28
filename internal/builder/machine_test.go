@@ -91,9 +91,7 @@ func TestTheBuilderBootsMisoAsItsAgent(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, "/boot/vmlinuz", machine.Kernel)
-	assert.Equal(t, "/boot/initramfs", machine.Initramfs)
-	assert.Equal(t, "console=ttyS0 panic=-1 -- agent", machine.CommandLine)
+	assert.Equal(t, qemu.Kernel{Image: "/boot/vmlinuz", Initramfs: "/boot/initramfs", CommandLine: "console=ttyS0 panic=-1 -- agent"}, machine.Boot)
 }
 
 func TestTheBuilderHasFourGibibytesOfMemory(t *testing.T) {

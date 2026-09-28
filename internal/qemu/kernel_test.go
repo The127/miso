@@ -11,7 +11,7 @@ import (
 
 func TestAMachineBootsItsKernelDirectly(t *testing.T) {
 	// arrange
-	machine := qemu.Machine{Kernel: "/k/vmlinuz", Initramfs: "/k/initrd", CommandLine: "console=ttyS0 -- agent"}
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz", Initramfs: "/k/initrd", CommandLine: "console=ttyS0 -- agent"}}
 
 	// act
 	args, err := qemu.Arguments(machine)

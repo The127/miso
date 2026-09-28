@@ -22,7 +22,7 @@ import (
 func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	// arrange
 	driver, recorded := fakeDriver(t)
-	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1}
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
 	vm, err := driver.Start(t.Context(), machine)
@@ -171,7 +171,7 @@ func TestQEMUKeepsItsTemporaryFilesWhereTheMachineSays(t *testing.T) {
 	driver, _ := fakeDriver(t)
 	told := filepath.Join(t.TempDir(), "tmpdir")
 	t.Setenv("MISO_FAKE_QEMU_TMPDIR", told)
-	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1, Temp: "/c/boot"}
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1, Temp: "/c/boot"}
 
 	// act
 	vm, err := driver.Start(t.Context(), machine)
@@ -190,7 +190,7 @@ func TestAMachineWithoutATempDirLeavesQEMUTheHostsOwn(t *testing.T) {
 	told := filepath.Join(t.TempDir(), "tmpdir")
 	t.Setenv("MISO_FAKE_QEMU_TMPDIR", told)
 	t.Setenv("TMPDIR", "/host/tmp")
-	machine := qemu.Machine{Kernel: "/k/vmlinuz", MemoryMiB: 512, CPUs: 1}
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
 	vm, err := driver.Start(t.Context(), machine)

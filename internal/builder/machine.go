@@ -41,10 +41,12 @@ func (b Build) Machine() (qemu.Machine, error) {
 	cache := qemu.Disk{Path: b.Cache, Format: "raw", Serial: protocol.CacheSerial}
 
 	return qemu.Machine{
-		Kernel:    b.Boot.Kernel,
-		Initramfs: b.Boot.Initramfs,
-		// the kernel hands init what follows --, and init is miso
-		CommandLine: "console=ttyS0 panic=-1 -- agent",
+		Boot: qemu.Kernel{
+			Image:     b.Boot.Kernel,
+			Initramfs: b.Boot.Initramfs,
+			// the kernel hands init what follows --, and init is miso
+			CommandLine: "console=ttyS0 panic=-1 -- agent",
+		},
 		// room for a package manager's run, the proof of concept built with it
 		MemoryMiB: 4096,
 		// more than eight seldom speeds a build up and takes from the host

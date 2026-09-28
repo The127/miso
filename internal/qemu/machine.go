@@ -2,13 +2,9 @@ package qemu
 
 import "io"
 
-// Machine is what a VM boots: the builder's kernel, or through firmware
-// an image miso made.
+// Machine is a VM to start.
 type Machine struct {
-	Firmware    *Firmware
-	Kernel      string
-	Initramfs   string
-	CommandLine string
+	Boot        Boot
 	MemoryMiB   int
 	CPUs        int
 	Disks       []Disk

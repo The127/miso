@@ -49,7 +49,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	defer stop()
 
 	vm, err := b.Driver.Start(ctx, qemu.Machine{
-		Firmware:    flash,
+		Boot:        flash,
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},
@@ -135,14 +135,14 @@ func (b Boot) notBooted(ctx context.Context, vm *qemu.VM, late <-chan struct{}, 
 
 // flash writes the firmware where QEMU reads it, the vars a copy of their
 // own.
-func (b Boot) flash() (*qemu.Firmware, error) {
-	flash := &qemu.Firmware{Code: filepath.Join(b.Dir, "code.fd"), Vars: filepath.Join(b.Dir, "vars.fd")}
+func (b Boot) flash() (qemu.Firmware, error) {
+	flash := qemu.Firmware{Code: filepath.Join(b.Dir, "code.fd"), Vars: filepath.Join(b.Dir, "vars.fd")}
 	if err := os.WriteFile(flash.Code, b.Firmware.Code, 0o600); err != nil {
-		return nil, err
+		return qemu.Firmware{}, err
 	}
 
 	if err := os.WriteFile(flash.Vars, b.Firmware.Vars, 0o600); err != nil {
-		return nil, err
+		return qemu.Firmware{}, err
 	}
 
 	return flash, nil
