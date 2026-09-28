@@ -108,6 +108,18 @@ func TestACopyFromAStageWithoutStepsIsBuiltFromItsBase(t *testing.T) {
 	assert.Equal(t, []string{source.Stages[0].BaseKey}, copying.From)
 }
 
+func TestACopyOfAnOutputOfAStageFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS build\nOUTPUT disk a.raw\nFROM scratch\nCOPY --from=build /usr a.raw /x/\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	assert.ErrorIs(t, err, build.ErrOutputNotBuilt)
+	assert.EqualError(t, err, "line 4: COPY --from=build /usr a.raw /x/: output not built yet")
+}
+
 func TestACopyRequestKnowsItsLineOfTheBuildFile(t *testing.T) {
 	// arrange
 	planned := copyingMotdAndIssue()

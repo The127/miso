@@ -14,6 +14,10 @@ import (
 // have no keys, so nothing can be asked for them.
 var ErrNotFetched = errors.New("not fetched yet")
 
+// ErrOutputNotBuilt is a copy from an output of a stage. Outputs are not
+// built yet, so there is nothing to copy.
+var ErrOutputNotBuilt = errors.New("output not built yet")
+
 // Request is what the agent is asked for a step of the build file.
 type Request struct {
 	Line    int
@@ -57,6 +61,14 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			case imagefile.Copy:
 				copying := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: instruction.Sources, Destination: instruction.Destination}
 				if instruction.From != "" {
+					for _, source := range instruction.Sources {
+						if !strings.HasPrefix(source, "/") {
+							line, written := imagefile.Written(instruction)
+
+							return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, ErrOutputNotBuilt)}
+						}
+					}
+
 					copying.Stage = instruction.From
 					copying.From = ends[instruction.From].layers
 				}
