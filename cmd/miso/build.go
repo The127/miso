@@ -24,7 +24,7 @@ var buildCommand = &cli.Command{
 	Usage:     "build what the build file describes, in the builder VM",
 	ArgsUsage: "[context]",
 	Flags: []cli.Flag{
-		&cli.StringFlag{Name: "file", Aliases: []string{"f"}, Usage: "the build file, Imagefile in the context if not given"},
+		fileFlag(),
 	},
 	Action: runBuild,
 }
@@ -44,7 +44,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 	// one open context for plan and build, so the build reads the directory
 	// the plan hashed even if its path changes in between
-	contextDir, _ := located(command)
+	contextDir, file := located(command)
 	files, err := buildcontext.Open(contextDir)
 	if err != nil {
 		return err
@@ -89,8 +89,6 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		if err != nil {
 			return err
 		}
-
-		_, file := located(command)
 
 		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), command.Root().Writer))
 	})

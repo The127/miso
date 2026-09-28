@@ -18,7 +18,7 @@ var planCommand = &cli.Command{
 	Usage:     "list what a build would do, without building",
 	ArgsUsage: "[context]",
 	Flags: []cli.Flag{
-		&cli.StringFlag{Name: "file", Aliases: []string{"f"}, Usage: "the build file, Imagefile in the context if not given"},
+		fileFlag(),
 	},
 	Action: listPlan,
 }
@@ -65,6 +65,15 @@ func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (pl
 	return planned, nil
 }
 
+// fileFlagName is the flag that names the build file.
+const fileFlagName = "file"
+
+// fileFlag names the build file of a command that reads one. Each command
+// gets its own, since a flag keeps what was parsed into it.
+func fileFlag() *cli.StringFlag {
+	return &cli.StringFlag{Name: fileFlagName, Aliases: []string{"f"}, Usage: "the build file, Imagefile in the context if not given"}
+}
+
 // located is the build context and the build file. The context is the
 // directory given, or the current one. The file is Imagefile in it, unless
 // -f names another.
@@ -74,7 +83,7 @@ func located(command *cli.Command) (dir string, file string) {
 		dir = "."
 	}
 
-	file = command.String("file")
+	file = command.String(fileFlagName)
 	if file == "" {
 		file = filepath.Join(dir, "Imagefile")
 	}
