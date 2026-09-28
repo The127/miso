@@ -59,7 +59,8 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 					request.Digests = append(request.Digests, file.Digest)
 				}
 
-				requests = append(requests, Request{Message: request})
+				line, written := imagefile.Written(copying)
+				requests = append(requests, Request{Line: line, Written: written, Message: request})
 			}
 
 			roots[step.Key] = under.after(step)

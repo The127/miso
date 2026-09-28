@@ -63,3 +63,27 @@ func TestACopyFromAStageTakesNothingFromTheBuildContext(t *testing.T) {
 		assert.IsNotType(t, protocol.Copy{}, request.Message)
 	}
 }
+
+func TestACopyRequestKnowsItsLineOfTheBuildFile(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:       "debian:13",
+		BaseDigest: "sha256:image",
+		BaseKey:    "base",
+		Steps: []plan.Step{{
+			Instruction: imagefile.Copy{Line: 2, Sources: []string{"motd", "issue"}, Destination: "/etc/"},
+			Key:         "k1",
+			BuiltOn:     []string{"base"},
+			Files:       []plan.File{{Path: "motd", Digest: "miso-context-1:aaaa"}, {Path: "issue", Digest: "miso-context-1:bbbb"}},
+		}},
+	}}}
+
+	// act
+	requests, err := build.Requests(planned, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 2)
+	assert.Equal(t, 2, requests[1].Line)
+	assert.Equal(t, "COPY motd issue /etc/", requests[1].Written)
+}
