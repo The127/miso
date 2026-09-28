@@ -1,3 +1,5 @@
+//go:build vmtest
+
 package place_test
 
 import (

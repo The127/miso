@@ -29,7 +29,16 @@ func (r *Root) File(path string, mode uint32, content io.Reader) error {
 		return err
 	}
 
-	// the mode given at create passes the umask first
+	// the host's users mean nothing in an image, and a directory with
+	// setgid hands on its own group
+	if err := unix.Fchown(fd, 0, 0); err != nil {
+		_ = file.Close()
+
+		return &os.PathError{Op: "chown", Path: path, Err: err}
+	}
+
+	// after the owner, whose change clears setuid, and the mode given at
+	// create passes the umask first
 	if err := unix.Fchmod(fd, mode); err != nil {
 		_ = file.Close()
 
