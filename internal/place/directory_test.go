@@ -47,3 +47,25 @@ func TestADirectoryThatIsThereKeepsItsModeAndOwner(t *testing.T) {
 	assert.Equal(t, os.ModeDir|0o700, info.Mode())
 	assert.Equal(t, [2]uint32{1000, 1000}, owner(t, etc))
 }
+
+func TestADirectoryOntoALinkToADirectoryGoesIntoItsTarget(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "usr", "bin"), 0o700))
+	require.NoError(t, os.Symlink("usr/bin", filepath.Join(root, "bin")))
+	image := place.Open(root)
+
+	// act
+	err := image.Directory("/bin", 0o755)
+	require.NoError(t, err)
+	err = image.Link("/bin/sh", "dash")
+
+	// assert
+	require.NoError(t, err)
+	info, err := os.Lstat(filepath.Join(root, "bin"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeSymlink, info.Mode().Type())
+	target, err := os.Readlink(filepath.Join(root, "usr", "bin", "sh"))
+	require.NoError(t, err)
+	assert.Equal(t, "dash", target)
+}
