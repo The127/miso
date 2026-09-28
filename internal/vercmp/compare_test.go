@@ -15,3 +15,11 @@ func TestTheBiggerNumberComparesHigher(t *testing.T) {
 	// assert
 	assert.Negative(t, compared)
 }
+
+func TestLeadingZerosOfANumberDoNotCount(t *testing.T) {
+	// act
+	compared := vercmp.Compare("010", "10")
+
+	// assert
+	assert.Zero(t, compared)
+}
