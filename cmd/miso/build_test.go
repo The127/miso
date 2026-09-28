@@ -3,6 +3,7 @@
 package main_test
 
 import (
+	"crypto/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,14 +16,17 @@ import (
 func TestABuildRunsItsStepOnTheBuilderKernel(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nRUN echo hi\n"), 0o600))
+	// a word of its own, or a cache from an earlier run holds the step and
+	// the build prints nothing
+	word := rand.Text()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nRUN echo "+word+"\n"), 0o600))
 
 	// act
 	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
 
 	// assert
 	require.NoError(t, err, string(said))
-	assert.Contains(t, string(said), "hi\n")
+	assert.Contains(t, string(said), word+"\n")
 }
 
 func TestAFailingStepOnTheBuilderKernelNamesItsLineOfTheBuildFile(t *testing.T) {
