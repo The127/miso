@@ -8,14 +8,13 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/The127/miso/internal/sandbox"
 )
 
-// overlaid mounts layers, lowest first, over a directory and hands the
-// root to work, whose writes go into the directory. The directory is no
-// longer mounted once it returns. Work tells whether what it wrote is kept.
-func (a *Agent) overlaid(layers []string, upper string, work func(root string) (keep bool, err error)) error {
+// overlaid mounts layers, lowest first, on top of a bottom made in scratch
+// and under a directory, and hands the root to work, whose writes go into
+// the directory. The directory is no longer mounted once it returns. Work
+// tells whether what it wrote is kept.
+func (a *Agent) overlaid(layers []string, bottom func(scratch string) (string, error), upper string, work func(root string) (keep bool, err error)) error {
 	// overlay wants its work directory on the file system of the upper one
 	scratch, err := a.layers.Scratch()
 	if err != nil {
@@ -38,14 +37,13 @@ func (a *Agent) overlaid(layers []string, upper string, work func(root string) (
 		lowers = append(lowers, a.layers.Path(key))
 	}
 
-	// the run's mount points live below every layer, so a layer holds only
-	// what its command wrote
-	floor, err := sandbox.Floor(scratch)
+	// overlay needs a layer below even on scratch
+	lowest, err := bottom(scratch)
 	if err != nil {
 		return err
 	}
 
-	lowers = append(lowers, floor)
+	lowers = append(lowers, lowest)
 
 	if err := mountOverlay(root, lowers, upper, overlayWork); err != nil {
 		return err

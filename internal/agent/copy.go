@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 
@@ -39,7 +41,7 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 		return err
 	}
 
-	err = a.overlaid(request.Layers, work.Dir(), func(root string) (bool, error) {
+	err = a.overlaid(request.Layers, empty, work.Dir(), func(root string) (bool, error) {
 		arrived, err := placeAll(place.Open(root), request, entries)
 		if err != nil {
 			return false, err
@@ -58,6 +60,18 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 	}
 
 	return work.Finish()
+}
+
+// empty is the bottom of a copy, with nothing of a run's in it, so that
+// what the copy puts is all its layer holds. Open to all, as the root of
+// an image on scratch is.
+func empty(scratch string) (string, error) {
+	dir := filepath.Join(scratch, "empty")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		return "", err
+	}
+
+	return dir, os.Chmod(dir, 0o755) //nolint:gosec // an image's root is open to all
 }
 
 // placeAll puts every entry where it lands, and hands back the digest of

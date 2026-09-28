@@ -173,3 +173,26 @@ func TestAnEntryOfASourceTheCopyDoesNotNameFailsTheCopy(t *testing.T) {
 	require.ErrorIs(t, err, agent.ErrUnknownSource)
 	assert.NoDirExists(t, filepath.Join(layers, "copy"))
 }
+
+func TestACopyOntoScratchHasTheModesOfItsSourceAndNoneOfARun(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := agent.New(layers, t.TempDir())
+	files := &sent{
+		entries:  []protocol.Entry{{Kind: "directory", Path: ".", Mode: 0o755}, {Kind: "directory", Path: "proc", Mode: 0o555}},
+		contents: []string{"", ""},
+	}
+	request := protocol.Copy{Key: "copy", Sources: []string{"rootfs"}, Digests: []string{files.digest()}, Destination: "/"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	root, err := os.Lstat(filepath.Join(layers, "copy"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|0o755, root.Mode())
+	proc, err := os.Lstat(filepath.Join(layers, "copy", "proc"))
+	require.NoError(t, err)
+	assert.Equal(t, os.ModeDir|0o555, proc.Mode())
+}

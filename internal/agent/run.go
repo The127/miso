@@ -35,7 +35,9 @@ func (a *Agent) Run(ctx context.Context, run protocol.Run, out io.Writer) (int, 
 // directory, which is no longer mounted once it returns.
 func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out io.Writer) (int, error) {
 	code := 0
-	err := a.overlaid(run.Layers, upper, func(root string) (bool, error) {
+	// the run's mount points live below every layer, so a layer holds only
+	// what its command wrote
+	err := a.overlaid(run.Layers, sandbox.Floor, upper, func(root string) (bool, error) {
 		var err error
 		code, err = sandbox.Run(ctx, root, run, out)
 
