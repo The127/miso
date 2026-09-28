@@ -3,6 +3,7 @@ package buildcontext
 import (
 	"io"
 	"strconv"
+	"strings"
 )
 
 // Entry is one thing a copy carries, with nothing in it that a digest does
@@ -28,6 +29,21 @@ type Entry struct {
 // a file with its content.
 func (d *Dir) Pack(source string, visit func(Entry, io.Reader) error) error {
 	return d.walk(source, func(found entry) error {
+		packed := Entry{Kind: string(found.kind), Path: found.path, Target: found.target}
+		// a link has no mode of its own
+		if found.mode != "" {
+			mode, err := strconv.ParseUint(found.mode, 8, 32)
+			if err != nil {
+				return err
+			}
+
+			packed.Mode = uint32(mode)
+		}
+
+		if found.kind != kindFile {
+			return visit(packed, strings.NewReader(""))
+		}
+
 		file, err := d.root.Open(found.name)
 		if err != nil {
 			return err
@@ -40,11 +56,8 @@ func (d *Dir) Pack(source string, visit func(Entry, io.Reader) error) error {
 			return err
 		}
 
-		mode, err := strconv.ParseUint(found.mode, 8, 32)
-		if err != nil {
-			return err
-		}
+		packed.Size = info.Size()
 
-		return visit(Entry{Kind: string(found.kind), Path: found.path, Mode: uint32(mode), Size: info.Size()}, file)
+		return visit(packed, file)
 	})
 }
