@@ -76,3 +76,18 @@ func TestAFileCopiedOntoADirectoryOfTheImageGoesIntoIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello\n", string(written))
 }
+
+func TestASourceIsNamedAsTheHostReadsItsPath(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	files := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd/."}, Digests: []string{files.digest()}, Destination: "/etc/"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(layers, "copy", "etc", "motd"))
+}

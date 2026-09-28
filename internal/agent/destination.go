@@ -27,7 +27,8 @@ func target(image *place.Root, request protocol.Copy, entry protocol.Entry) (str
 	}
 
 	if into {
-		return filepath.Join(request.Destination, filepath.Base(request.Sources[entry.Source])), nil
+		// the host walks a source by its clean path, so motd/. is motd
+		return filepath.Join(request.Destination, filepath.Base(filepath.Clean(request.Sources[entry.Source]))), nil
 	}
 
 	return request.Destination, nil
