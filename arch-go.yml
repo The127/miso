@@ -45,8 +45,9 @@ dependenciesRules:
         - net
         - syscall
   # the build context reads what a COPY names, below one directory of the
-  # host and never outside it. It knows only the copy digest of ours, and it
-  # never touches a process, the network or the kernel
+  # host and never outside it. It knows only the copy digest of ours, which
+  # decides what may reach a digest. It touches the kernel only to read
+  # safely, and never a process or the network
   - package: '**.internal.buildcontext$'
     shouldOnlyDependsOn:
       internal:
@@ -55,7 +56,6 @@ dependenciesRules:
       standard:
         - os/exec
         - net
-        - syscall
   # the version reads what the Go toolchain wrote into the binary and
   # nothing else
   - package: '**.internal.version$'

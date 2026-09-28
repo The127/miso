@@ -39,7 +39,7 @@ func (e entry) sum(content string) string {
 // content streams a file into its hash, a source may be a disk image of
 // many gigabytes.
 func (d *Dir) content(name string) (string, error) {
-	file, err := d.root.Open(name)
+	file, err := d.open(name)
 	if err != nil {
 		return "", err
 	}

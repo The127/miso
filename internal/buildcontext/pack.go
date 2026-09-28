@@ -70,7 +70,7 @@ func (d *Dir) pack(found entry, visit func(Entry, io.Reader) error) (string, err
 		return found.sum(""), visit(packed, strings.NewReader(""))
 	}
 
-	file, err := d.root.Open(found.name)
+	file, err := d.open(found.name)
 	if err != nil {
 		return "", err
 	}
