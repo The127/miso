@@ -35,3 +35,18 @@ func TestASourcePathThroughALinkIsResolvedInsideTheStage(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "stage\n", string(got))
 }
+
+func TestASourceWhoseLookupARenameRacedIsStillCopied(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "motd"), []byte("hello\n"), 0o600))
+	tree.RaceOnce(t)
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/motd"}, onto("/motd"))
+
+	// assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(image, "motd"))
+}
