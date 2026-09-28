@@ -52,8 +52,23 @@ func TestAProgramRunInTheNamespaceRunsInIt(t *testing.T) {
 	assert.Equal(t, inside, strings.TrimSpace(string(theirs)))
 }
 
-func TestAProgramRunInTheNamespaceHoldsNoWayToTalkToMiso(t *testing.T) {
+// inherited is a file miso holds without close-on-exec, the way it holds
+// what its own caller left open for it.
+func inherited(t *testing.T) {
+	t.Helper()
+
+	null, err := os.Open(os.DevNull)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = null.Close() })
+
+	fd, err := unix.Dup(int(null.Fd()))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = unix.Close(fd) })
+}
+
+func TestAProgramRunInTheNamespaceHoldsOnlyItsStandardFiles(t *testing.T) {
 	// arrange
+	inherited(t)
 	namespace := opened(t)
 	read, written, err := os.Pipe()
 	require.NoError(t, err)
@@ -65,7 +80,20 @@ func TestAProgramRunInTheNamespaceHoldsNoWayToTalkToMiso(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	require.NoError(t, written.Close())
-	open, err := io.ReadAll(read)
+	listed, err := io.ReadAll(read)
 	require.NoError(t, err)
-	assert.NotContains(t, string(open), "socket:")
+	require.Contains(t, string(listed), " 1 -> pipe:")
+	for _, line := range strings.Split(string(listed), "\n") {
+		fd, target, isLink := strings.Cut(line, " -> ")
+		if !isLink {
+			continue
+		}
+
+		fields := strings.Fields(fd)
+		number := fields[len(fields)-1]
+		// ls holds the directory it lists
+		if number != "0" && number != "1" && number != "2" {
+			assert.True(t, strings.HasPrefix(target, "/proc/"), "fd %s -> %s", number, target)
+		}
+	}
 }

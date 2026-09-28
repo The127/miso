@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -33,8 +34,14 @@ func Helper() {
 		return
 	}
 
-	// what the helper runs must not be able to talk to miso as the helper
+	// what the helper runs must not be able to talk to miso as the helper,
+	// nor hold what miso's own caller left open for it
 	syscall.CloseOnExec(helperConn)
+
+	if err := unix.CloseRange(helperConn+1, math.MaxUint32, unix.CLOSE_RANGE_CLOEXEC); err != nil {
+		_ = answerFailed(helperConn, err)
+		os.Exit(1)
+	}
 
 	// the inner namespace is this thread's alone, so everything inside it
 	// is done here
