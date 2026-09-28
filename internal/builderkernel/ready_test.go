@@ -2,11 +2,7 @@ package builderkernel_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,21 +10,8 @@ import (
 
 	"github.com/The127/miso/internal/builderkernel"
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/download/downloadtest"
 )
-
-// kept writes bytes into a store by hand and answers their digest, as a
-// download of them would have left them there.
-func kept(t *testing.T, dir string, content []byte) string {
-	t.Helper()
-
-	sum := sha256.Sum256(content)
-	digest := hex.EncodeToString(sum[:])
-
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", digest), content, 0o600))
-
-	return "sha256:" + digest
-}
 
 func TestTheBuilderKernelIsReadiedFromThePinnedPackage(t *testing.T) {
 	// arrange
@@ -36,7 +19,7 @@ func TestTheBuilderKernelIsReadiedFromThePinnedPackage(t *testing.T) {
 		"./lib/modules/" + testRelease + "/kernel/fs/btrfs/btrfs.ko.xz": packedModule(t, "name=btrfs"),
 	})
 	dir := t.TempDir()
-	digest := kept(t, dir, deb)
+	digest := downloadtest.Kept(t, dir, deb)
 	store := download.Open(dir, http.DefaultClient)
 
 	// act

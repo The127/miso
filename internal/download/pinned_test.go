@@ -8,13 +8,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/download/downloadtest"
 )
 
 // arrived is the digest bytes have once they are in.
@@ -24,17 +24,6 @@ func arrived(t *testing.T, content string) string {
 	sum := sha256.Sum256([]byte(content))
 
 	return "sha256:" + hex.EncodeToString(sum[:])
-}
-
-// kept writes bytes into a store by hand and answers their digest.
-func kept(t *testing.T, dir, content string) string {
-	t.Helper()
-
-	digest := arrived(t, content)
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", strings.TrimPrefix(digest, "sha256:")), []byte(content), 0o600))
-
-	return digest
 }
 
 func read(t *testing.T, path string) string {
@@ -54,7 +43,7 @@ func TestAPinnedFileThatIsThereIsAnsweredWithoutARequest(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 	dir := t.TempDir()
-	digest := kept(t, dir, "the kernel")
+	digest := downloadtest.Kept(t, dir, []byte("the kernel"))
 	store := download.Open(dir, server.Client())
 
 	// act

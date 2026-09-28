@@ -133,6 +133,17 @@ dependenciesRules:
       standard:
         - os/exec
         - syscall
+  # the downloadtest puts bytes into a download store for tests. It knows
+  # nothing of ours and never fetches anything
+  - package: '**.internal.download.downloadtest$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os/exec
+        - net
+        - syscall
   # the base image knows what a FROM names and has the download fetch it. It
   # never opens a connection itself, starts a process or touches the kernel
   - package: '**.internal.baseimage$'

@@ -2,11 +2,7 @@ package firmware_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,22 +10,9 @@ import (
 
 	"github.com/The127/miso/internal/deb/debtest"
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/download/downloadtest"
 	"github.com/The127/miso/internal/firmware"
 )
-
-// kept writes bytes into a store by hand and answers their digest, as a
-// download of them would have left them there.
-func kept(t *testing.T, dir string, content []byte) string {
-	t.Helper()
-
-	sum := sha256.Sum256(content)
-	digest := hex.EncodeToString(sum[:])
-
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", digest), content, 0o600))
-
-	return "sha256:" + digest
-}
 
 func TestTheFirmwareIsReadiedFromThePinnedPackage(t *testing.T) {
 	// arrange
@@ -38,7 +21,7 @@ func TestTheFirmwareIsReadiedFromThePinnedPackage(t *testing.T) {
 		"./usr/share/OVMF/OVMF_VARS_4M.fd": "the vars",
 	})
 	dir := t.TempDir()
-	digest := kept(t, dir, pkg)
+	digest := downloadtest.Kept(t, dir, pkg)
 	store := download.Open(dir, http.DefaultClient)
 
 	// act
