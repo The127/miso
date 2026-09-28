@@ -78,7 +78,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 		_, file := located(command)
 
-		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, command.Root().Writer))
+		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, nil, command.Root().Writer))
 	})
 }
 

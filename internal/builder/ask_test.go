@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -30,12 +31,34 @@ func TestEveryRequestIsAskedInOrderEachOnItsOwnConnection(t *testing.T) {
 	)
 
 	// act
-	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, messagesOf(requests), agent.asked)
 	assert.Equal(t, 2, *dials)
+}
+
+func TestACopyGetsItsFilesFromTheBuildContext(t *testing.T) {
+	// arrange
+	agent := &receiving{}
+	request := protocol.Copy{Key: "step", Layers: []string{"base"}, Sources: []string{"motd"}, Digests: []string{"sha256:aaaa"}, Destination: "/etc/motd"}
+	var asked []protocol.Copy
+	files := func(copying protocol.Copy) protocol.Files {
+		asked = append(asked, copying)
+
+		return func(send func(protocol.Entry, io.Reader) error) error {
+			return send(protocol.Entry{Kind: "file", Path: ".", Mode: 0o644, Size: 6}, strings.NewReader("hello\n"))
+		}
+	}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(agent), agentName, requested(request), files, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []protocol.Copy{request}, asked)
+	assert.Equal(t, []string{"hello\n"}, agent.contents)
 }
 
 func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
@@ -48,7 +71,7 @@ func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, &out)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, nil, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -62,7 +85,7 @@ func TestTheAgentIsWaitedForUntilItListens(t *testing.T) {
 	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), running{}, booting(2, dial), agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, booting(2, dial), agentName, requests, nil, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -75,7 +98,7 @@ func TestAVMThatStopsBeforeItsAgentListensFailsWithItsReason(t *testing.T) {
 	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), stopped{reason}, unreachable, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{reason}, unreachable, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, reason)
@@ -86,7 +109,7 @@ func TestAVMThatStopsWithoutAReasonBeforeItsAgentListensSaysOnlyThat(t *testing.
 	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), stopped{}, unreachable, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), stopped{}, unreachable, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "the builder VM stopped before its agent listened")
@@ -98,7 +121,7 @@ func TestAVMThatDiesDuringAStepFailsWithItsReason(t *testing.T) {
 	requests := requested(protocol.Run{Key: "step", Command: "true"})
 
 	// act
-	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, vm.reason)
@@ -110,7 +133,7 @@ func TestAVMThatDiesDuringAStepWithoutAReasonSaysOnlyThat(t *testing.T) {
 	requests := []build.Request{{Line: 2, Written: "RUN true", Message: protocol.Run{Key: "step", Command: "true"}}}
 
 	// act
-	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), vm, vm.dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "line 2: RUN true: the builder VM stopped during a step")
@@ -130,7 +153,7 @@ func TestACancelledBuildCancelsTheRunningStep(t *testing.T) {
 	}()
 
 	// act
-	err := builder.Ask(ctx, running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(ctx, running{}, dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, context.Canceled)
@@ -152,7 +175,7 @@ func TestACancelledBuildStopsWaitingForTheAgent(t *testing.T) {
 	time.AfterFunc(50*time.Millisecond, cancel)
 
 	// act
-	err := builder.Ask(ctx, running{}, unreachable, agentName, requests, io.Discard)
+	err := builder.Ask(ctx, running{}, unreachable, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
@@ -165,7 +188,7 @@ func TestACancelledBuildWhoseVMWasStoppedByTheCancelSaysCancelled(t *testing.T) 
 	requests := oneImport()
 
 	// act
-	err := builder.Ask(ctx, stopped{errors.New("QEMU stopped: signal: killed")}, unreachable, agentName, requests, io.Discard)
+	err := builder.Ask(ctx, stopped{errors.New("QEMU stopped: signal: killed")}, unreachable, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, context.Canceled)
@@ -177,7 +200,7 @@ func TestAnAgentThatDoesNotListenInTimeFailsTheBuild(t *testing.T) {
 	requests := oneImport()
 
 	// act
-	err := builder.Ask(t.Context(), running{}, unreachable, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, unreachable, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.ErrorContains(t, err, "the agent did not listen within 100ms")
@@ -190,7 +213,7 @@ func TestAFailedCommandFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	start := time.Now()
 
 	// act
-	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, protocol.ErrCommandFailed)
@@ -203,7 +226,7 @@ func TestAFailedStepIsNamedAfterItsLineOfTheBuildFile(t *testing.T) {
 	requests := []build.Request{{Line: 2, Written: "RUN false", Message: protocol.Run{Key: "step", Command: "false"}}}
 
 	// act
-	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	assert.EqualError(t, err, "line 2: RUN false: command failed: exit code 1")
@@ -216,7 +239,7 @@ func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	start := time.Now()
 
 	// act
-	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, io.Discard)
+	err := builder.Ask(t.Context(), running{}, dial, agentName, requests, nil, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, protocol.ErrAgentFailed)
@@ -445,4 +468,32 @@ func (w waiting) Import(context.Context, protocol.Import, io.Writer) error {
 
 func (w waiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return nil
+}
+
+// receiving is an agent that reads the files of a copy and keeps their
+// content.
+type receiving struct {
+	recording
+
+	contents []string
+}
+
+func (r *receiving) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
+	for {
+		_, content, err := entries.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		read, err := io.ReadAll(content)
+		if err != nil {
+			return err
+		}
+
+		r.contents = append(r.contents, string(read))
+	}
 }
