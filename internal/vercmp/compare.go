@@ -8,7 +8,12 @@ import (
 // Compare is negative when version a is older than b, zero when both are
 // the same version and positive when a is newer.
 func Compare(a, b string) int {
-	for a != "" && b != "" {
+	for {
+		a, b = skipped(a), skipped(b)
+		if a == "" || b == "" {
+			return cmp.Compare(len(a), len(b))
+		}
+
 		if a[0] == '.' && b[0] == '.' {
 			a, b = a[1:], b[1:]
 
@@ -34,8 +39,18 @@ func Compare(a, b string) int {
 			return compared
 		}
 	}
+}
 
-	return cmp.Compare(len(a), len(b))
+// skipped is a version without the characters at its front that the
+// format has no meaning for.
+func skipped(version string) string {
+	// byte by byte, every byte of a character beyond ASCII is skipped
+	start := 0
+	for start < len(version) && !isDigit(version[start]) && !isLetter(version[start]) && strings.IndexByte("-.~^", version[start]) < 0 {
+		start++
+	}
+
+	return version[start:]
 }
 
 // number splits the digits off the front of a version, without the zeros

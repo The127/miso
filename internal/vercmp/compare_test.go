@@ -32,6 +32,14 @@ func TestNumbersBetweenDotsCompareOneByOne(t *testing.T) {
 	assert.Negative(t, compared)
 }
 
+func TestCharactersOutsideTheFormatAreSkipped(t *testing.T) {
+	// act
+	compared := vercmp.Compare("1+", "1")
+
+	// assert
+	assert.Zero(t, compared)
+}
+
 func TestLettersCompareInAlphabeticalOrder(t *testing.T) {
 	// act
 	compared := vercmp.Compare("123.a", "123.b")
