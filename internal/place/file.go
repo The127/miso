@@ -9,6 +9,15 @@ import (
 
 // File puts a file with a content at a path of the image.
 func (r *Root) File(path string, mode uint32, content io.Reader) error {
+	return r.create(path, mode, func(file *os.File) error {
+		_, err := io.Copy(file, content)
+
+		return err
+	})
+}
+
+// create makes a file at a path of the image and has write fill it.
+func (r *Root) create(path string, mode uint32, write func(*os.File) error) error {
 	parent, name, err := r.parent(path)
 	if err != nil {
 		return err
@@ -30,7 +39,7 @@ func (r *Root) File(path string, mode uint32, content io.Reader) error {
 	}
 
 	file := os.NewFile(uintptr(fd), path)
-	if _, err := io.Copy(file, content); err != nil {
+	if err := write(file); err != nil {
 		_ = file.Close()
 
 		return err

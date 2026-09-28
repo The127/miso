@@ -334,3 +334,24 @@ func TestDevicesFifosAndSocketsOfAStageAreMadeAsTheyAre(t *testing.T) {
 	assert.Equal(t, uint32(unix.S_IFIFO|0o640), pipe.Mode)
 	assert.Equal(t, uint32(unix.S_IFSOCK|0o600), sock.Mode)
 }
+
+func TestAHoleInAFileOfAStageStaysAHole(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	sparse, err := os.Create(filepath.Join(stage, "sparse"))
+	require.NoError(t, err)
+	_, err = sparse.WriteAt([]byte("x"), 64<<20)
+	require.NoError(t, err)
+	require.NoError(t, sparse.Close())
+
+	// act
+	err = tree.Into(stage, place.Open(image), []string{"/sparse"}, onto("/sparse"))
+
+	// assert
+	require.NoError(t, err)
+	var copied unix.Stat_t
+	require.NoError(t, unix.Stat(filepath.Join(image, "sparse"), &copied))
+	assert.Equal(t, int64(64<<20+1), copied.Size)
+	assert.Less(t, copied.Blocks*512, int64(1<<20), "the hole takes room")
+}

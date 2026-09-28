@@ -207,7 +207,7 @@ func (c stageCopy) file(name, target string, info fs.FileInfo) error {
 
 	defer func() { _ = in.Close() }()
 
-	if err := c.image.File(target, uint32(info.Mode().Perm()), in); err != nil {
+	if err := c.image.Sparse(target, uint32(info.Mode().Perm()), in); err != nil {
 		return err
 	}
 
