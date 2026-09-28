@@ -34,7 +34,7 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 			}
 		case Send:
 			if files == nil {
-				return fmt.Errorf("%T is no answer to %T", m, request)
+				return noAnswer(m, request)
 			}
 
 			if err := files(c.SendEntry); err != nil {
@@ -51,7 +51,12 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 		case Failed:
 			return fmt.Errorf("%w: %s", ErrAgentFailed, m.Reason)
 		default:
-			return fmt.Errorf("%T is no answer to %T", m, request)
+			return noAnswer(m, request)
 		}
 	}
+}
+
+// noAnswer is the error for a message the request does not expect.
+func noAnswer(message, request Message) error {
+	return fmt.Errorf("%T is no answer to %T", message, request)
 }

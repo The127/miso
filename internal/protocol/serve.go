@@ -26,56 +26,71 @@ func (c *Conn) Serve(runner Runner) error {
 		return err
 	}
 
-	run, isRun := message.(Run)
-	request, isImport := message.(Import)
-	copying, isCopy := message.(Copy)
-	if !isRun && !isImport && !isCopy {
+	switch request := message.(type) {
+	case Copy:
+		return c.serveCopy(runner, request)
+	case Import:
+		return c.serveImport(runner, request)
+	case Run:
+		return c.serveRun(runner, request)
+	default:
 		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
 	}
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// a copy reads its entries from the host, so no one else may read
-	if isCopy {
-		if err := runner.Copy(ctx, copying, c, outputs{c}); err != nil {
-			// the host sends every entry before it reads an answer, so it
-			// would wait on us while we wait on it. Unasked, it sends none
-			for c.asked {
-				if _, _, err := c.Next(); err != nil {
-					break
-				}
+// serveCopy has the runner copy what the host sends. A copy reads its
+// entries from the host, so no one else may read.
+func (c *Conn) serveCopy(runner Runner, request Copy) error {
+	err := runner.Copy(context.Background(), request, c, outputs{c})
+	if err != nil {
+		// the host sends every entry before it reads an answer, so it
+		// would wait on us while we wait on it. Unasked, it sends none
+		for c.asked {
+			if _, _, err := c.Next(); err != nil {
+				break
 			}
-
-			return c.Send(Failed{Reason: err.Error()})
 		}
-
-		return c.Send(Done{})
 	}
 
-	// the host sends nothing more in an exchange, so whatever ends this read
-	// is the host going away
+	return c.answer(err)
+}
+
+func (c *Conn) serveImport(runner Runner, request Import) error {
+	ctx, cancel := c.watched()
+	defer cancel()
+
+	return c.answer(runner.Import(ctx, request, outputs{c}))
+}
+
+func (c *Conn) serveRun(runner Runner, request Run) error {
+	ctx, cancel := c.watched()
+	defer cancel()
+
+	code, err := runner.Run(ctx, request, outputs{c})
+	if err == nil && code != 0 {
+		return c.Send(Exited{Code: code})
+	}
+
+	return c.answer(err)
+}
+
+// watched is cancelled once the host goes away. The host sends nothing
+// more in an exchange, so whatever ends this read is the host leaving.
+func (c *Conn) watched() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		_, _ = c.Receive()
 
 		cancel()
 	}()
 
-	if isImport {
-		if err := runner.Import(ctx, request, outputs{c}); err != nil {
-			return c.Send(Failed{Reason: err.Error()})
-		}
+	return ctx, cancel
+}
 
-		return c.Send(Done{})
-	}
-
-	code, err := runner.Run(ctx, run, outputs{c})
+// answer tells the host how the request ended.
+func (c *Conn) answer(err error) error {
 	if err != nil {
 		return c.Send(Failed{Reason: err.Error()})
-	}
-
-	if code != 0 {
-		return c.Send(Exited{Code: code})
 	}
 
 	return c.Send(Done{})
