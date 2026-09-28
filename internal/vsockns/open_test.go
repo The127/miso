@@ -25,3 +25,14 @@ func TestANamespaceForVMsKeepsItsVsockToItselfOrIsRefused(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "local", mode)
 }
+
+func TestANamespaceThatCannotBeMadeLocalIsRefused(t *testing.T) {
+	// arrange
+	vsockns.NoChildMode(t)
+
+	// act
+	_, err := vsockns.Open()
+
+	// assert
+	assert.ErrorIs(t, err, vsockns.ErrNotPrivate)
+}

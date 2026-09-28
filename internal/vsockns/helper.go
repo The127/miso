@@ -31,7 +31,7 @@ func Helper() {
 	// is done here
 	runtime.LockOSThread()
 
-	if err := enter(); err != nil {
+	if err := enter(os.Args[1]); err != nil {
 		_, _ = fmt.Fprintln(conn, err)
 		os.Exit(1)
 	}
@@ -44,8 +44,9 @@ func Helper() {
 // enter makes the namespaces started from here local, and moves this thread
 // into one. The helper's own namespace takes the host's mode, which only
 // root may change, and only once.
-func enter() error {
-	if err := os.WriteFile("/proc/sys/net/vsock/child_ns_mode", []byte("local"), 0); err != nil {
+func enter(childMode string) error {
+	//nolint:gosec // miso names the path when it starts its own helper
+	if err := os.WriteFile(childMode, []byte("local"), 0); err != nil {
 		return err
 	}
 
