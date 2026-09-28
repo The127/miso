@@ -2,6 +2,8 @@ package imagefile
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -19,9 +21,13 @@ func readRun(line int, arguments string) ([]Instruction, error) {
 	var flags []string
 	command := arguments
 	for strings.HasPrefix(command, "--") {
-		var flag string
-		flag, command, _ = strings.Cut(command, " ")
-		flags = append(flags, flag)
+		end := strings.IndexAny(command, " \t")
+		if end < 0 {
+			end = len(command)
+		}
+
+		flags = append(flags, command[:end])
+		command = strings.TrimLeft(command[end:], " \t")
 	}
 
 	_, options, err := splitOptions(flags)
@@ -29,7 +35,8 @@ func readRun(line int, arguments string) ([]Instruction, error) {
 		return nil, err
 	}
 
-	for name, value := range options {
+	for _, name := range slices.Sorted(maps.Keys(options)) {
+		value := options[name]
 		if name != "network" {
 			return nil, fmt.Errorf("does not know --%s", name)
 		}

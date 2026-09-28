@@ -98,3 +98,41 @@ func TestRunWithoutACommandIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, imagefile.ErrArguments)
 	assert.ErrorContains(t, err, "needs a command")
 }
+
+func TestRunOptionsMayBeSeparatedByATab(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --network=none\tmake test\n"
+
+	// act
+	stages, err := imagefile.Parse(source)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []imagefile.Instruction{
+		imagefile.Run{Line: 2, Offline: true, Command: "make test"},
+	}, stages[0].Instructions)
+}
+
+func TestRunOptionsMayBeSeparatedByMoreThanOneSpace(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --network=none   --network=default  make test\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--network twice")
+}
+
+func TestRunWithSeveralUnknownFlagsNamesTheAlphabeticallyFirstOne(t *testing.T) {
+	// arrange
+	source := "FROM debian:sid\nRUN --zeta=1 --alpha=1 --mid=1 make test\n"
+
+	// act
+	_, err := imagefile.Parse(source)
+
+	// assert
+	assert.ErrorIs(t, err, imagefile.ErrArguments)
+	assert.ErrorContains(t, err, "--alpha")
+}
