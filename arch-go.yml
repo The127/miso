@@ -509,8 +509,8 @@ dependenciesRules:
   # through the protocol, finds its cache disk through disk, mounts base
   # disks through basemount, copies them through tree, puts what a COPY
   # sends through place and checks it through copydigest, keeps layers through layer and runs steps on them
-  # through sandbox. It touches the kernel, and never starts a process or
-  # opens a connection itself
+  # through sandbox, and finds what boots a disk through kernel. It touches
+  # the kernel, and never starts a process or opens a connection itself
   - package: '**.internal.agent$'
     shouldOnlyDependsOn:
       internal:
@@ -522,6 +522,7 @@ dependenciesRules:
         - '**.internal.copydigest$'
         - '**.internal.layer$'
         - '**.internal.sandbox$'
+        - '**.internal.kernel$'
     shouldNotDependsOn:
       standard:
         - os/exec
