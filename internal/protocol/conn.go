@@ -20,6 +20,9 @@ type Conn struct {
 	agent string
 	r     io.Reader
 	w     io.Writer
+
+	// what follows the entry received last, as far as it is not read yet
+	content io.Reader
 }
 
 // New speaks as the given agent, reads what the other side sends from r and
@@ -54,6 +57,15 @@ func (c *Conn) Send(message Message) error {
 // Receive reads what the other side sent next, and not a byte further, so
 // that raw bytes may follow a message.
 func (c *Conn) Receive() (Message, error) {
+	// content left unread would be taken for the next message
+	if c.content != nil {
+		if _, err := io.Copy(io.Discard, c.content); err != nil {
+			return nil, err
+		}
+
+		c.content = nil
+	}
+
 	var length [4]byte
 	if _, err := io.ReadFull(c.r, length[:]); err != nil {
 		return nil, err
@@ -82,6 +94,10 @@ func (c *Conn) Receive() (Message, error) {
 	message := e.open()
 	if message == nil {
 		return nil, ErrUnknownMessage
+	}
+
+	if entry, isEntry := message.(Entry); isEntry {
+		c.content = io.LimitReader(c.r, entry.Size)
 	}
 
 	return message, nil

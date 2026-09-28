@@ -14,7 +14,8 @@ func (c *Conn) SendEntry(entry Entry, content io.Reader) error {
 	return err
 }
 
-// Content is what follows an entry just received.
-func (c *Conn) Content(entry Entry) io.Reader {
-	return io.LimitReader(c.r, entry.Size)
+// Content is what follows the entry received last. The next Receive skips
+// what is left of it.
+func (c *Conn) Content() io.Reader {
+	return c.content
 }
