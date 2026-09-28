@@ -26,12 +26,7 @@ func answerFailed(conn int, failed error) error {
 // answer is the helper's next answer: what it said and handed over, or why
 // the question failed.
 func (n *Namespace) answer() (string, []int, error) {
-	return answerOn(n.conn)
-}
-
-// answerOn is the next answer the helper sends on a connection.
-func answerOn(conn int) (string, []int, error) {
-	said, files, err := hear(conn)
+	said, files, err := hear(n.conn)
 	if err != nil {
 		return "", nil, err
 	}

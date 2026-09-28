@@ -1,16 +1,10 @@
 package vsockns
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"math"
 	"os"
-	"os/exec"
 	"runtime"
-	"strconv"
 	"strings"
-	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -25,10 +19,6 @@ const helperConn = 3
 const (
 	modeQuestion   = "mode"
 	socketQuestion = "socket"
-	startQuestion  = "start"
-
-	// what miso sends on a program's report to stop it
-	killWord = "kill"
 )
 
 // Helper holds a vsock namespace when miso was started as its helper, and
@@ -36,15 +26,6 @@ const (
 func Helper() {
 	if os.Args[0] != helperName {
 		return
-	}
-
-	// what the helper runs must not be able to talk to miso as the helper,
-	// nor hold what miso's own caller left open for it
-	syscall.CloseOnExec(helperConn)
-
-	if err := unix.CloseRange(helperConn+1, math.MaxUint32, unix.CLOSE_RANGE_CLOEXEC); err != nil {
-		_ = answerFailed(helperConn, err)
-		os.Exit(1)
 	}
 
 	// the inner namespace is this thread's alone, so everything inside it
@@ -80,7 +61,6 @@ type handler func(argument string, files []int) (string, []int, error)
 var handlers = map[string]handler{
 	modeQuestion:   mode,
 	socketQuestion: socket,
-	startQuestion:  start,
 }
 
 // serve answers miso until it hangs up.
@@ -143,106 +123,4 @@ func socket(string, []int) (string, []int, error) {
 	}
 
 	return "", []int{fd}, nil
-}
-
-// start starts a program from this thread, so in the namespace, with the
-// first file miso lent as its stdout, and tells on the second how it ended.
-func start(argument string, files []int) (string, []int, error) {
-	if len(files) != 2 {
-		return "", nil, fmt.Errorf("a program needs its stdout and its report, it got %d files", len(files))
-	}
-
-	var args []string
-	if err := json.Unmarshal([]byte(argument), &args); err != nil {
-		return "", nil, err
-	}
-
-	if len(args) == 0 {
-		return "", nil, errors.New("a program needs a name")
-	}
-
-	// copies of their own, since the files are only lent, and ones the
-	// program does not inherit
-	own, err := unix.FcntlInt(uintptr(files[0]), unix.F_DUPFD_CLOEXEC, 0)
-	if err != nil {
-		return "", nil, err
-	}
-
-	stdout := os.NewFile(uintptr(own), "stdout")
-	defer func() { _ = stdout.Close() }()
-
-	report, err := unix.FcntlInt(uintptr(files[1]), unix.F_DUPFD_CLOEXEC, 0)
-	if err != nil {
-		return "", nil, err
-	}
-
-	//nolint:gosec // miso names the program it runs in its own namespace
-	program := exec.Command(args[0], args[1:]...)
-	program.Stdout = stdout
-	// a program ends with the helper, whether miso closed the namespace or
-	// died. The thread it is started from lives as long as the helper
-	program.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
-
-	if err := program.Start(); err != nil {
-		_ = unix.Close(report)
-
-		return "", nil, err
-	}
-
-	// the waiter alone closes the report, once it has woken the listener
-	// and the listener is done, so neither uses the number after it went
-	listening := make(chan struct{})
-	go func() {
-		defer close(listening)
-
-		stopOnWord(program, report)
-	}()
-	go tellEnd(program, report, listening)
-
-	return "", nil, nil
-}
-
-// stopOnWord kills the program once miso says so, or its report ends. It
-// listens on after a kill, until the waiter has told how the program ended.
-func stopOnWord(program *exec.Cmd, report int) {
-	for {
-		said, _, err := hear(report)
-		if err != nil {
-			// miso is gone, or the waiter is done, and a program that ended
-			// is not killed
-			_ = program.Process.Kill()
-
-			return
-		}
-
-		if said == killWord {
-			_ = program.Process.Kill()
-		}
-	}
-}
-
-// tellEnd tells miso how the program ended, then closes the report once
-// the listener is done with it.
-func tellEnd(program *exec.Cmd, report int, listening <-chan struct{}) {
-	defer func() {
-		_ = unix.Shutdown(report, unix.SHUT_RDWR)
-		<-listening
-		_ = unix.Close(report)
-	}()
-
-	err := program.Wait()
-	var exited *exec.ExitError
-	if err != nil && !errors.As(err, &exited) {
-		_ = answerFailed(report, err)
-
-		return
-	}
-
-	if status, ok := program.ProcessState.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-		_ = answerFailed(report, fmt.Errorf("the program was %s", program.ProcessState))
-
-		return
-	}
-
-	_ = answerOK(report, strconv.Itoa(program.ProcessState.ExitCode()))
 }
