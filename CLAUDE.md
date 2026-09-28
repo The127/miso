@@ -73,6 +73,13 @@ CONTRIBUTING for the contributor-facing policy):
 
 The whole repository is a single Go module licensed under AGPL-3.0-or-later.
 
+## Claude sessions
+
+How a Claude session works in this repo, and how a fresh clone in the
+cloud gets its tooling:
+
+@CLAUDE.session.md
+
 ## Personal extensions
 
 Machine- or person-specific notes go in `CLAUDE.local.md` (untracked):
