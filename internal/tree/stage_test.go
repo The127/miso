@@ -184,3 +184,24 @@ func TestALinkOfAStageStaysTheLinkItIs(t *testing.T) {
 	assert.Equal(t, uint32(1234), stat.Uid)
 	assert.True(t, then.Equal(info.ModTime()), "modified %s", info.ModTime())
 }
+
+func TestTheWholeStageIsCopiedFromItsRoot(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "etc"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "etc", "os-release"), []byte("ID=miso\n"), 0o600))
+	require.NoError(t, os.Symlink("usr/bin", filepath.Join(stage, "bin")))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/"}, below("/"))
+
+	// assert
+	require.NoError(t, err)
+	release, err := os.ReadFile(filepath.Join(image, "etc", "os-release"))
+	require.NoError(t, err)
+	assert.Equal(t, "ID=miso\n", string(release))
+	text, err := os.Readlink(filepath.Join(image, "bin"))
+	require.NoError(t, err)
+	assert.Equal(t, "usr/bin", text)
+}
