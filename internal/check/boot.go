@@ -67,7 +67,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	}()
 
 	if err := Booted(notices); err != nil {
-		return nil, notBooted(vm, err)
+		return nil, notBooted(ctx, vm, err)
 	}
 
 	var results []Result
@@ -90,9 +90,13 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	return results, nil
 }
 
-// notBooted is why a wait for the boot ended without it, the VM's own
-// reason once it stopped.
-func notBooted(vm *qemu.VM, err error) error {
+// notBooted is why a wait for the boot ended without it: the caller gave
+// up, or the VM's own reason once it stopped.
+func notBooted(ctx context.Context, vm *qemu.VM, err error) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	select {
 	case <-vm.Done():
 		return fmt.Errorf("the image did not boot: %w", vm.Err())

@@ -3,6 +3,7 @@
 package check_test
 
 import (
+	"context"
 	"io"
 	"testing"
 	"time"
@@ -58,4 +59,23 @@ func TestAnImageThatCannotBeBootedFailsItsChecksWithQEMUsReasonWithKVM(t *testin
 	case <-time.After(30 * time.Second):
 		assert.Fail(t, "the checks of an image that cannot boot never ended")
 	}
+}
+
+func TestChecksGivenUpBeforeTheBootSayTheyWereGivenUpWithKVM(t *testing.T) {
+	// arrange
+	boot := check.Boot{
+		Driver:   qemu.Driver{Binary: "qemu-system-x86_64"},
+		Firmware: kvmtest.Firmware(t),
+		Image:    kvmtest.Image(t, "debian:sid"),
+		Dir:      t.TempDir(),
+		Console:  io.Discard,
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	// act
+	_, err := boot.Run(ctx, []string{"true"})
+
+	// assert
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
