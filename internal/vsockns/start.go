@@ -10,8 +10,10 @@ import (
 
 // Program is one started inside the namespace.
 type Program struct {
-	// where the helper tells how the program ended
-	report int
+	// where the helper tells how the program ended. A file rather than a
+	// number, so that a use after Wait closed it fails instead of reaching
+	// whatever took the number since
+	report *os.File
 }
 
 // Start starts a program inside the namespace, writing to stdout, and
@@ -36,17 +38,45 @@ func (n *Namespace) Start(args []string, stdout *os.File) (*Program, error) {
 		return nil, err
 	}
 
-	return &Program{report: pair[0]}, nil
+	return &Program{report: os.NewFile(uintptr(pair[0]), "report")}, nil
 }
 
 // Wait waits until the program ended and gives its exit code.
 func (p *Program) Wait() (int, error) {
-	defer func() { _ = unix.Close(p.report) }()
+	defer func() { _ = p.report.Close() }()
 
-	said, _, err := answerOn(p.report)
+	var said string
+	err := p.onReport(func(report int) error {
+		var err error
+		said, _, err = answerOn(report)
+
+		return err
+	})
 	if err != nil {
 		return 0, err
 	}
 
 	return strconv.Atoi(said)
+}
+
+// Kill stops the program. Wait then tells that it was stopped.
+func (p *Program) Kill() error {
+	return p.onReport(func(report int) error {
+		return say(report, killWord)
+	})
+}
+
+// onReport does something with the report's fd while it is still open.
+func (p *Program) onReport(do func(report int) error) error {
+	raw, err := p.report.SyscallConn()
+	if err != nil {
+		return err
+	}
+
+	var failed error
+	if err := raw.Control(func(fd uintptr) { failed = do(int(fd)) }); err != nil {
+		return err
+	}
+
+	return failed
 }

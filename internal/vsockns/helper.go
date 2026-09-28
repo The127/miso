@@ -27,6 +27,9 @@ const (
 	socketQuestion = "socket"
 	runQuestion    = "run"
 	startQuestion  = "start"
+
+	// what miso sends on a program's report to stop it
+	killWord = "kill"
 )
 
 // Helper holds a vsock namespace when miso was started as its helper, and
@@ -218,19 +221,60 @@ func start(argument string, files []int) (string, []int, error) {
 		return "", nil, err
 	}
 
+	// the waiter alone closes the report, once it has woken the listener
+	// and the listener is done, so neither uses the number after it went
+	listening := make(chan struct{})
 	go func() {
-		defer func() { _ = unix.Close(report) }()
+		defer close(listening)
 
-		err := program.Wait()
-		var exited *exec.ExitError
-		if err != nil && !errors.As(err, &exited) {
-			_ = answerFailed(report, err)
+		stopOnWord(program, report)
+	}()
+	go tellEnd(program, report, listening)
+
+	return "", nil, nil
+}
+
+// stopOnWord kills the program once miso says so, or its report ends. It
+// listens on after a kill, until the waiter has told how the program ended.
+func stopOnWord(program *exec.Cmd, report int) {
+	for {
+		said, _, err := hear(report)
+		if err != nil {
+			// miso is gone, or the waiter is done, and a program that ended
+			// is not killed
+			_ = program.Process.Kill()
 
 			return
 		}
 
-		_ = answerOK(report, strconv.Itoa(program.ProcessState.ExitCode()))
+		if said == killWord {
+			_ = program.Process.Kill()
+		}
+	}
+}
+
+// tellEnd tells miso how the program ended, then closes the report once
+// the listener is done with it.
+func tellEnd(program *exec.Cmd, report int, listening <-chan struct{}) {
+	defer func() {
+		_ = unix.Shutdown(report, unix.SHUT_RDWR)
+		<-listening
+		_ = unix.Close(report)
 	}()
 
-	return "", nil, nil
+	err := program.Wait()
+	var exited *exec.ExitError
+	if err != nil && !errors.As(err, &exited) {
+		_ = answerFailed(report, err)
+
+		return
+	}
+
+	if status, ok := program.ProcessState.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+		_ = answerFailed(report, fmt.Errorf("the program was %s", program.ProcessState))
+
+		return
+	}
+
+	_ = answerOK(report, strconv.Itoa(program.ProcessState.ExitCode()))
 }
