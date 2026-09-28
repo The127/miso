@@ -2,6 +2,7 @@ package check
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -54,8 +55,19 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		return nil, err
 	}
 
+	// a VM that stops ends the wait for its boot, the notices can come from
+	// nobody else
+	go func() {
+		select {
+		case <-vm.Done():
+		case <-ctx.Done():
+		}
+
+		_ = notices.Close()
+	}()
+
 	if err := Booted(notices); err != nil {
-		return nil, err
+		return nil, notBooted(vm, err)
 	}
 
 	var results []Result
@@ -76,6 +88,17 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	}
 
 	return results, nil
+}
+
+// notBooted is why a wait for the boot ended without it, the VM's own
+// reason once it stopped.
+func notBooted(vm *qemu.VM, err error) error {
+	select {
+	case <-vm.Done():
+		return fmt.Errorf("the image did not boot: %w", vm.Err())
+	default:
+		return fmt.Errorf("the image did not boot: %w", err)
+	}
 }
 
 // flash writes the firmware where QEMU reads it, the vars a copy of their
