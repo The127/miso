@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/tree"
@@ -63,4 +64,23 @@ func TestAFileOfAStageKeepsItsOwnerModeAndTimes(t *testing.T) {
 	assert.Equal(t, uint32(5678), stat.Gid)
 	assert.Equal(t, os.ModeSetuid|0o755, info.Mode())
 	assert.True(t, then.Equal(info.ModTime()), "modified %s", info.ModTime())
+}
+
+func TestAFileCapabilityOfAStageOutlivesItsOwnerChange(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	ping := filepath.Join(stage, "ping")
+	require.NoError(t, os.WriteFile(ping, nil, 0o600))
+	require.NoError(t, os.Chown(ping, 1234, 1234))
+	require.NoError(t, unix.Lsetxattr(ping, "security.capability", netRaw, 0))
+	require.NoError(t, unix.Lsetxattr(ping, "user.note", []byte("file"), 0))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/ping"}, onto("/ping"))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, netRaw, xattr(t, filepath.Join(image, "ping"), "security.capability"))
+	assert.Equal(t, "file", string(xattr(t, filepath.Join(image, "ping"), "user.note")))
 }

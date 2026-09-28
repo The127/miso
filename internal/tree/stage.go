@@ -60,6 +60,10 @@ func into(from *os.Root, image *place.Root, source string, land Land) error {
 		return err
 	}
 
+	if kept.Xattrs, err = fileXattrs(in); err != nil {
+		return &fs.PathError{Op: "getxattr", Path: source, Err: err}
+	}
+
 	return image.Keep(target, kept)
 }
 

@@ -1,6 +1,7 @@
 package place
 
 import (
+	"fmt"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -14,10 +15,19 @@ type Meta struct {
 	Mode uint32
 
 	Atime, Mtime unix.Timespec
+
+	Xattrs []Xattr
 }
 
-// Keep gives what is at a path of the image the owner, mode and times it
-// had where it was copied from, never following a link at the path.
+// Xattr is an extended attribute with its value.
+type Xattr struct {
+	Name  string
+	Value []byte
+}
+
+// Keep gives what is at a path of the image the owner, mode, extended
+// attributes and times it had where it was copied from, never following a
+// link at the path.
 func (r *Root) Keep(path string, meta Meta) error {
 	parent, name, err := r.parent(path)
 	if err != nil {
@@ -33,6 +43,14 @@ func (r *Root) Keep(path string, meta Meta) error {
 
 	if err := unix.Fchmodat(parent, name, meta.Mode, 0); err != nil {
 		return &os.PathError{Op: "chmod", Path: path, Err: err}
+	}
+
+	// after the owner too, whose change clears a file capability
+	at := fmt.Sprintf("/proc/self/fd/%d/%s", parent, name)
+	for _, xattr := range meta.Xattrs {
+		if err := unix.Lsetxattr(at, xattr.Name, xattr.Value, 0); err != nil {
+			return &os.PathError{Op: "setxattr " + xattr.Name, Path: path, Err: err}
+		}
 	}
 
 	if err := unix.UtimesNanoAt(parent, name, []unix.Timespec{meta.Atime, meta.Mtime}, unix.AT_SYMLINK_NOFOLLOW); err != nil {

@@ -2,8 +2,11 @@ package tree
 
 import (
 	"bytes"
+	"os"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/The127/miso/internal/place"
 )
 
 // xattrs gives a copy the extended attributes of what it was copied from,
@@ -94,6 +97,56 @@ func get(path, attribute string) ([]byte, error) {
 	value := make([]byte, size)
 
 	size, err = unix.Lgetxattr(path, attribute, value)
+	if err != nil {
+		return nil, err
+	}
+
+	return value[:size], nil
+}
+
+// fileXattrs is every extended attribute of an open file with its value.
+func fileXattrs(file *os.File) ([]place.Xattr, error) {
+	fd := int(file.Fd())
+
+	size, err := unix.Flistxattr(fd, nil)
+	if err != nil || size == 0 {
+		return nil, err
+	}
+
+	names := make([]byte, size)
+
+	size, err = unix.Flistxattr(fd, names)
+	if err != nil {
+		return nil, err
+	}
+
+	var xattrs []place.Xattr
+
+	for name := range bytes.SplitSeq(names[:size], []byte{0}) {
+		if len(name) == 0 {
+			continue
+		}
+
+		value, err := fileXattr(fd, string(name))
+		if err != nil {
+			return nil, err
+		}
+
+		xattrs = append(xattrs, place.Xattr{Name: string(name), Value: value})
+	}
+
+	return xattrs, nil
+}
+
+func fileXattr(fd int, name string) ([]byte, error) {
+	size, err := unix.Fgetxattr(fd, name, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	value := make([]byte, size)
+
+	size, err = unix.Fgetxattr(fd, name, value)
 	if err != nil {
 		return nil, err
 	}
