@@ -48,19 +48,34 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
-	vm, err := b.Driver.Start(ctx, qemu.Machine{
+	vm, err := b.start(ctx, flash, notices.Port())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := b.awaitBoot(ctx, vm, notices); err != nil {
+		return nil, err
+	}
+
+	return runChecks(vm, checks)
+}
+
+// start is the VM the image boots in, told where to send its notices.
+func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (*qemu.VM, error) {
+	return b.Driver.Start(ctx, qemu.Machine{
 		Boot:        flash,
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},
 		Console:     b.Console,
-		Credentials: Credentials(notices.Port()),
+		Credentials: Credentials(notifyPort),
 		Temp:        b.Dir,
 	})
-	if err != nil {
-		return nil, err
-	}
+}
 
+// awaitBoot waits until the image has booted, the VM stopped, the caller
+// gave up or the patience ran out.
+func (b Boot) awaitBoot(ctx context.Context, vm *qemu.VM, notices *vsock.Listener) error {
 	// a VM that stops ends the wait for its boot, the notices can come from
 	// nobody else
 	go func() {
@@ -81,7 +96,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	defer patience.Stop()
 
 	if err := Booted(notices); err != nil {
-		return nil, b.notBooted(ctx, vm, late, err)
+		return b.notBooted(ctx, vm, late, err)
 	}
 
 	// the notices after the boot were closed with it. Stop only says the
@@ -89,9 +104,14 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	if !patience.Stop() {
 		<-late
 
-		return nil, b.notBooted(ctx, vm, late, nil)
+		return b.notBooted(ctx, vm, late, nil)
 	}
 
+	return nil
+}
+
+// runChecks runs each check on a connection of its own.
+func runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
 	var results []Result
 	for _, check := range checks {
 		conn, err := vsock.Dial(vm.CID(), shellPort)
