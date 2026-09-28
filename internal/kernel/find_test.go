@@ -18,7 +18,7 @@ func TestTheOneKernelOfAnImageIsFoundWithTheInitrdBesideIt(t *testing.T) {
 	}
 
 	// act
-	found, err := kernel.Find(image)
+	found, err := kernel.Find(image, "")
 
 	// assert
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestAnInitrdOfDebianIsFoundInBoot(t *testing.T) {
 	}
 
 	// act
-	found, err := kernel.Find(image)
+	found, err := kernel.Find(image, "")
 
 	// assert
 	require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestModulesLeftOfARemovedKernelAreNoKernel(t *testing.T) {
 	}
 
 	// act
-	found, err := kernel.Find(image)
+	found, err := kernel.Find(image, "")
 
 	// assert
 	require.NoError(t, err)
@@ -70,11 +70,28 @@ func TestTheNewestOfSeveralKernelsIsFound(t *testing.T) {
 	}
 
 	// act
-	found, err := kernel.Find(image)
+	found, err := kernel.Find(image, "")
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "7.3.1+deb14-amd64", found.Version)
+}
+
+func TestAWantedKernelIsFoundOverANewerOne(t *testing.T) {
+	// arrange
+	image := fstest.MapFS{
+		"usr/lib/modules/7.2.8+deb14-amd64/vmlinuz": {},
+		"usr/lib/modules/7.2.8+deb14-amd64/initrd":  {},
+		"usr/lib/modules/7.3.1+deb14-amd64/vmlinuz": {},
+		"usr/lib/modules/7.3.1+deb14-amd64/initrd":  {},
+	}
+
+	// act
+	found, err := kernel.Find(image, "7.2.8+deb14-amd64")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "7.2.8+deb14-amd64", found.Version)
 }
 
 func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
@@ -84,7 +101,7 @@ func TestAnImageWithoutModulesHasNoKernel(t *testing.T) {
 	}
 
 	// act
-	_, err := kernel.Find(image)
+	_, err := kernel.Find(image, "")
 
 	// assert
 	require.ErrorIs(t, err, kernel.ErrNoKernel)
@@ -98,7 +115,7 @@ func TestAnImageWithOnlyModulesLeftHasNoKernel(t *testing.T) {
 	}
 
 	// act
-	_, err := kernel.Find(image)
+	_, err := kernel.Find(image, "")
 
 	// assert
 	require.ErrorIs(t, err, kernel.ErrNoKernel)
@@ -113,7 +130,7 @@ func TestAnInitrdOfFedoraIsFoundInBoot(t *testing.T) {
 	}
 
 	// act
-	found, err := kernel.Find(image)
+	found, err := kernel.Find(image, "")
 
 	// assert
 	require.NoError(t, err)
@@ -127,7 +144,7 @@ func TestAKernelWithoutAnInitrdFailsNamingWhereItLooked(t *testing.T) {
 	}
 
 	// act
-	_, err := kernel.Find(image)
+	_, err := kernel.Find(image, "")
 
 	// assert
 	require.ErrorIs(t, err, kernel.ErrNoInitrd)

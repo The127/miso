@@ -23,8 +23,9 @@ type Kernel struct {
 	Initrd  string
 }
 
-// Find finds the kernel of an image and the initrd made for it.
-func Find(image fs.FS) (Kernel, error) {
+// Find finds the kernel of an image and the initrd made for it: the kernel
+// of the wanted version, or the newest one when none is wanted.
+func Find(image fs.FS, wanted string) (Kernel, error) {
 	versions, err := fs.ReadDir(image, modules)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return Kernel{}, err
@@ -43,6 +44,10 @@ func Find(image fs.FS) (Kernel, error) {
 
 	// the kernel systemd-boot would start first
 	version := slices.MaxFunc(installed, vercmp.Compare)
+	if wanted != "" {
+		version = wanted
+	}
+
 	initrd, err := initrdOf(image, version)
 	if err != nil {
 		return Kernel{}, err
