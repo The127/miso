@@ -68,6 +68,20 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the console reads and writes the serial port of a machine it is handed
+  # as a reader and a writer. It knows nothing of ours, opens nothing and
+  # never touches a process, the network or the kernel, so it is tested
+  # without a machine
+  - package: '**.internal.console$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the listing writes a plan out for eyes and for diff. It knows the plan
   # and the language, writes to the writer it is handed and opens nothing
   - package: '**.internal.listing$'
