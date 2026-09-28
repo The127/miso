@@ -506,3 +506,23 @@ func TestACopyThatFailsBeforeItReadsDoesNotAskForItsEntries(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Failed{Reason: "mount layer abc: no such file or directory"}, failed)
 }
+
+func TestAHostGoneBeforeAllEntriesAreSentFailsTheCopy(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Copy{Key: "abc", Sources: []string{"etc"}, Destination: "/etc"}))
+	require.NoError(t, host.SendEntry(protocol.Entry{Kind: "file", Path: "motd", Mode: 0o644, Size: 6}, strings.NewReader("hello\n")))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(&reading{})
+
+	// assert
+	require.NoError(t, err)
+	_, err = host.Receive()
+	require.NoError(t, err)
+	failed, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Failed{Reason: "host gone before all entries were sent: unexpected EOF"}, failed)
+}

@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
@@ -28,6 +29,11 @@ func (c *Conn) Next() (Entry, io.Reader, error) {
 	}
 
 	message, err := c.Receive()
+	if errors.Is(err, io.EOF) {
+		// io.EOF would tell the runner that it has every entry
+		return Entry{}, nil, fmt.Errorf("host gone before all entries were sent: %w", io.ErrUnexpectedEOF)
+	}
+
 	if err != nil {
 		return Entry{}, nil, err
 	}
