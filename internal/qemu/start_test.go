@@ -317,3 +317,19 @@ func TestQEMUHoldsNothingMisosCallerLeftOpen(t *testing.T) {
 	require.NotEmpty(t, targets)
 	assert.NotContains(t, strings.Split(string(targets), "\n"), left)
 }
+
+func TestADriverClaimsItsCIDOnTheDeviceItIsHanded(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	driver.OpenVsock = func() (*os.File, error) { return os.Open(os.DevNull) }
+	var told error
+	driver.WithoutVsock = func(why error) { told = why }
+
+	// act
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	assert.ErrorIs(t, told, unix.ENOTTY)
+}

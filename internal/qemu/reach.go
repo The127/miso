@@ -19,8 +19,8 @@ type reach struct {
 
 // reachFor claims a CID on the host's vsock device, or else gives the
 // machine a virtio port.
-func reachFor(vsockDevice string) (reach, error) {
-	device, cid, withoutVsock := holdCID(vsockDevice)
+func reachFor(open func() (*os.File, error)) (reach, error) {
+	device, cid, withoutVsock := holdCID(open)
 	if withoutVsock == nil {
 		return reach{args: vsock(cid, deviceFD), machine: device, cid: cid}, nil
 	}

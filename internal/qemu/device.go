@@ -26,8 +26,8 @@ func openVsock(path string) (*os.File, error) {
 
 // holdCID opens the device and claims a CID on it, held for as long as the
 // device stays open.
-func holdCID(path string) (*os.File, uint32, error) {
-	device, err := openVsock(path)
+func holdCID(open func() (*os.File, error)) (*os.File, uint32, error) {
+	device, err := open()
 	if err != nil {
 		return nil, 0, err
 	}

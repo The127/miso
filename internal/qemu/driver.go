@@ -22,6 +22,10 @@ type Driver struct {
 	// Vsock is the host's vsock device, /dev/vhost-vsock when empty.
 	Vsock string
 
+	// OpenVsock opens the vsock device the machine runs on, the one at Vsock
+	// when nil. A VM is in the network namespace its device was opened in.
+	OpenVsock func() (*os.File, error)
+
 	// WithoutKVM hears why the machine runs on TCG. It may be nil.
 	WithoutKVM func(why error)
 
@@ -47,12 +51,7 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 		d.withoutKVM(why)
 	}
 
-	vsockDevice := d.Vsock
-	if vsockDevice == "" {
-		vsockDevice = vhostVsock
-	}
-
-	reach, err := reachFor(vsockDevice)
+	reach, err := reachFor(d.openVsock)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +87,20 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 	vm.withoutKVM = why != nil
 
 	return vm, nil
+}
+
+// openVsock opens the device the machine runs on.
+func (d Driver) openVsock() (*os.File, error) {
+	if d.OpenVsock != nil {
+		return d.OpenVsock()
+	}
+
+	path := d.Vsock
+	if path == "" {
+		path = vhostVsock
+	}
+
+	return openVsock(path)
 }
 
 // withoutKVM is only a notice, the machine still runs, only slower.
