@@ -1,8 +1,11 @@
 package vsockns
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 
@@ -19,6 +22,7 @@ const helperConn = 3
 const (
 	modeQuestion   = "mode"
 	socketQuestion = "socket"
+	runQuestion    = "run"
 )
 
 // Helper holds a vsock namespace when miso was started as its helper, and
@@ -54,18 +58,20 @@ func enter(childMode string) error {
 	return unix.Unshare(unix.CLONE_NEWNET)
 }
 
-// handler answers one kind of question, with the files it hands over.
-type handler func(argument string) (string, []int, error)
+// handler answers one kind of question, with the files it hands over. It
+// owns the files miso handed with the question.
+type handler func(argument string, files []int) (string, []int, error)
 
 var handlers = map[string]handler{
 	modeQuestion:   mode,
 	socketQuestion: socket,
+	runQuestion:    run,
 }
 
 // serve answers miso until it hangs up.
 func serve(conn int) {
 	for {
-		asked, _, err := hear(conn)
+		asked, received, err := hear(conn)
 		if err != nil {
 			return
 		}
@@ -79,7 +85,7 @@ func serve(conn int) {
 			continue
 		}
 
-		text, files, err := handle(argument)
+		text, files, err := handle(argument, received)
 		if err != nil {
 			_ = answerFailed(conn, err)
 
@@ -96,7 +102,7 @@ func serve(conn int) {
 }
 
 // mode is the vsock mode of the namespace the helper works in.
-func mode(string) (string, []int, error) {
+func mode(string, []int) (string, []int, error) {
 	said, err := os.ReadFile("/proc/sys/net/vsock/ns_mode")
 	if err != nil {
 		return "", nil, err
@@ -106,11 +112,37 @@ func mode(string) (string, []int, error) {
 }
 
 // socket is a fresh vsock socket made inside.
-func socket(string) (string, []int, error) {
+func socket(string, []int) (string, []int, error) {
 	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return "", nil, err
 	}
 
 	return "", []int{fd}, nil
+}
+
+// run runs a program to its end, from this thread, so in the namespace, with
+// the file miso handed as its stdout.
+func run(argument string, files []int) (string, []int, error) {
+	if len(files) != 1 {
+		return "", nil, fmt.Errorf("a program needs its stdout, it got %d files", len(files))
+	}
+
+	stdout := os.NewFile(uintptr(files[0]), "stdout")
+	defer func() { _ = stdout.Close() }()
+
+	var args []string
+	if err := json.Unmarshal([]byte(argument), &args); err != nil {
+		return "", nil, err
+	}
+
+	if len(args) == 0 {
+		return "", nil, errors.New("a program needs a name")
+	}
+
+	//nolint:gosec // miso names the program it runs in its own namespace
+	program := exec.Command(args[0], args[1:]...)
+	program.Stdout = stdout
+
+	return "", nil, program.Run()
 }
