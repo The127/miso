@@ -16,25 +16,21 @@ const (
 // read takes the firmware out of a package.
 func read(pkg io.Reader) (Firmware, error) {
 	var found Firmware
+	wanted := map[string]*[]byte{codeFile: &found.Code, varsFile: &found.Vars}
 
 	files, failed := deb.Files(pkg)
 	for name, file := range files {
-		switch name {
-		case codeFile:
-			code, err := io.ReadAll(file)
-			if err != nil {
-				return Firmware{}, err
-			}
-
-			found.Code = code
-		case varsFile:
-			vars, err := io.ReadAll(file)
-			if err != nil {
-				return Firmware{}, err
-			}
-
-			found.Vars = vars
+		into, isWanted := wanted[name]
+		if !isWanted {
+			continue
 		}
+
+		content, err := io.ReadAll(file)
+		if err != nil {
+			return Firmware{}, err
+		}
+
+		*into = content
 	}
 
 	if err := failed(); err != nil {
