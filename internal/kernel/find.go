@@ -27,16 +27,9 @@ type Kernel struct {
 // Find finds the kernel of an image and the initrd made for it: the kernel
 // of the wanted version, or the newest one when none is wanted.
 func Find(image fs.FS, wanted string) (Kernel, error) {
-	versions, err := fs.ReadDir(image, modules)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	installed, err := installedIn(image)
+	if err != nil {
 		return Kernel{}, err
-	}
-
-	var installed []string
-	for _, entry := range versions {
-		if _, err := fs.Stat(image, path.Join(modules, entry.Name(), "vmlinuz")); err == nil {
-			installed = append(installed, entry.Name())
-		}
 	}
 
 	if len(installed) == 0 {
@@ -64,4 +57,22 @@ func Find(image fs.FS, wanted string) (Kernel, error) {
 		Linux:   path.Join(modules, version, "vmlinuz"),
 		Initrd:  initrd,
 	}, nil
+}
+
+// installedIn are the versions of the kernels an image has. Modules a
+// removed kernel left behind are none.
+func installedIn(image fs.FS) ([]string, error) {
+	versions, err := fs.ReadDir(image, modules)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	var installed []string
+	for _, entry := range versions {
+		if _, err := fs.Stat(image, path.Join(modules, entry.Name(), "vmlinuz")); err == nil {
+			installed = append(installed, entry.Name())
+		}
+	}
+
+	return installed, nil
 }
