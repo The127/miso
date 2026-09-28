@@ -4,6 +4,7 @@ package agent_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,13 +34,18 @@ func TestADiskOfAnImageWithoutAKernelFailsNamingIt(t *testing.T) {
 	assert.ErrorIs(t, err, kernel.ErrNoKernel)
 }
 
-// fakeTools adds to the base a systemd-repart that writes disk into the
-// last path it is given, and answers the layers of those tools.
-func fakeTools(t *testing.T, worker *agent.Agent) []string {
+// writesDisk is a systemd-repart that writes disk into the last path it is
+// given.
+const writesDisk = `for last; do :; done
+echo disk > "$last"`
+
+// fakeTools adds to the base a systemd-repart that runs the script, and
+// answers the layers of those tools.
+func fakeTools(t *testing.T, worker *agent.Agent, repart string) []string {
 	t.Helper()
 
-	repart := `printf '#!/bin/sh\nfor last; do :; done\necho disk > "$last"\n' > /usr/local/bin/systemd-repart && chmod 755 /usr/local/bin/systemd-repart`
-	run := protocol.Run{Key: "tools", Layers: []string{"base"}, Command: repart}
+	command := fmt.Sprintf("cat > /usr/local/bin/systemd-repart <<'EOF'\n#!/bin/sh\n%s\nEOF\nchmod 755 /usr/local/bin/systemd-repart", repart)
+	run := protocol.Run{Key: "tools", Layers: []string{"base"}, Command: command}
 	code, err := worker.Run(context.Background(), run, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
@@ -51,7 +57,7 @@ func TestADiskIsWhatItsToolsWriteKeptAsTheLayerOfItsKey(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker)}
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk)}
 
 	// act
 	err := worker.Disk(context.Background(), disk, io.Discard)
@@ -61,4 +67,18 @@ func TestADiskIsWhatItsToolsWriteKeptAsTheLayerOfItsKey(t *testing.T) {
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "disk\n", string(written))
+}
+
+func TestADiskWhoseToolsFailFailsNamingTheExitCodeAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, "exit 3")}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "exit code 3")
+	assert.NoDirExists(t, filepath.Join(layers, "disk"))
 }

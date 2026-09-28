@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -62,6 +63,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	code := 0
 	err = a.overlaid(request.Tools, sandbox.Floor, nil, upper, func(root string) (bool, error) {
 		output := filepath.Join(root, "run", "miso", "out")
 		if err := os.MkdirAll(output, 0o700); err != nil {
@@ -74,11 +76,18 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		defer func() { _ = unix.Unmount(output, unix.MNT_DETACH) }()
 
-		_, err := sandbox.Run(ctx, root, protocol.Run{Command: "systemd-repart /run/miso/out/disk.raw"}, out)
+		var err error
+		code, err = sandbox.Run(ctx, root, protocol.Run{Command: "systemd-repart /run/miso/out/disk.raw"}, out)
 
 		return false, err
 	})
+	if err == nil && code != 0 {
+		err = fmt.Errorf("the tools failed making the disk: exit code %d", code)
+	}
+
 	if err != nil {
+		_ = work.Discard()
+
 		return err
 	}
 
