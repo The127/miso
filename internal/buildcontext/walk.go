@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -25,7 +24,7 @@ type entry struct {
 	path string
 
 	// empty for a link, which has none of its own that a copy could keep
-	mode string
+	mode uint32
 
 	// of a link, as written
 	target string
@@ -134,15 +133,15 @@ func below(source string, name string) string {
 	return strings.TrimPrefix(name, source+"/")
 }
 
-// permissions are the twelve bits of a unix mode in octal, like 4755. Go
-// keeps the upper three apart from the nine that Perm gives.
-func permissions(mode fs.FileMode) string {
-	bits := uint64(mode.Perm())
-	for flag, bit := range map[fs.FileMode]uint64{fs.ModeSetuid: 0o4000, fs.ModeSetgid: 0o2000, fs.ModeSticky: 0o1000} {
+// permissions are the twelve bits of a unix mode. Go keeps the upper three
+// apart from the nine that Perm gives.
+func permissions(mode fs.FileMode) uint32 {
+	bits := uint32(mode.Perm())
+	for flag, bit := range map[fs.FileMode]uint32{fs.ModeSetuid: 0o4000, fs.ModeSetgid: 0o2000, fs.ModeSticky: 0o1000} {
 		if mode&flag != 0 {
 			bits |= bit
 		}
 	}
 
-	return strconv.FormatUint(bits, 8)
+	return bits
 }

@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -43,13 +42,8 @@ func (s *sent) Next() (protocol.Entry, io.Reader, error) {
 func (s *sent) digest() string {
 	sums := make([]string, 0, len(s.entries))
 	for i, entry := range s.entries {
-		mode := strconv.FormatUint(uint64(entry.Mode), 8)
-		if entry.Kind == "link" {
-			mode = ""
-		}
-
 		content := sha256.Sum256([]byte(s.contents[i]))
-		sums = append(sums, copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: mode, Target: entry.Target}.Sum(hex.EncodeToString(content[:])))
+		sums = append(sums, copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: entry.Mode, Target: entry.Target}.Sum(hex.EncodeToString(content[:])))
 	}
 
 	return copydigest.Of(sums)

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/The127/miso/internal/copydigest"
@@ -55,16 +54,7 @@ func (d *Dir) Pack(source string, digest string, visit func(Entry, io.Reader) er
 
 // pack hands one entry to visit and sums it as it went out.
 func (d *Dir) pack(found entry, visit func(Entry, io.Reader) error) (string, error) {
-	packed := Entry{Kind: string(found.kind), Path: found.path, Target: found.target}
-	// a link has no mode of its own
-	if found.mode != "" {
-		mode, err := strconv.ParseUint(found.mode, 8, 32)
-		if err != nil {
-			return "", err
-		}
-
-		packed.Mode = uint32(mode)
-	}
+	packed := Entry{Kind: string(found.kind), Path: found.path, Mode: found.mode, Target: found.target}
 
 	if found.kind != kindFile {
 		return found.sum(""), visit(packed, strings.NewReader(""))

@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 
 	"github.com/The127/miso/internal/copydigest"
 	"github.com/The127/miso/internal/place"
@@ -141,13 +140,7 @@ func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries
 
 // summed is an entry as its digest sees it.
 func summed(entry protocol.Entry) copydigest.Entry {
-	mode := strconv.FormatUint(uint64(entry.Mode), 8)
-	// a link has no mode of its own
-	if entry.Kind == "link" {
-		mode = ""
-	}
-
-	return copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: mode, Target: entry.Target}
+	return copydigest.Entry{Kind: entry.Kind, Path: entry.Path, Mode: entry.Mode, Target: entry.Target}
 }
 
 // placeOne puts an entry at a path of the image as what it is.
