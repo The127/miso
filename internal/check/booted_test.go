@@ -49,3 +49,15 @@ func TestAnImageHasBootedOnceItsSystemdSaysReady(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, said.sent)
 }
+
+func TestReadyInTheTextOfAStatusIsNoBoot(t *testing.T) {
+	// arrange
+	said := sending("STATUS=Waiting for READY=1 from the network", "READY=1")
+
+	// act
+	err := check.Booted(said)
+
+	// assert
+	require.NoError(t, err)
+	assert.Empty(t, said.sent)
+}

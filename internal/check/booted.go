@@ -1,8 +1,9 @@
 package check
 
 import (
-	"bytes"
 	"io"
+	"slices"
+	"strings"
 )
 
 // Notices are the connections the image's systemd makes to tell the host
@@ -26,7 +27,9 @@ func Booted(notices Notices) error {
 			return err
 		}
 
-		if bytes.Contains(said, []byte("READY=1")) {
+		// a notification is one assignment per line, and a free text such as
+		// STATUS= may hold anything
+		if slices.Contains(strings.Split(string(said), "\n"), "READY=1") {
 			return nil
 		}
 	}
