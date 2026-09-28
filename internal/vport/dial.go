@@ -13,7 +13,7 @@ type Dialer struct {
 
 // Connect opens the host's side of the port it is handed.
 func Connect(port io.ReadWriteCloser) (*Dialer, error) {
-	session, err := yamux.Client(port, yamux.DefaultConfig())
+	session, err := yamux.Client(port, config())
 	if err != nil {
 		return nil, err
 	}

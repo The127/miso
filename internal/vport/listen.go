@@ -13,7 +13,7 @@ type Listener struct {
 
 // Listen opens the VM's side of the port it is handed.
 func Listen(port io.ReadWriteCloser) (*Listener, error) {
-	session, err := yamux.Server(port, yamux.DefaultConfig())
+	session, err := yamux.Server(port, config())
 	if err != nil {
 		return nil, err
 	}
