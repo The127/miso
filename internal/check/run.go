@@ -11,7 +11,7 @@ import (
 type Conn interface {
 	io.ReadWriter
 
-	// the shell reads the check until the host closes its side
+	// CloseWrite the shell reads the check until the host closes its side
 	CloseWrite() error
 }
 

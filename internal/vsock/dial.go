@@ -10,7 +10,7 @@ import (
 type Conn interface {
 	io.ReadWriteCloser
 
-	// the other side reads to its end, and can still answer
+	// CloseWrite the other side reads to its end, and can still answer
 	CloseWrite() error
 }
 
