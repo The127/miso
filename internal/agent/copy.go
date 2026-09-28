@@ -24,6 +24,11 @@ var ErrNotPlanned = errors.New("not what was planned")
 // ErrUnknownSource is an entry of a source that the copy does not name.
 var ErrUnknownSource = errors.New("of a source the copy does not name")
 
+// ErrOutOfOrder is an entry of a source after one of a later source. The
+// sources of a copy come one after the other, in the order the build file
+// names them.
+var ErrOutOfOrder = errors.New("out of order")
+
 // ErrUnknownKind is an entry that is no file, no directory and no link. A
 // copy carries nothing else.
 var ErrUnknownKind = errors.New("unknown kind of entry")
@@ -78,6 +83,7 @@ func empty(scratch string) (string, error) {
 // what it put of each source.
 func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries) ([]string, error) {
 	sums := make([][]string, len(request.Sources))
+	source := 0
 	for {
 		entry, content, err := entries.Next()
 		if errors.Is(err, io.EOF) {
@@ -91,6 +97,14 @@ func placeAll(image *place.Root, request protocol.Copy, entries protocol.Entries
 		if entry.Source < 0 || entry.Source >= len(request.Sources) {
 			return nil, fmt.Errorf("%s: %w: %d", entry.Path, ErrUnknownSource, entry.Source)
 		}
+
+		// each source is checked on its own, so its place among the others is
+		// checked here, or the last to write would win
+		if entry.Source < source {
+			return nil, fmt.Errorf("%s: %w: source %d after %d", entry.Path, ErrOutOfOrder, entry.Source, source)
+		}
+
+		source = entry.Source
 
 		path, err := target(image, request, entry)
 		if err != nil {

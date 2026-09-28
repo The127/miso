@@ -196,3 +196,20 @@ func TestACopyOntoScratchHasTheModesOfItsSourceAndNoneOfARun(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, os.ModeDir|0o555, proc.Mode())
 }
+
+func TestAnEntryOfAnEarlierSourceAfterALaterOneFailsTheCopy(t *testing.T) {
+	// arrange
+	layers := bareLayers(t)
+	worker := agent.New(layers, t.TempDir())
+	motd := &sent{entries: []protocol.Entry{{Kind: "file", Path: ".", Mode: 0o644, Size: 6}}, contents: []string{"hello\n"}}
+	issue := &sent{entries: []protocol.Entry{{Source: 1, Kind: "file", Path: ".", Mode: 0o644, Size: 8}}, contents: []string{"welcome\n"}}
+	files := &sent{entries: append(issue.entries, motd.entries...), contents: append(issue.contents, motd.contents...)}
+	request := protocol.Copy{Key: "copy", Layers: []string{"bare"}, Sources: []string{"motd", "issue"}, Digests: []string{motd.digest(), issue.digest()}, Destination: "/etc/"}
+
+	// act
+	err := worker.Copy(context.Background(), request, files, io.Discard)
+
+	// assert
+	require.ErrorIs(t, err, agent.ErrOutOfOrder)
+	assert.NoDirExists(t, filepath.Join(layers, "copy"))
+}
