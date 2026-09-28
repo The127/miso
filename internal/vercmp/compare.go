@@ -24,12 +24,6 @@ func Compare(a, b string) int {
 			continue
 		}
 
-		if a[0] == '.' && b[0] == '.' {
-			a, b = a[1:], b[1:]
-
-			continue
-		}
-
 		if isDigit(a[0]) || isDigit(b[0]) {
 			var numberA, numberB string
 			numberA, a = number(a)
@@ -52,7 +46,7 @@ func Compare(a, b string) int {
 }
 
 // separators are looked for in the order the specification checks them.
-const separators = "-^"
+const separators = "-^."
 
 // separator compares the fronts of two versions when either is a separator.
 // The version with a separator the other lacks is the older one.

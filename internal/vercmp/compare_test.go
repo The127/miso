@@ -68,6 +68,14 @@ func TestACaretMakesTheOlderVersion(t *testing.T) {
 	assert.Positive(t, reversed)
 }
 
+func TestADotOnOneSideMakesTheOlderVersion(t *testing.T) {
+	// act
+	compared := vercmp.Compare("1a.0", "1a0")
+
+	// assert
+	assert.Negative(t, compared)
+}
+
 func TestLettersCompareInAlphabeticalOrder(t *testing.T) {
 	// act
 	compared := vercmp.Compare("123.a", "123.b")
