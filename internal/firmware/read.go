@@ -1,6 +1,7 @@
 package firmware
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/The127/miso/internal/deb"
@@ -36,5 +37,18 @@ func read(pkg io.Reader) (Firmware, error) {
 		}
 	}
 
-	return found, failed()
+	if err := failed(); err != nil {
+		return Firmware{}, err
+	}
+
+	// a link in a package reads as an empty file, and would boot nothing
+	if len(found.Code) == 0 {
+		return Firmware{}, fmt.Errorf("the package holds no usable %s", codeFile)
+	}
+
+	if len(found.Vars) == 0 {
+		return Firmware{}, fmt.Errorf("the package holds no usable %s", varsFile)
+	}
+
+	return found, nil
 }

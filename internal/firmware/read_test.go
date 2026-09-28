@@ -28,3 +28,31 @@ func TestTheFirmwareOfAPackageIsItsCodeAndVarsWithoutSecureBoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, firmware.Firmware{Code: []byte("the code"), Vars: []byte("the vars")}, found)
 }
+
+func TestAPackageWithoutTheVarsIsRefusedNamingThem(t *testing.T) {
+	// arrange
+	pkg := debtest.Package(t, map[string]string{
+		"./usr/share/OVMF/OVMF_CODE_4M.fd":    "the code",
+		"./usr/share/OVMF/OVMF_VARS_4M.ms.fd": "the vars with microsoft keys",
+	})
+
+	// act
+	_, err := firmware.Read(bytes.NewReader(pkg))
+
+	// assert
+	assert.ErrorContains(t, err, "usr/share/OVMF/OVMF_VARS_4M.fd")
+}
+
+func TestAPackageWithoutTheCodeIsRefusedNamingIt(t *testing.T) {
+	// arrange
+	pkg := debtest.Package(t, map[string]string{
+		"./usr/share/OVMF/OVMF_CODE_4M.secboot.fd": "the secure boot code",
+		"./usr/share/OVMF/OVMF_VARS_4M.fd":         "the vars",
+	})
+
+	// act
+	_, err := firmware.Read(bytes.NewReader(pkg))
+
+	// assert
+	assert.ErrorContains(t, err, "usr/share/OVMF/OVMF_CODE_4M.fd")
+}
