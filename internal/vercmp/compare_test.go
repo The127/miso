@@ -50,6 +50,14 @@ func TestAMinusMakesTheOlderVersion(t *testing.T) {
 	assert.Positive(t, reversed)
 }
 
+func TestWhatFollowsAMinusOnBothSidesDecides(t *testing.T) {
+	// act
+	compared := vercmp.Compare("123-2", "123-1")
+
+	// assert
+	assert.Positive(t, compared)
+}
+
 func TestLettersCompareInAlphabeticalOrder(t *testing.T) {
 	// act
 	compared := vercmp.Compare("123.a", "123.b")

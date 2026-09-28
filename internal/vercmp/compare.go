@@ -15,6 +15,10 @@ func Compare(a, b string) int {
 		}
 
 		switch {
+		case a[0] == '-' && b[0] == '-':
+			a, b = a[1:], b[1:]
+
+			continue
 		case a[0] == '-':
 			return -1
 		case b[0] == '-':
