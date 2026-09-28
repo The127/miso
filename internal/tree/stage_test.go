@@ -246,3 +246,47 @@ func TestAFileWithTwoNamesThatTwoSourcesNameIsStillCopied(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "one\n", string(got))
 }
+
+func TestAFileWithTwoNamesKeepsItsContentWhenALaterSourceTakesItsFirstPlace(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "x"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "y"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "x", "a"), []byte("x\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(stage, "x", "a"), filepath.Join(stage, "x", "c")))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "y", "a"), []byte("y\n"), 0o600))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/x/a", "/y/a", "/x/c"}, named)
+
+	// assert
+	require.NoError(t, err)
+	a, err := os.ReadFile(filepath.Join(image, "a"))
+	require.NoError(t, err)
+	assert.Equal(t, "y\n", string(a))
+	c, err := os.ReadFile(filepath.Join(image, "c"))
+	require.NoError(t, err)
+	assert.Equal(t, "x\n", string(c))
+}
+
+func TestAFileWithTwoNamesKeepsItsContentWhenALaterLinkTakesItsFirstPlace(t *testing.T) {
+	// arrange
+	stage := t.TempDir()
+	image := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "p"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(stage, "q"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "p", "a"), []byte("p\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(stage, "q", "a"), []byte("q\n"), 0o600))
+	require.NoError(t, os.Link(filepath.Join(stage, "p", "a"), filepath.Join(stage, "p", "c")))
+	require.NoError(t, os.Link(filepath.Join(stage, "q", "a"), filepath.Join(stage, "q", "b")))
+
+	// act
+	err := tree.Into(stage, place.Open(image), []string{"/q/b", "/p/a", "/q/a", "/p/c"}, named)
+
+	// assert
+	require.NoError(t, err)
+	c, err := os.ReadFile(filepath.Join(image, "c"))
+	require.NoError(t, err)
+	assert.Equal(t, "p\n", string(c))
+}
