@@ -52,6 +52,16 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 				requests = append(requests, Request{Line: line, Written: written, Message: request})
 			}
 
+			// a copy from a stage takes nothing from the build context
+			if copying, isCopy := step.Instruction.(imagefile.Copy); isCopy && copying.From == "" {
+				request := protocol.Copy{Key: step.Key, Layers: under.layers, Sources: copying.Sources, Destination: copying.Destination}
+				for _, file := range step.Files {
+					request.Digests = append(request.Digests, file.Digest)
+				}
+
+				requests = append(requests, Request{Message: request})
+			}
+
 			roots[step.Key] = under.after(step)
 		}
 	}
