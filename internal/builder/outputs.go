@@ -69,15 +69,30 @@ func OutputsIn(dir string, check Check) Outputs {
 			return checked{File: file, dir: dir, name: name, request: request, check: check}, nil
 		}
 
-		return plain{file}, nil
+		return plain{File: file, dir: dir, name: name}, nil
 	}
 }
 
 // plain is the file of a disk without checks.
 type plain struct {
 	*os.File
+
+	dir  string
+	name string
 }
 
+// Discard throws away what was fetched, which is no whole disk.
 func (p plain) Discard() error {
-	return p.Close()
+	if err := p.Close(); err != nil {
+		return err
+	}
+
+	root, err := os.OpenRoot(p.dir)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = root.Close() }()
+
+	return root.Remove(p.name)
 }

@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -124,6 +125,20 @@ func TestAnOutputReplacesAnOlderFileOfItsName(t *testing.T) {
 	written, err := os.ReadFile(filepath.Join(dir, "os.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "ab", string(written))
+}
+
+func TestADiskWithoutChecksWhoseFetchFailsLeavesNoFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	agent := &sending{disk: "disk\n", err: errors.New("the agent broke off")}
+	requests := []build.Request{{Message: protocol.Fetch{Key: "disk"}, Output: "os.raw"}}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(agent), agentName, requests, nil, builder.OutputsIn(dir, nil), io.Discard)
+
+	// assert
+	require.Error(t, err)
+	assert.NoFileExists(t, filepath.Join(dir, "os.raw"))
 }
 
 func TestADiskItsOutputsGiveNoFileIsNotFetched(t *testing.T) {
