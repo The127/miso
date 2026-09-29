@@ -25,7 +25,7 @@ const (
 // Helper holds a vsock namespace when miso was started as its helper, and
 // returns at once otherwise.
 func Helper() {
-	if os.Args[0] != helperName {
+	if !isHelper(os.Args, helperConn) {
 		return
 	}
 
@@ -43,6 +43,20 @@ func Helper() {
 	_ = answerOK(helperConn, "")
 	serve(helperConn)
 	os.Exit(0)
+}
+
+// isHelper is whether the program was started the way miso starts its
+// helper: under the helper's name, with the paths the helper works on and
+// its channel to miso. A name alone is any program's to take, and it would
+// then write into whatever file it names.
+func isHelper(args []string, conn int) bool {
+	if len(args) < 3 || args[0] != helperName {
+		return false
+	}
+
+	kind, err := unix.GetsockoptInt(conn, unix.SOL_SOCKET, unix.SO_TYPE)
+
+	return err == nil && kind == unix.SOCK_SEQPACKET
 }
 
 // enter makes the namespaces started from here local, and moves this thread

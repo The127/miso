@@ -36,6 +36,10 @@ func NoDevice(t *testing.T) {
 	t.Cleanup(func() { devicePath = was })
 }
 
+// IsHelper is whether a program with the arguments and the file as its
+// channel is the helper.
+var IsHelper = isHelper
+
 // Ask puts any question to the helper.
 func Ask(n *Namespace, question string) (string, error) {
 	text, _, err := n.ask(question)
