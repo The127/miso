@@ -119,6 +119,21 @@ func TestAPieceDuringARunIsAnError(t *testing.T) {
 	assert.EqualError(t, err, "protocol.Piece is no answer to protocol.Run")
 }
 
+func TestALengthDuringARunIsAnError(t *testing.T) {
+	// arrange
+	var replies bytes.Buffer
+	agent := protocol.New("miso 1.2.0", bytes.NewReader(nil), &replies)
+	require.NoError(t, agent.Send(protocol.Length{Size: 16}))
+	require.NoError(t, agent.Send(protocol.Done{}))
+	host := protocol.New("miso 1.2.0", &replies, io.Discard)
+
+	// act
+	err := host.Ask(protocol.Run{Command: "echo hello"}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "protocol.Length is no answer to protocol.Run")
+}
+
 func TestAMessageTheAgentNeverSendsIsNoAnswer(t *testing.T) {
 	// arrange
 	var replies bytes.Buffer

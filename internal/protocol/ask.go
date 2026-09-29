@@ -56,6 +56,10 @@ func (c *Conn) ask(request Message, files Files, disk DiskFile, out io.Writer) e
 				return err
 			}
 		case Length:
+			if disk == nil {
+				return noAnswer(m, request)
+			}
+
 			if err := disk.Truncate(m.Size); err != nil {
 				return err
 			}
