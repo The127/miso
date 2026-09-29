@@ -39,7 +39,9 @@ func OutputsIn(dir string) Outputs {
 
 		defer func() { _ = root.Close() }()
 
-		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0o644)
+		// the holes of a disk are never written, so an older file under the
+		// name would show through them
+		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			return nil, err
 		}

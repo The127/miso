@@ -97,6 +97,24 @@ func TestAnOutputInADirectoryIsTheFileOfItsName(t *testing.T) {
 	assert.Equal(t, "disk\n", string(written))
 }
 
+func TestAnOutputReplacesAnOlderFileOfItsName(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "os.raw"), []byte("XXXXXXXX"), 0o600))
+
+	// act
+	output, err := builder.OutputsIn(dir)("os.raw")
+	require.NoError(t, err)
+	_, err = output.WriteAt([]byte("ab"), 0)
+	require.NoError(t, err)
+	require.NoError(t, output.Close())
+
+	// assert
+	written, err := os.ReadFile(filepath.Join(dir, "os.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "ab", string(written))
+}
+
 func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
 	// arrange
 	agent := &sending{disk: "disk\n"}
