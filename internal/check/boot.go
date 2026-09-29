@@ -108,7 +108,7 @@ func (b Boot) awaitBoot(ctx context.Context, vm *qemu.VM, notices *vsock.Listene
 
 	closing := context.AfterFunc(wait, func() { _ = notices.Close() })
 
-	err := booted(notices)
+	err := booted(notices, vm.CID())
 
 	// the notices after the boot must stay open, and a wait that ended as
 	// the boot came has closed them already

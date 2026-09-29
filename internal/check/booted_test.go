@@ -22,9 +22,11 @@ type notice struct {
 
 func (notice) Close() error { return nil }
 
-// notices hands out the notifications in order, then waits.
+// notices hands out the notifications in order, then waits, and remembers
+// which machine they were asked from.
 type notices struct {
-	sent chan io.ReadWriteCloser
+	sent  chan io.ReadWriteCloser
+	asked uint32
 }
 
 func sending(said ...string) *notices {
@@ -36,9 +38,14 @@ func sending(said ...string) *notices {
 	return n
 }
 
-func (n *notices) Accept() (io.ReadWriteCloser, error) {
+func (n *notices) AcceptFrom(cid uint32) (io.ReadWriteCloser, error) {
+	n.asked = cid
+
 	return <-n.sent, nil
 }
+
+// machine is the context ID of the VM whose notices the tests take.
+const machine = 7
 
 // booted waits for Booted, and fails the test at once if it never returns
 // rather than when the test run times out.
@@ -46,7 +53,7 @@ func booted(t *testing.T, notices check.Notices) error {
 	t.Helper()
 
 	done := make(chan error, 1)
-	go func() { done <- check.Booted(notices) }()
+	go func() { done <- check.Booted(notices, machine) }()
 
 	select {
 	case err := <-done:
@@ -182,4 +189,16 @@ func TestANoticeThatBreaksBeforeTheBootDoesNotEndTheWait(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
+}
+
+func TestABootTakesTheNoticesOfItsOwnMachineOnly(t *testing.T) {
+	// arrange
+	said := sending("READY=1")
+
+	// act
+	err := booted(t, said)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, uint32(machine), said.asked)
 }

@@ -7,17 +7,19 @@ import (
 )
 
 // noticeListener takes the connections the image's systemd makes to tell
-// the host how its boot goes, one for each notification.
+// the host how its boot goes, one for each notification, from the machine
+// with the context ID.
 type noticeListener interface {
-	Accept() (io.ReadWriteCloser, error)
+	AcceptFrom(cid uint32) (io.ReadWriteCloser, error)
 }
 
-// booted waits until the image's systemd says it is ready. Its notices are
-// taken on after that until the owner of the notices closes them, because
-// systemd waits on a notice nobody takes and then starts no check shell.
-func booted(notices noticeListener) error {
+// booted waits until the image's systemd in the VM with the context ID says
+// it is ready. Its notices are taken on after that until the owner of the
+// notices closes them, because systemd waits on a notice nobody takes and
+// then starts no check shell.
+func booted(notices noticeListener, cid uint32) error {
 	for {
-		said, err := take(notices)
+		said, err := take(notices, cid)
 		if err != nil {
 			return err
 		}
@@ -27,7 +29,7 @@ func booted(notices noticeListener) error {
 		if slices.Contains(strings.Split(said, "\n"), "READY=1") {
 			go func() {
 				for {
-					if _, err := take(notices); err != nil {
+					if _, err := take(notices, cid); err != nil {
 						return
 					}
 				}
@@ -38,10 +40,10 @@ func booted(notices noticeListener) error {
 	}
 }
 
-// take reads the next notice to its end. Only a failing Accept ends the
-// taking.
-func take(notices noticeListener) (string, error) {
-	conn, err := notices.Accept()
+// take reads the next notice of the VM to its end. Only a failing Accept
+// ends the taking.
+func take(notices noticeListener, cid uint32) (string, error) {
+	conn, err := notices.AcceptFrom(cid)
 	if err != nil {
 		return "", err
 	}
