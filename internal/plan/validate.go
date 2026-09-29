@@ -23,6 +23,10 @@ func Validate(stages []imagefile.Stage) error {
 			return err
 		}
 
+		if err := checkPartitions(stage); err != nil {
+			return err
+		}
+
 		if stage.Name != "" {
 			known[stage.Name] = outputNames(stage)
 		}

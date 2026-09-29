@@ -22,7 +22,7 @@ func checkOutputs(stage imagefile.Stage, written map[string]bool) error {
 			continue
 		}
 
-		if strings.Contains(output.Name, "/") || output.Name == "." || output.Name == ".." {
+		if !plainName(output.Name) {
 			return at(output.Line, fmt.Errorf("OUTPUT %q: %w", output.Name, ErrNotAFileName))
 		}
 
@@ -45,4 +45,9 @@ func outputNames(stage imagefile.Stage) map[string]bool {
 	}
 
 	return names
+}
+
+// plainName is a name that stays in the directory it is written to.
+func plainName(name string) bool {
+	return !strings.Contains(name, "/") && name != "." && name != ".."
 }

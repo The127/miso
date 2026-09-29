@@ -98,15 +98,16 @@ func TestABuildOnAHostThatCannotKeepVsockPrivateSaysSoAndStillRunsOnTheBuilderKe
 	assert.Contains(t, string(said), word+"\n")
 }
 
-// bootable is a build file of a disk: its image brings a kernel and its own
-// repart definitions, and miso's own tools make the disk of them.
+// bootable is a build file of a disk: its image brings a kernel, its
+// partitions are lines of its own, and miso's tools make the disk of them.
 const bootable = `FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 RUN : > /etc/fstab && \
-    mkdir -p /etc/kernel /usr/lib/repart.d && \
-    printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline && \
-    printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
-    printf '[Partition]\nType=root\nFormat=ext4\nCopyFiles=/:/\nUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f\nSizeMinBytes=3G\n' > /usr/lib/repart.d/20-root.conf
+    mkdir -p /etc/kernel && \
+    printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline
+
+PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
+PARTITION root Type=root Format=ext4 CopyFiles=/:/ UUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f SizeMinBytes=3G
 OUTPUT disk os.raw
 `
 

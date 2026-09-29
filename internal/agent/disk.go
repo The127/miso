@@ -30,6 +30,9 @@ const repart = `set --
 if [ -n "$MISO_EL_TORITO" ]; then
 	set -- --el-torito=yes
 fi
+if [ -d /run/miso/definitions ]; then
+	set -- --definitions=/run/miso/definitions "$@"
+fi
 systemd-repart \
 	--dry-run=no \
 	--root=/run/miso/image \
@@ -131,6 +134,15 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	definitions := filepath.Join(scratch, "definitions")
+	if err := os.Mkdir(definitions, 0o700); err != nil {
+		return err
+	}
+
+	if err := writeDefinitions(definitions, request.Partitions); err != nil {
+		return err
+	}
+
 	// the tools run as a RUN does, but nothing they write is kept
 	upper := filepath.Join(scratch, "tools")
 	if err := os.Mkdir(upper, 0o700); err != nil {
@@ -145,6 +157,15 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		}
 
 		defer unbindOutput()
+
+		if len(request.Partitions) > 0 {
+			unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
+			if err != nil {
+				return false, err
+			}
+
+			defer unbindDefinitions()
+		}
 
 		code, err = buildUKI(ctx, root, parts, esp, found.Version, out)
 		if err != nil || code != 0 {

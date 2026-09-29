@@ -24,10 +24,10 @@ RUN v=$(ls /usr/lib/modules | sort -V | tail -1) && \
       --install "/usr/bin/systemd-dissect /usr/lib/systemd/system/systemd-loop@.service /usr/lib/udev/rules.d/99-systemd.rules" \
       --kver "$v" "/boot/initrd.img-$v"
 RUN : > /etc/fstab && \
-    mkdir -p /etc/kernel /usr/lib/repart.d && \
-    printf 'ro rootfstype=erofs systemd.volatile=overlay console=ttyS0\n' > /etc/kernel/cmdline && \
-    printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
-    printf '[Partition]\nType=root\nFormat=erofs\nCopyFiles=/:/\nExcludeFiles=/efi/\nMinimize=best\nReadOnly=yes\n' > /usr/lib/repart.d/20-root.conf
+    mkdir -p /etc/kernel && \
+    printf 'ro rootfstype=erofs systemd.volatile=overlay console=ttyS0\n' > /etc/kernel/cmdline
+PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
+PARTITION root Type=root Format=erofs CopyFiles=/:/ ExcludeFiles=/efi/ Minimize=best ReadOnly=yes
 OUTPUT iso os.iso
 CHECK test -b /dev/sr0
 `

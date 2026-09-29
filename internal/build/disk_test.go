@@ -152,3 +152,19 @@ func TestAToolsOptionOnADiskIsAnOptionMisoDoesNotKnow(t *testing.T) {
 	assert.ErrorContains(t, err, "line 3")
 	assert.ErrorContains(t, err, "--tools")
 }
+
+func TestADiskIsMadeOfThePartitionsAboveIt(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nPARTITION esp Format=vfat\nPARTITION root Format=ext4 SizeMinBytes=3G\nOUTPUT disk os.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, []protocol.Partition{
+		{Name: "esp", Settings: []protocol.Setting{{Key: "Format", Value: "vfat"}}},
+		{Name: "root", Settings: []protocol.Setting{{Key: "Format", Value: "ext4"}, {Key: "SizeMinBytes", Value: "3G"}}},
+	}, disksOf(requests)[0].Partitions)
+}

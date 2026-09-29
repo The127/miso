@@ -77,11 +77,16 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 	var steps []Step
 	rootfs := from
 	var artifacts []string
+	var partitions []string
 	for _, instruction := range stage.Instructions {
 		builtOn := []string{rootfs}
 		if _, isCheck := instruction.(imagefile.Check); isCheck {
 			// a copy, the steps must not share one list that still grows
 			builtOn = slices.Clone(artifacts)
+		}
+
+		if _, isOutput := instruction.(imagefile.Output); isOutput {
+			builtOn = append(builtOn, partitions...)
 		}
 
 		step, err := p.step(builtOn, instruction)
@@ -93,6 +98,8 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		switch instruction.(type) {
 		case imagefile.Output, imagefile.Check:
 			artifacts = append(artifacts, step.Key)
+		case imagefile.Partition:
+			partitions = append(partitions, step.Key)
 		default:
 			rootfs = step.Key
 		}

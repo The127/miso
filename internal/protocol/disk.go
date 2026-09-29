@@ -14,6 +14,21 @@ type Disk struct {
 
 	// the disk boots from an optical drive too, as an ISO
 	ElTorito bool
+
+	// the partitions of the disk, in the order they are laid out
+	Partitions []Partition
+}
+
+// Partition is a definition for systemd-repart, named as its file is.
+type Partition struct {
+	Name     string
+	Settings []Setting
+}
+
+// Setting is a line of a definition. A key may come more than once.
+type Setting struct {
+	Key   string
+	Value string
 }
 
 func (d Disk) into(e *envelope) { e.Disk = &d }

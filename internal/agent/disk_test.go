@@ -446,6 +446,25 @@ echo "$@" > "$last"`
 	assert.Equal(t, "--dry-run=no --root=/run/miso/image --offline=yes --sector-size=512 --empty=create --size=auto --el-torito=yes /run/miso/out/disk.raw\n", string(written))
 }
 
+func TestADiskGivesRepartItsPartitionsAsDefinitionFiles(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	repart := `for arg; do case $arg in --definitions=*) definitions=${arg#--definitions=} ;; esac; last=$arg; done
+cat "$definitions/10-esp.conf" > "$last"`
+	esp := protocol.Partition{Name: "esp", Settings: []protocol.Setting{{Key: "Type", Value: "esp"}, {Key: "Format", Value: "vfat"}}}
+	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, repart), Partitions: []protocol.Partition{esp}}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "[Partition]\nType=esp\nFormat=vfat\n", string(written))
+}
+
 func TestTheToolsCannotOpenADeviceOfTheImage(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
