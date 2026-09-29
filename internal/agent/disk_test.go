@@ -55,9 +55,11 @@ func bootable(t *testing.T, worker *agent.Agent) []string {
 const writesDisk = `for last; do :; done
 echo disk > "$last"`
 
-// ukify is a ukify that writes its arguments into its output.
-const ukify = `for arg; do case $arg in --output=*) output=${arg#--output=} ;; esac; done
-echo "$@" > "$output"`
+// ukify is a ukify that writes its arguments into its output, and after
+// them the kernel it is given.
+const ukify = `for arg; do case $arg in --output=*) output=${arg#--output=} ;; --linux=*) linux=${arg#--linux=} ;; esac; done
+echo "$@" > "$output"
+cat "$linux" >> "$output"`
 
 // fakeTools adds to the base a systemd-repart that runs the script and a
 // ukify, and answers the layers of those tools.
@@ -158,10 +160,10 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "build"+
-		" --linux=/run/miso/image/usr/lib/modules/99.0/vmlinuz"+
-		" --initrd=/run/miso/image/usr/lib/modules/99.0/initrd"+
-		" --stub=/run/miso/image/usr/lib/systemd/boot/efi/linuxx64.efi.stub"+
-		" --os-release=@/run/miso/image/etc/os-release"+
+		" --linux=/run/miso/parts/linux"+
+		" --initrd=/run/miso/parts/initrd"+
+		" --stub=/run/miso/parts/stub"+
+		" --os-release=@/run/miso/parts/os-release"+
 		" --uname=99.0"+
 		" --output=/run/miso/esp/EFI/Linux/99.0.efi\n", string(written))
 }
@@ -186,7 +188,7 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	require.NoError(t, err)
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
-	assert.Contains(t, string(written), " --cmdline=@/run/miso/image/etc/kernel/cmdline")
+	assert.Contains(t, string(written), " --cmdline=@/run/miso/parts/cmdline")
 }
 
 func TestADiskOfAnImageWithoutSystemdBootFailsNamingWhereItShouldBe(t *testing.T) {
@@ -329,6 +331,30 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
 	assert.Contains(t, string(written), " --uname=99.0 ")
+}
+
+func TestTheToolsBuildTheUKIFromTheImagesKernelBehindItsOwnLinks(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 && cd /usr/lib/modules/99.0 && touch initrd" +
+		" && echo image-kernel > /etc/miso-kernel && ln -s /etc/miso-kernel vmlinuz"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Contains(t, string(written), "\nimage-kernel\n")
 }
 
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {

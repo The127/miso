@@ -36,17 +36,17 @@ const repart = `systemd-repart \
 	--size=auto \
 	/run/miso/out/disk.raw`
 
-// ukify builds the UKI of the image's kernel into the ESP, with the
-// image's kernel command line when it has one.
+// ukify builds the UKI of the image's kernel into the ESP from copies of
+// the image's parts, with its kernel command line when it has one.
 const ukify = `set --
-if [ -e /run/miso/image/etc/kernel/cmdline ]; then
-	set -- --cmdline=@/run/miso/image/etc/kernel/cmdline
+if [ -e /run/miso/parts/cmdline ]; then
+	set -- --cmdline=@/run/miso/parts/cmdline
 fi
 ukify build \
-	--linux="/run/miso/image/$MISO_LINUX" \
-	--initrd="/run/miso/image/$MISO_INITRD" \
-	--stub=/run/miso/image/` + stub + ` \
-	--os-release=@/run/miso/image/etc/os-release \
+	--linux=/run/miso/parts/linux \
+	--initrd=/run/miso/parts/initrd \
+	--stub=/run/miso/parts/stub \
+	--os-release=@/run/miso/parts/os-release \
 	--uname="$MISO_VERSION" \
 	--output="/run/miso/esp/EFI/Linux/$MISO_VERSION.efi" \
 	"$@"`
@@ -134,12 +134,12 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	_, err = os.Stat(filepath.Join(image, stub))
-	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("the image has no UKI stub at /%s", stub)
+	parts := filepath.Join(scratch, "parts")
+	if err := os.Mkdir(parts, 0o700); err != nil {
+		return err
 	}
 
-	if err != nil {
+	if err := copyParts(imageFS, found, parts); err != nil {
 		return err
 	}
 
@@ -176,39 +176,42 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		defer func() { _ = unix.Unmount(output, unix.MNT_DETACH) }()
 
-		seen := filepath.Join(root, "run", "miso", "image")
-		if err := os.Mkdir(seen, 0o700); err != nil {
+		given := filepath.Join(root, "run", "miso", "parts")
+		if err := os.Mkdir(given, 0o700); err != nil {
 			return false, err
 		}
 
-		if err := cloneInto(image, seen); err != nil {
+		if err := unix.Mount(parts, given, "", unix.MS_BIND, ""); err != nil {
 			return false, err
 		}
 
 		building := filepath.Join(root, "run", "miso", "esp")
 		if err := os.Mkdir(building, 0o700); err != nil {
+			_ = unix.Unmount(given, unix.MNT_DETACH)
+
 			return false, err
 		}
 
 		if err := unix.Mount(filepath.Join(esp, "efi"), building, "", unix.MS_BIND, ""); err != nil {
-			_ = unix.Unmount(seen, unix.MNT_DETACH)
+			_ = unix.Unmount(given, unix.MNT_DETACH)
 
 			return false, err
 		}
 
-		// names from the image reach the shell only as values, never as its
-		// words
-		uki := protocol.Run{Command: ukify, Env: []string{
-			"MISO_LINUX=" + found.Linux,
-			"MISO_INITRD=" + found.Initrd,
-			"MISO_VERSION=" + found.Version,
-		}}
+		// a version from the image reaches the shell only as a value, never
+		// as its words
+		uki := protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + found.Version}}
 
 		var err error
 		code, err = sandbox.Run(ctx, root, uki, out)
 		_ = unix.Unmount(building, unix.MNT_DETACH)
-		_ = unix.Unmount(seen, unix.MNT_DETACH)
+		_ = unix.Unmount(given, unix.MNT_DETACH)
 		if err != nil || code != 0 {
+			return false, err
+		}
+
+		seen := filepath.Join(root, "run", "miso", "image")
+		if err := os.Mkdir(seen, 0o700); err != nil {
 			return false, err
 		}
 
@@ -245,13 +248,13 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 // cloneInto shows a mount at another place. The clone keeps the attributes
 // of the mount, so a device in an image opens nothing of the builder's.
-func cloneInto(mount, place string) error {
+func cloneInto(mount, at string) error {
 	clone, err := unix.OpenTree(unix.AT_FDCWD, mount, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC)
 	if err != nil {
 		return err
 	}
 
-	err = unix.MoveMount(clone, "", unix.AT_FDCWD, place, unix.MOVE_MOUNT_F_EMPTY_PATH)
+	err = unix.MoveMount(clone, "", unix.AT_FDCWD, at, unix.MOVE_MOUNT_F_EMPTY_PATH)
 	_ = unix.Close(clone)
 
 	return err
