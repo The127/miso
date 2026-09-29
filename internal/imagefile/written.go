@@ -23,6 +23,10 @@ func Written(instruction Instruction) (int, string) {
 		return step.Line, outputText(step)
 	case Check:
 		return step.Line, "CHECK " + step.Command
+	case Partition:
+		return step.Line, partitionText(step)
+	case Cmdline:
+		return step.Line, "CMDLINE " + step.Text
 	}
 
 	return 0, ""
@@ -49,6 +53,15 @@ func outputText(step Output) string {
 		}
 
 		words = append(words, word)
+	}
+
+	return strings.Join(words, " ")
+}
+
+func partitionText(step Partition) string {
+	words := []string{"PARTITION", step.Name}
+	for _, setting := range step.Settings {
+		words = append(words, setting.Key+"="+setting.Value)
 	}
 
 	return strings.Join(words, " ")

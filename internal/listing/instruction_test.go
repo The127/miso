@@ -91,3 +91,38 @@ func TestACheckStepReadsAsWritten(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "FROM scratch\n   8  9a8b7c6d5e4f  CHECK systemctl is-system-running\n", out.String())
 }
+
+func TestAPartitionStepReadsAsWritten(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Partition{Line: 4, Name: "root", Settings: []imagefile.Setting{
+			{Key: "Format", Value: "ext4"},
+			{Key: "SizeMinBytes", Value: "3G"},
+		}}, Key: "0f1e2d3c4b5a"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   4  0f1e2d3c4b5a  PARTITION root Format=ext4 SizeMinBytes=3G\n", out.String())
+}
+
+func TestACmdlineStepReadsAsWritten(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Cmdline{Line: 5, Text: "rw console=ttyS0"}, Key: "6a5b4c3d2e1f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   5  6a5b4c3d2e1f  CMDLINE rw console=ttyS0\n", out.String())
+}
