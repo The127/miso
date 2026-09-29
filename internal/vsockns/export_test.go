@@ -40,6 +40,11 @@ func NoDevice(t *testing.T) {
 // channel is the helper.
 var IsHelper = isHelper
 
+// Conn is the number of miso's end of the channel to the helper.
+func Conn(n *Namespace) int {
+	return n.conn
+}
+
 // Ask puts any question to the helper.
 func Ask(n *Namespace, question string) (string, error) {
 	text, _, err := n.ask(question)

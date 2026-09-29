@@ -28,6 +28,9 @@ type Namespace struct {
 
 	// a question and its answer share the channel with no other
 	asking sync.Mutex
+
+	closing sync.Once
+	closed  error
 }
 
 // Open sets up a vsock namespace that only miso's VMs share.
@@ -73,11 +76,4 @@ func (n *Namespace) Mode() (string, error) {
 	mode, _, err := n.ask(modeQuestion)
 
 	return mode, err
-}
-
-// Close ends the helper, and with it the namespace.
-func (n *Namespace) Close() error {
-	_ = unix.Close(n.conn)
-
-	return n.helper.Wait()
 }
