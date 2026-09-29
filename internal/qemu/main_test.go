@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/boot"
 	"github.com/The127/miso/internal/guestport"
@@ -74,7 +75,8 @@ const guestPort = 1024
 
 // guest readies the VM it is the init of and answers each connection from
 // the host with miso, over its virtio port when it has one as the agent
-// does, else over vsock, until the host stops the VM.
+// does, else over vsock, until the host stops the VM. With MISO_GUEST_DIAL
+// it answers instead whether it reached that port of the host.
 func guest() {
 	defer boot.PowerOff()
 
@@ -82,6 +84,11 @@ func guest() {
 		fmt.Println(err)
 
 		return
+	}
+
+	said := "miso"
+	if port := os.Getenv("MISO_GUEST_DIAL"); port != "" {
+		said = dialHost(port)
 	}
 
 	listener, err := guestListener()
@@ -99,9 +106,26 @@ func guest() {
 			return
 		}
 
-		_, _ = fmt.Fprintln(conn, "miso")
+		_, _ = fmt.Fprintln(conn, said)
 		_ = conn.Close()
 	}
+}
+
+// dialHost is whether the guest reaches the port of the host over vsock.
+func dialHost(port string) string {
+	number, err := strconv.ParseUint(port, 10, 32)
+	if err != nil {
+		return err.Error()
+	}
+
+	conn, err := vsock.Dial(unix.VMADDR_CID_HOST, uint32(number))
+	if err != nil {
+		return "not reached: " + err.Error()
+	}
+
+	_ = conn.Close()
+
+	return "reached"
 }
 
 // guestListener mirrors how miso's agent listens, so the guest answers on

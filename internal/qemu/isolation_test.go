@@ -5,13 +5,15 @@ package qemu_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/kvmtest"
 	"github.com/The127/miso/internal/qemu"
@@ -37,14 +39,14 @@ func private(t *testing.T) *vsockns.Namespace {
 
 // guestIn is a VM with this binary as its guest, run on a device of the
 // namespace.
-func guestIn(t *testing.T, namespace *vsockns.Namespace) *qemu.VM {
+func guestIn(t *testing.T, namespace *vsockns.Namespace, cmdline string) *qemu.VM {
 	t.Helper()
 
 	self, err := os.Executable()
 	require.NoError(t, err)
 	init, err := os.ReadFile(self)
 	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1")
+	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1 "+cmdline)
 	var console bytes.Buffer
 	machine.Console = &console
 	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: namespace.Device}.Start(t.Context(), machine)
@@ -61,8 +63,21 @@ func guestIn(t *testing.T, namespace *vsockns.Namespace) *qemu.VM {
 func TestAMachineOnADeviceOfAVsockNamespaceIsOutOfTheHostsReachWithKVM(t *testing.T) {
 	// arrange
 	namespace := private(t)
-	vm := guestIn(t, namespace)
-	inside := func() (io.ReadWriteCloser, error) {
+	vm := guestIn(t, namespace, "")
+	said, err := answer(vm, insideDial(namespace, vm))
+	require.NoError(t, err)
+	require.Equal(t, "miso\n", said, "the guest listens inside")
+
+	// act
+	_, err = vsock.Dial(vm.CID(), guestPort)
+
+	// assert
+	assert.Error(t, err)
+}
+
+// insideDial dials the guest through sockets of the namespace.
+func insideDial(namespace *vsockns.Namespace, vm *qemu.VM) func() (io.ReadWriteCloser, error) {
+	return func() (io.ReadWriteCloser, error) {
 		socket, err := namespace.Socket()
 		if err != nil {
 			return nil, err
@@ -72,13 +87,20 @@ func TestAMachineOnADeviceOfAVsockNamespaceIsOutOfTheHostsReachWithKVM(t *testin
 
 		return vsock.DialOn(socket, vm.CID(), guestPort)
 	}
-	said, err := answer(vm, inside, 30*time.Second)
+}
+
+func TestAMachineOnADeviceOfAVsockNamespaceCannotReachTheHostWithKVM(t *testing.T) {
+	// arrange
+	namespace := private(t)
+	outside, err := vsock.Listen(unix.VMADDR_PORT_ANY)
 	require.NoError(t, err)
-	require.Equal(t, "miso\n", said, "the guest listens inside")
+	t.Cleanup(func() { _ = outside.Close() })
 
 	// act
-	_, err = vsock.Dial(vm.CID(), guestPort)
+	vm := guestIn(t, namespace, fmt.Sprintf("MISO_GUEST_DIAL=%d", outside.Port()))
 
 	// assert
-	assert.Error(t, err)
+	said, err := answer(vm, insideDial(namespace, vm))
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(said, "not reached"), said)
 }

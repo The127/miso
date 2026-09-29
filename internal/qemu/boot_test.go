@@ -42,7 +42,7 @@ func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 
 	// assert
 	dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), guestPort) }
-	said, err := answer(vm, dial, 30*time.Second)
+	said, err := answer(vm, dial)
 	require.NoError(t, err)
 	assert.Equal(t, "miso\n", said)
 }
@@ -71,14 +71,17 @@ func TestAMachineWithoutVsockBootsTheBuilderKernelAndAnswersOverItsVirtioPort(t 
 	require.NotNil(t, vm.Port(), "reach falls back to vsock without a port")
 	dial, err := reach.Agent(vm, nil)
 	require.NoError(t, err)
-	said, err := answer(vm, dial, 30*time.Second)
+	said, err := answer(vm, dial)
 	require.NoError(t, err)
 	assert.Equal(t, "miso\n", said)
 }
 
+// patience is how long a guest has to boot and listen.
+const patience = 30 * time.Second
+
 // answer is what the guest says on a connection the dial makes, asked
-// until it listens, the VM stops or the time is up.
-func answer(vm *qemu.VM, dial func() (io.ReadWriteCloser, error), patience time.Duration) (string, error) {
+// until it listens, the VM stops or the patience is up.
+func answer(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) (string, error) {
 	deadline := time.After(patience)
 	for {
 		select {
