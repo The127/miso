@@ -125,7 +125,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	loader, err := fs.ReadFile(imageFS, systemdBoot)
+	err = copyPart(imageFS, systemdBoot, filepath.Join(fallback, "BOOTX64.EFI"))
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
 	}
@@ -140,10 +140,6 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	}
 
 	if err := copyParts(imageFS, found, parts); err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(filepath.Join(fallback, "BOOTX64.EFI"), loader, 0o644); err != nil { //nolint:gosec // an image's files are open to all
 		return err
 	}
 
