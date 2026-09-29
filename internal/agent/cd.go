@@ -23,12 +23,12 @@ func bootsFromCD(stub string) error {
 		return err
 	}
 
-	_, after, found := bytes.Cut(read, stubMark)
-	if !found {
-		return nil
+	_, after, marked := bytes.Cut(read, stubMark)
+	version, _, ended := bytes.Cut(after, []byte(" ####"))
+	if !marked || !ended {
+		return fmt.Errorf("an ISO boots from a CD only with systemd-stub %s or newer, and the image's stub does not say its version", cdStub)
 	}
 
-	version, _, _ := bytes.Cut(after, []byte(" ####"))
 	if vercmp.Compare(string(version), cdStub) < 0 {
 		return fmt.Errorf("an ISO boots from a CD only with systemd-stub %s or newer, the image brings %q", cdStub, version)
 	}

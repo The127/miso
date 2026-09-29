@@ -434,7 +434,7 @@ func TestADiskThatBootsFromACDHasRepartWriteItsBootCatalog(t *testing.T) {
 	worker := mountedBase(t, layers)
 	repart := `for last; do :; done
 echo "$@" > "$last"`
-	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, repart), ElTorito: true}
+	disk := protocol.Disk{Key: "disk", Layers: stubbed(t, worker, "262-1"), Tools: fakeTools(t, worker, repart), ElTorito: true}
 
 	// act
 	err := worker.Disk(context.Background(), disk, io.Discard)

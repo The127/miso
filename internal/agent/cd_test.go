@@ -20,8 +20,16 @@ import (
 func stubbed(t *testing.T, worker *agent.Agent, version string) []string {
 	t.Helper()
 
-	boot := `mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo loader > systemd-bootx64.efi && printf 'MZ #### LoaderInfo: systemd-stub %s ####\n' "$VERSION" > linuxx64.efi.stub`
-	run := protocol.Run{Key: "boot", Layers: []string{"base"}, Command: boot, Env: []string{"VERSION=" + version}}
+	return withStub(t, worker, "MZ #### LoaderInfo: systemd-stub "+version+" ####\n")
+}
+
+// withStub adds to the base the systemd-boot an image brings and a UKI
+// stub of the bytes, and answers the layers of that image.
+func withStub(t *testing.T, worker *agent.Agent, stub string) []string {
+	t.Helper()
+
+	boot := `mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo loader > systemd-bootx64.efi && printf '%s' "$STUB" > linuxx64.efi.stub`
+	run := protocol.Run{Key: "boot", Layers: []string{"base"}, Command: boot, Env: []string{"STUB=" + stub}}
 	code, err := worker.Run(context.Background(), run, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
@@ -40,5 +48,31 @@ func TestAnISOOfAnImageWhoseStubIsOlderThan261FailsNamingItsVersion(t *testing.T
 	// assert
 	require.Error(t, err)
 	assert.ErrorContains(t, err, `"257.9-1"`)
+	assert.ErrorContains(t, err, "261")
+}
+
+func TestAnISOOfAnImageWhoseStubDoesNotSayItsVersionFails(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	disk := protocol.Disk{Key: "disk", Layers: withStub(t, worker, "MZ stub\n"), Tools: fakeTools(t, worker, writesDisk), ElTorito: true}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "261")
+}
+
+func TestAnISOOfAnImageWhoseStubBreaksOffItsVersionFails(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	disk := protocol.Disk{Key: "disk", Layers: withStub(t, worker, "MZ #### LoaderInfo: systemd-stub 262"), Tools: fakeTools(t, worker, writesDisk), ElTorito: true}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.Error(t, err)
 	assert.ErrorContains(t, err, "261")
 }
