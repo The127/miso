@@ -35,12 +35,5 @@ func (b Boot) listen() (*vsock.Listener, error) {
 
 // dial connects to a port of the VM.
 func (b Boot) dial(cid, port uint32) (vsock.Conn, error) {
-	socket, err := b.Namespace.Socket()
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { _ = socket.Close() }()
-
-	return vsock.DialOn(socket, cid, port)
+	return vsock.DialOn(b.Namespace.Socket, cid, port)
 }

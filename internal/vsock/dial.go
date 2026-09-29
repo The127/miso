@@ -28,10 +28,17 @@ func Dial(cid, port uint32) (Conn, error) {
 	return conn, nil
 }
 
-// DialOn connects a socket made elsewhere to a port of the machine with a
-// context ID. The connection has a copy of the socket of its own, so the
-// socket stays the caller's to close.
-func DialOn(socket *os.File, cid, port uint32) (Conn, error) {
+// DialOn connects a socket that the maker makes elsewhere to a port of the
+// machine with a context ID.
+func DialOn(maker func() (*os.File, error), cid, port uint32) (Conn, error) {
+	socket, err := maker()
+	if err != nil {
+		return nil, err
+	}
+
+	// the connection has a copy of the socket of its own
+	defer func() { _ = socket.Close() }()
+
 	conn, err := mdsocket.FileConn(socket, "vsock")
 	if err != nil {
 		return nil, err

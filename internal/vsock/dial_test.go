@@ -65,15 +65,13 @@ func TestAConnectionClosedForWritingStillHearsTheAnswer(t *testing.T) {
 
 // unconnected is a socket of this machine that is neither bound nor
 // connected, made outside the package as a namespace makes it.
-func unconnected(t *testing.T) *os.File {
-	t.Helper()
-
+func unconnected() (*os.File, error) {
 	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
-	require.NoError(t, err)
-	socket := os.NewFile(uintptr(fd), "vsock")
-	t.Cleanup(func() { assert.NoError(t, socket.Close()) })
+	if err != nil {
+		return nil, err
+	}
 
-	return socket
+	return os.NewFile(uintptr(fd), "vsock"), nil
 }
 
 func TestAConnectionDialedOnAHandedSocketCarriesWhatItWrites(t *testing.T) {
@@ -83,7 +81,7 @@ func TestAConnectionDialedOnAHandedSocketCarriesWhatItWrites(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, listener.Close()) })
 
 	// act
-	dialed, err := vsock.DialOn(unconnected(t), unix.VMADDR_CID_LOCAL, listener.Port())
+	dialed, err := vsock.DialOn(unconnected, unix.VMADDR_CID_LOCAL, listener.Port())
 
 	// assert
 	require.NoError(t, err)
@@ -104,7 +102,7 @@ func TestAConnectionDialedOnAHandedSocketClosedForWritingStillHearsTheAnswer(t *
 	listener, err := vsock.Listen(unix.VMADDR_PORT_ANY)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, listener.Close()) })
-	dialed, err := vsock.DialOn(unconnected(t), unix.VMADDR_CID_LOCAL, listener.Port())
+	dialed, err := vsock.DialOn(unconnected, unix.VMADDR_CID_LOCAL, listener.Port())
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
 	accepted, err := listener.Accept()

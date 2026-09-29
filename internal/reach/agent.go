@@ -40,14 +40,5 @@ func Agent(vm VM, socket func() (*os.File, error)) (func() (io.ReadWriteCloser, 
 		return nil, ErrNoSockets
 	}
 
-	return func() (io.ReadWriteCloser, error) {
-		dialing, err := socket()
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() { _ = dialing.Close() }()
-
-		return vsock.DialOn(dialing, vm.CID(), vsock.AgentPort)
-	}, nil
+	return func() (io.ReadWriteCloser, error) { return vsock.DialOn(socket, vm.CID(), vsock.AgentPort) }, nil
 }

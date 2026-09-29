@@ -77,16 +77,7 @@ func TestAMachineOnADeviceOfAVsockNamespaceIsOutOfTheHostsReachWithKVM(t *testin
 
 // insideDial dials the guest through sockets of the namespace.
 func insideDial(namespace *vsockns.Namespace, vm *qemu.VM) func() (io.ReadWriteCloser, error) {
-	return func() (io.ReadWriteCloser, error) {
-		socket, err := namespace.Socket()
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() { _ = socket.Close() }()
-
-		return vsock.DialOn(socket, vm.CID(), guestPort)
-	}
+	return func() (io.ReadWriteCloser, error) { return vsock.DialOn(namespace.Socket, vm.CID(), guestPort) }
 }
 
 func TestAMachineOnADeviceOfAVsockNamespaceCannotReachTheHostWithKVM(t *testing.T) {
