@@ -3,6 +3,7 @@ package builder
 import (
 	"errors"
 	"io"
+	"os"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -26,4 +27,23 @@ func fetch(conn *protocol.Conn, request protocol.Fetch, name string, outputs Out
 	}
 
 	return errors.Join(conn.AskFetch(request, file, out), file.Close())
+}
+
+// OutputsIn are outputs that are files in a directory.
+func OutputsIn(dir string) Outputs {
+	return func(name string) (Output, error) {
+		root, err := os.OpenRoot(dir)
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() { _ = root.Close() }()
+
+		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0o644)
+		if err != nil {
+			return nil, err
+		}
+
+		return file, nil
+	}
 }

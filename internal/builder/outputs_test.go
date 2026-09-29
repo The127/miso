@@ -3,6 +3,8 @@ package builder_test
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -76,6 +78,23 @@ func TestAFetchedDiskIsWrittenIntoTheFileItsOutputNames(t *testing.T) {
 	require.Contains(t, created, "os.raw")
 	assert.Equal(t, "disk\n", string(created["os.raw"].bytes))
 	assert.True(t, created["os.raw"].closed)
+}
+
+func TestAnOutputInADirectoryIsTheFileOfItsName(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+
+	// act
+	output, err := builder.OutputsIn(dir)("os.raw")
+	require.NoError(t, err)
+	_, err = output.WriteAt([]byte("disk\n"), 0)
+	require.NoError(t, err)
+	require.NoError(t, output.Close())
+
+	// assert
+	written, err := os.ReadFile(filepath.Join(dir, "os.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "disk\n", string(written))
 }
 
 func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
