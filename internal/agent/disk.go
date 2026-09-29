@@ -2,10 +2,8 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -97,40 +95,8 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	// the ESP lies on the image as its efi, where the image's repart
-	// definitions take it from
 	esp := filepath.Join(scratch, "esp")
-	fallback := filepath.Join(esp, "efi", "EFI", "BOOT")
-	if err := os.MkdirAll(fallback, 0o755); err != nil { //nolint:gosec // an image's directories are open to all
-		return err
-	}
-
-	if err := os.Mkdir(filepath.Join(esp, "efi", "EFI", "Linux"), 0o755); err != nil { //nolint:gosec // an image's directories are open to all
-		return err
-	}
-
-	// the image's root shows the mode and owner of the top layer, which the
-	// ESP is
-	root, err := os.Stat(image)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Chmod(esp, root.Mode().Perm()); err != nil {
-		return err
-	}
-
-	owner, _ := root.Sys().(*syscall.Stat_t)
-	if err := os.Lchown(esp, int(owner.Uid), int(owner.Gid)); err != nil {
-		return err
-	}
-
-	err = copyPart(imageFS, systemdBoot, filepath.Join(fallback, "BOOTX64.EFI"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
-	}
-
-	if err != nil {
+	if err := makeESP(imageFS, image, esp); err != nil {
 		return err
 	}
 
