@@ -45,6 +45,9 @@ func (n *Namespace) answer() (string, []int, error) {
 
 // ask puts a question to the helper and takes its answer.
 func (n *Namespace) ask(question string) (string, []int, error) {
+	n.asking.Lock()
+	defer n.asking.Unlock()
+
 	if err := say(n.conn, question); err != nil {
 		return "", nil, err
 	}

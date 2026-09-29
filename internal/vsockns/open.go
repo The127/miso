@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -24,6 +25,9 @@ var devicePath = "/dev/vhost-vsock"
 type Namespace struct {
 	helper *exec.Cmd
 	conn   int
+
+	// a question and its answer share the channel with no other
+	asking sync.Mutex
 }
 
 // Open sets up a vsock namespace that only miso's VMs share.
