@@ -1,6 +1,9 @@
 package protocol
 
-import "errors"
+import (
+	"errors"
+	"io"
+)
 
 // ErrNegativeOffset is a piece that says it lies before the start of its
 // disk.
@@ -15,3 +18,14 @@ type Piece struct {
 }
 
 func (p Piece) into(e *envelope) { e.Piece = &p }
+
+// SendPiece writes a piece to the other side and its bytes right after it.
+func (c *Conn) SendPiece(piece Piece, content io.Reader) error {
+	if err := c.Send(piece); err != nil {
+		return err
+	}
+
+	_, err := io.CopyN(c.w, content, piece.Size)
+
+	return err
+}

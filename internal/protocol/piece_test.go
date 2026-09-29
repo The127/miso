@@ -3,6 +3,7 @@ package protocol_test
 import (
 	"bytes"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,8 +18,7 @@ func TestTheBytesOfAPieceFollowIt(t *testing.T) {
 	agent := protocol.New("miso 1.2.0", &wire, &wire)
 	host := protocol.New("miso 1.2.0", &wire, &wire)
 	piece := protocol.Piece{Offset: 4096, Size: 6}
-	require.NoError(t, agent.Send(piece))
-	wire.WriteString("hello\n")
+	require.NoError(t, agent.SendPiece(piece, strings.NewReader("hello\n")))
 	require.NoError(t, agent.Send(protocol.Done{}))
 
 	// act
