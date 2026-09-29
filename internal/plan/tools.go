@@ -1,6 +1,10 @@
 package plan
 
-import "github.com/The127/miso/internal/imagefile"
+import (
+	"strings"
+
+	"github.com/The127/miso/internal/imagefile"
+)
 
 // BuiltinTools names the stage miso adds, with a space that no name in a
 // build file can have.
@@ -28,12 +32,36 @@ func makesDisk(output imagefile.Output) bool {
 // change when miso moves it, not when Debian does.
 const snapshot = "20260928T000000Z"
 
+// toolPackages are what makes a disk: repart and ukify, the loader and the
+// stub they need, and what formats the file systems.
+var toolPackages = []string{"systemd-repart", "systemd-ukify", "systemd-boot-efi", "dosfstools", "mtools", "e2fsprogs", "erofs-utils"}
+
+// archive is the apt source of the tools, a line of its file each.
+func archive() []string {
+	return []string{
+		"Types: deb",
+		"URIs: https://snapshot.debian.org/archive/debian/" + snapshot + "/",
+		"Suites: sid",
+		"Components: main",
+		"Check-Valid-Until: no",
+		"Signed-By: /usr/share/keyrings/debian-archive-keyring.pgp",
+	}
+}
+
+// installTools is the command that has the tools come from the archive.
+func installTools() string {
+	source := strings.Join(archive(), `\n`) + `\n`
+
+	return "rm -f /etc/apt/sources.list /etc/apt/sources.list.d/* && " +
+		"printf '" + source + "' > /etc/apt/sources.list.d/debian.sources && " +
+		"apt-get update && " +
+		"apt-get install -y --no-install-recommends " + strings.Join(toolPackages, " ")
+}
+
 // builtinStage is on the line of the output that needs it, so that a failure
 // in it points somewhere in the build file.
 func builtinStage(line int) imagefile.Stage {
-	source := `Types: deb\nURIs: https://snapshot.debian.org/archive/debian/` + snapshot + `/\nSuites: sid\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.pgp\n`
-	install := imagefile.Run{Line: line, Command: "rm -f /etc/apt/sources.list /etc/apt/sources.list.d/* && printf '" + source + "' > /etc/apt/sources.list.d/debian.sources && " +
-		"apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools e2fsprogs erofs-utils"}
+	install := imagefile.Run{Line: line, Command: installTools()}
 
 	return imagefile.Stage{Line: line, Name: BuiltinTools, Base: "debian:sid", Instructions: []imagefile.Instruction{install}}
 }
