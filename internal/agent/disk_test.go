@@ -165,6 +165,29 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 		" --output=/run/miso/esp/EFI/Linux/99.0.efi\n", string(written))
 }
 
+func TestTheUKITakesTheImagesKernelCommandLine(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 /etc/kernel && touch /usr/lib/modules/99.0/vmlinuz /usr/lib/modules/99.0/initrd /etc/kernel/cmdline"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Contains(t, string(written), " --cmdline=@/run/miso/image/etc/kernel/cmdline")
+}
+
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	// arrange
 	layers := t.TempDir()

@@ -27,14 +27,20 @@ const repart = `systemd-repart \
 	--size=auto \
 	/run/miso/out/disk.raw`
 
-// ukify builds the UKI of the image's kernel into the ESP.
-const ukify = `ukify build \
+// ukify builds the UKI of the image's kernel into the ESP, with the
+// image's kernel command line when it has one.
+const ukify = `set --
+if [ -e /run/miso/image/etc/kernel/cmdline ]; then
+	set -- --cmdline=@/run/miso/image/etc/kernel/cmdline
+fi
+ukify build \
 	--linux="/run/miso/image/$MISO_LINUX" \
 	--initrd="/run/miso/image/$MISO_INITRD" \
 	--stub=/run/miso/image/usr/lib/systemd/boot/efi/linuxx64.efi.stub \
 	--os-release=@/run/miso/image/etc/os-release \
 	--uname="$MISO_VERSION" \
-	--output="/run/miso/esp/EFI/Linux/$MISO_VERSION.efi"`
+	--output="/run/miso/esp/EFI/Linux/$MISO_VERSION.efi" \
+	"$@"`
 
 // Disk makes a bootable disk image of the image's layers with the tools of
 // another stage.
