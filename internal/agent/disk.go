@@ -105,6 +105,16 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	// the image's root shows the mode of the top layer, which the ESP is
+	root, err := os.Stat(image)
+	if err != nil {
+		return err
+	}
+
+	if err := os.Chmod(esp, root.Mode().Perm()); err != nil {
+		return err
+	}
+
 	loader, err := os.ReadFile(filepath.Join(image, systemdBoot))
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)

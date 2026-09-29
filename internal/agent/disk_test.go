@@ -239,6 +239,28 @@ func TestADiskWhoseLayerIsThereAlreadyIsNotMadeAgain(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRepartSeesTheImagesRootWithItsOwnMode(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: "chmod 0751 /"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+stat -c %a "$root" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "751\n", string(written))
+}
+
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
