@@ -15,12 +15,13 @@ func outputFlag() *cli.StringFlag {
 }
 
 // outputsOf are the outputs in the directory -o names, which is made if it
-// is missing, or none without -o. A disk with checks is booted through check
-// before it gets its name.
-func outputsOf(command *cli.Command, check builder.Check) (builder.Outputs, error) {
+// is missing. A disk with checks is booted through check before it gets its
+// name. Without -o only the disks with checks are fetched, into scratch, so
+// the checks still run.
+func outputsOf(command *cli.Command, check builder.Check, scratch string) (builder.Outputs, error) {
 	dir := command.String(outputFlagName)
 	if dir == "" {
-		return nil, nil
+		return builder.OnlyChecked(builder.OutputsIn(scratch, check)), nil
 	}
 
 	if err := os.MkdirAll(dir, 0o750); err != nil {

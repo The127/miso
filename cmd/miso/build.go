@@ -74,7 +74,15 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 	defer func() { _ = console.Close() }()
 
-	outputs, err := outputsOf(command, checker(ctx, blobs, dir, console))
+	// where disks go that are only checked, not written out
+	scratch, err := os.MkdirTemp(dir, "outputs-")
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = os.RemoveAll(scratch) }()
+
+	outputs, err := outputsOf(command, checker(ctx, blobs, dir, console), scratch)
 	if err != nil {
 		return err
 	}

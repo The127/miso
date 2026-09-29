@@ -166,3 +166,18 @@ func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKe
 	assert.Contains(t, string(said), file+":12: CHECK command -v nothing-of-that-name: exit code 1")
 	assert.NoFileExists(t, filepath.Join(out, "os.raw"))
 }
+
+func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Imagefile")
+	failing := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v nothing-of-that-name\n", 1)
+	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), file+":12: CHECK command -v nothing-of-that-name: exit code 1")
+}
