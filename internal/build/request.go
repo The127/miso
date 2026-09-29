@@ -24,9 +24,6 @@ var ErrUnknownKind = errors.New("unknown kind of output")
 // ErrUnknownOption is an option an output of its kind does not take.
 var ErrUnknownOption = errors.New("unknown option")
 
-// ErrNoTools is a disk without a stage that brings the tools to make it.
-var ErrNoTools = errors.New("needs --tools=<stage>")
-
 // Request is what the agent is asked for a step of the build file.
 type Request struct {
 	Line    int
@@ -118,7 +115,12 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return diskRequest(step, instruction, under, ends[instruction.Options[plan.Tools]])
+		tools, hasTools := instruction.Options[plan.Tools]
+		if !hasTools {
+			tools = plan.BuiltinTools
+		}
+
+		return diskRequest(step, instruction, under, ends[tools])
 	}
 
 	return nil, nil

@@ -1,0 +1,82 @@
+package plan_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/imagefile"
+	"github.com/The127/miso/internal/plan"
+)
+
+func TestADiskWithoutToolsGetsAToolsStageOnDebianBeforeItsOwn(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	assert.Equal(t, "debian:13", planned.Stages[0].Base)
+	assert.Equal(t, "scratch", planned.Stages[1].Base)
+}
+
+func TestADiskInALaterStageGetsTheToolsStageBeforeAllStages(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch AS base\nRUN true\nFROM base\nOUTPUT disk os.img\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 3)
+	assert.Equal(t, "debian:13", planned.Stages[0].Base)
+	assert.Equal(t, "scratch", planned.Stages[1].Base)
+}
+
+func TestAnIsoWithoutToolsGetsTheToolsStage(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT iso os.iso\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	assert.Equal(t, "debian:13", planned.Stages[0].Base)
+}
+
+func TestTheToolsStageInstallsTheTools(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages[0].Steps, 1)
+	install, isRun := planned.Stages[0].Steps[0].Instruction.(imagefile.Run)
+	require.True(t, isRun)
+	assert.Contains(t, install.Command, "systemd-repart")
+	assert.Contains(t, install.Command, "systemd-ukify")
+}
+
+func TestADiskWithoutToolsGetsADifferentKeyWhenTheToolsBaseChanges(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
+
+	// act
+	oldKeys := keys(t, stages, anyAgent, noFiles, images{"debian:13": "sha256:old"})
+	newKeys := keys(t, stages, anyAgent, noFiles, images{"debian:13": "sha256:new"})
+
+	// assert
+	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
+}
+
+var toolsImages = images{"debian:13": "sha256:trixie"}

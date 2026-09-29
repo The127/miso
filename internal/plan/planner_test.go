@@ -151,8 +151,8 @@ func TestAChangedOutputChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nCHECK true\n")
 
 	// act
-	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
-	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -164,8 +164,8 @@ func TestAChangedEarlierOutputChangesTheKeyOfTheCheck(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT portable app.raw\nCHECK true\n")
 
 	// act
-	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
-	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -177,8 +177,8 @@ func TestAChangedCheckChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
 	degraded := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK systemctl --failed\nCHECK test -e /etc/motd\n")
 
 	// act
-	runningKeys := keys(t, running, anyAgent, noFiles, noImages)
-	degradedKeys := keys(t, degraded, anyAgent, noFiles, noImages)
+	runningKeys := keys(t, running, anyAgent, noFiles, toolsImages)
+	degradedKeys := keys(t, degraded, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
@@ -203,8 +203,8 @@ func TestAChangedOutputKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nRUN apt-get install -y vim\n")
 
 	// act
-	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
-	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -229,8 +229,8 @@ func TestAChangedOutputKeepsTheKeyOfTheOutputAfterIt(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT portable app.raw\n")
 
 	// act
-	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
-	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -242,8 +242,8 @@ func TestAChangedCheckKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 	degraded := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK systemctl --failed\nRUN apt-get install -y vim\n")
 
 	// act
-	runningKeys := keys(t, running, anyAgent, noFiles, noImages)
-	degradedKeys := keys(t, degraded, anyAgent, noFiles, noImages)
+	runningKeys := keys(t, running, anyAgent, noFiles, toolsImages)
+	degradedKeys := keys(t, degraded, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))
@@ -268,8 +268,8 @@ func TestAChangedCheckKeepsTheKeysOfAStageBasedOnItsStage(t *testing.T) {
 	degraded := parse(t, "FROM scratch AS os\nOUTPUT disk os.img\nCHECK systemctl --failed\nFROM os\nRUN apt-get install -y vim\n")
 
 	// act
-	runningKeys := keys(t, running, anyAgent, noFiles, noImages)
-	degradedKeys := keys(t, degraded, anyAgent, noFiles, noImages)
+	runningKeys := keys(t, running, anyAgent, noFiles, toolsImages)
+	degradedKeys := keys(t, degraded, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, runningKeys), lastKey(t, degradedKeys))

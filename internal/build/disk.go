@@ -14,15 +14,12 @@ import (
 // file system under it, with the tools taken from where their stage ends.
 func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs) (protocol.Disk, error) {
 	var refused error
-	_, hasTools := instruction.Options[plan.Tools]
 	unknown, hasUnknown := unknownOption(instruction.Options)
 	switch {
 	case instruction.Kind != "disk" && instruction.Kind != "iso":
 		refused = ErrUnknownKind
 	case hasUnknown:
 		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
-	case !hasTools:
-		refused = ErrNoTools
 	}
 
 	if refused != nil {

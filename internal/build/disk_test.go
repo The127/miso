@@ -41,6 +41,24 @@ func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testin
 	}, disksOf(requests)[0])
 }
 
+func TestADiskWithoutToolsIsMadeWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT disk os.raw\n")
+	tools, image := source.Stages[0], source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, protocol.Disk{
+		Key:    image.Steps[1].Key,
+		Layers: []string{image.BaseKey, image.Steps[0].Key},
+		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+	}, disksOf(requests)[0])
+}
+
 func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nRUN apt-get install htop\nOUTPUT iso os.iso --tools=tools\n")
@@ -138,16 +156,4 @@ func TestADiskWithAnOptionMisoDoesNotKnowFailsAtItsLine(t *testing.T) {
 	require.ErrorIs(t, err, build.ErrUnknownOption)
 	assert.ErrorContains(t, err, "line 3")
 	assert.ErrorContains(t, err, "kernal")
-}
-
-func TestADiskWithoutToolsFailsAtItsLine(t *testing.T) {
-	// arrange
-	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\n")
-
-	// act
-	_, err := build.Requests(source, network)
-
-	// assert
-	require.ErrorIs(t, err, build.ErrNoTools)
-	assert.ErrorContains(t, err, "line 2")
 }

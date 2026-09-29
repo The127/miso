@@ -17,6 +17,8 @@ type planner struct {
 
 func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
 	planned := Plan{Agent: p.agent}
+	stages = withTools(stages)
+
 	for _, stage := range stages {
 		from, digest, err := p.start(stage)
 		if err != nil {
@@ -142,6 +144,10 @@ func (p *planner) reads(instruction imagefile.Instruction, files []File) []strin
 	if step, isOutput := instruction.(imagefile.Output); isOutput {
 		if tools, hasTools := step.Options[Tools]; hasTools {
 			return []string{p.ends[tools]}
+		}
+
+		if makesDisk(step) {
+			return []string{p.ends[BuiltinTools]}
 		}
 	}
 

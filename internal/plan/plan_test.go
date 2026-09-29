@@ -100,12 +100,12 @@ func TestAPlannedRunAfterAnOutputWasBuiltOnTheRunBeforeIt(t *testing.T) {
 	stages := parse(t, "FROM scratch\nRUN make\nOUTPUT disk os.img\nRUN make install\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, planned.Stages, 1)
-	steps := planned.Stages[0].Steps
+	require.Len(t, planned.Stages, 2)
+	steps := planned.Stages[1].Steps
 	require.Len(t, steps, 3)
 	assert.Equal(t, []string{steps[0].Key}, steps[2].BuiltOn)
 }
@@ -115,12 +115,12 @@ func TestAPlannedCheckWasBuiltOnTheOutputsBeforeIt(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\nOUTPUT portable app.raw\nCHECK true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
-	require.Len(t, planned.Stages, 1)
-	steps := planned.Stages[0].Steps
+	require.Len(t, planned.Stages, 2)
+	steps := planned.Stages[1].Steps
 	require.Len(t, steps, 3)
 	assert.Equal(t, []string{steps[0].Key, steps[1].Key}, steps[2].BuiltOn)
 }

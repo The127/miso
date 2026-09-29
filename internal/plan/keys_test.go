@@ -38,8 +38,8 @@ func TestACheckAndARunOfTheSameCommandGetDifferentKeys(t *testing.T) {
 	check := parse(t, "FROM scratch\nOUTPUT disk os.img\nCHECK true\n")
 
 	// act
-	runKeys := keys(t, run, anyAgent, noFiles, noImages)
-	checkKeys := keys(t, check, anyAgent, noFiles, noImages)
+	runKeys := keys(t, run, anyAgent, noFiles, toolsImages)
+	checkKeys := keys(t, check, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, runKeys), lastKey(t, checkKeys))
@@ -90,8 +90,8 @@ func TestAChangedOutputKindChangesItsKey(t *testing.T) {
 	iso := parse(t, "FROM scratch\nOUTPUT iso os.img\n")
 
 	// act
-	diskKeys := keys(t, disk, anyAgent, noFiles, noImages)
-	isoKeys := keys(t, iso, anyAgent, noFiles, noImages)
+	diskKeys := keys(t, disk, anyAgent, noFiles, toolsImages)
+	isoKeys := keys(t, iso, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, diskKeys), lastKey(t, isoKeys))
@@ -103,8 +103,8 @@ func TestAChangedOutputOptionChangesItsKey(t *testing.T) {
 	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\n")
 
 	// act
-	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
-	largeKeys := keys(t, large, anyAgent, noFiles, noImages)
+	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
+	largeKeys := keys(t, large, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.NotEqual(t, lastKey(t, smallKeys), lastKey(t, largeKeys))
@@ -116,8 +116,8 @@ func TestOutputOptionsInADifferentOrderKeepTheKey(t *testing.T) {
 	sizeLast := parse(t, "FROM scratch\nOUTPUT disk os.img --label=root --verity --size=4G\n")
 
 	// act
-	sizeFirstKeys := keys(t, sizeFirst, anyAgent, noFiles, noImages)
-	sizeLastKeys := keys(t, sizeLast, anyAgent, noFiles, noImages)
+	sizeFirstKeys := keys(t, sizeFirst, anyAgent, noFiles, toolsImages)
+	sizeLastKeys := keys(t, sizeLast, anyAgent, noFiles, toolsImages)
 
 	// assert
 	assert.Equal(t, lastKey(t, sizeFirstKeys), lastKey(t, sizeLastKeys))
