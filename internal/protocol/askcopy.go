@@ -9,5 +9,5 @@ type Files func(send func(Entry, io.Reader) error) error
 // AskCopy has the agent carry out a copy and sends it the files when it asks
 // for them, which it does only when their layer is not cached.
 func (c *Conn) AskCopy(request Copy, files Files, out io.Writer) error {
-	return c.ask(request, files, out)
+	return c.ask(request, files, nil, out)
 }

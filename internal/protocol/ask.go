@@ -12,10 +12,10 @@ var ErrNoAnswer = errors.New("no answer")
 // Ask has the agent carry out a request and writes what the request writes
 // to out until the agent tells how it ended.
 func (c *Conn) Ask(request Message, out io.Writer) error {
-	return c.ask(request, nil, out)
+	return c.ask(request, nil, nil, out)
 }
 
-func (c *Conn) ask(request Message, files Files, out io.Writer) error {
+func (c *Conn) ask(request Message, files Files, disk io.WriterAt, out io.Writer) error {
 	if err := c.Send(request); err != nil {
 		return err
 	}
@@ -45,6 +45,10 @@ func (c *Conn) ask(request Message, files Files, out io.Writer) error {
 			}
 
 			if err := c.Send(Sent{}); err != nil {
+				return err
+			}
+		case Piece:
+			if _, err := io.Copy(io.NewOffsetWriter(disk, m.Offset), c.Content()); err != nil {
 				return err
 			}
 		case Done:
