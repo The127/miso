@@ -23,5 +23,9 @@ func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol
 		return err
 	}
 
-	return pieces.Length(info.Size())
+	if err := pieces.Length(info.Size()); err != nil {
+		return err
+	}
+
+	return pieces.Piece(protocol.Piece{Size: info.Size()}, disk)
 }

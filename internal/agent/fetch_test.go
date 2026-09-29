@@ -17,6 +17,7 @@ import (
 // received is what a fetch sent to the host.
 type received struct {
 	length int64
+	disk   []byte
 }
 
 func (r *received) Length(size int64) error {
@@ -25,7 +26,18 @@ func (r *received) Length(size int64) error {
 	return nil
 }
 
-func (r *received) Piece(protocol.Piece, io.Reader) error {
+func (r *received) Piece(piece protocol.Piece, content io.Reader) error {
+	data, err := io.ReadAll(content)
+	if err != nil {
+		return err
+	}
+
+	if end := int(piece.Offset) + len(data); end > len(r.disk) {
+		r.disk = append(r.disk, make([]byte, end-len(r.disk))...)
+	}
+
+	copy(r.disk[piece.Offset:], data)
+
 	return nil
 }
 
@@ -51,4 +63,17 @@ func TestAFetchSendsTheLengthOfTheDisk(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, int64(16), sent.length)
+}
+
+func TestAFetchSendsTheDataOfTheDisk(t *testing.T) {
+	// arrange
+	worker := agent.New(keptDisk(t, "disk", []byte("hello, disk\n")), t.TempDir())
+	sent := &received{}
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk"}, sent, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "hello, disk\n", string(sent.disk))
 }
