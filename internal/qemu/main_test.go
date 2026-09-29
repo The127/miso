@@ -22,6 +22,7 @@ import (
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vport"
 	"github.com/The127/miso/internal/vsock"
+	"github.com/The127/miso/internal/vsockns"
 )
 
 // TestMain stands in for QEMU when a test starts this binary as one, and
@@ -41,6 +42,9 @@ import (
 // it answers the host over vsock as the init of a VM instead. Being process
 // 1 would say that too, but a container's entrypoint is process 1 as well.
 func TestMain(m *testing.M) {
+	// the helper of a vsock namespace is this binary too
+	vsockns.Helper()
+
 	if os.Getenv("MISO_GUEST") != "" {
 		guest()
 
@@ -68,9 +72,9 @@ func TestMain(m *testing.M) {
 // guestPort is where the guest answers the host.
 const guestPort = 1024
 
-// guest readies the VM it is the init of, answers one connection from the
-// host with miso, over its virtio port when it has one as the agent does,
-// else over vsock, and powers the VM off.
+// guest readies the VM it is the init of and answers each connection from
+// the host with miso, over its virtio port when it has one as the agent
+// does, else over vsock, until the host stops the VM.
 func guest() {
 	defer boot.PowerOff()
 
@@ -87,15 +91,17 @@ func guest() {
 		return
 	}
 
-	conn, err := listener.Accept()
-	if err != nil {
-		fmt.Println(err)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println(err)
 
-		return
+			return
+		}
+
+		_, _ = fmt.Fprintln(conn, "miso")
+		_ = conn.Close()
 	}
-
-	_, _ = fmt.Fprintln(conn, "miso")
-	_ = conn.Close()
 }
 
 // guestListener mirrors how miso's agent listens, so the guest answers on
