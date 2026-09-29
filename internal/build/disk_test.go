@@ -69,6 +69,20 @@ func TestTheFetchOfADiskCarriesTheChecksAfterItsOutput(t *testing.T) {
 	assert.Equal(t, []imagefile.Check{{Line: 4, Command: "command -v htop"}}, last.Checks)
 }
 
+func TestAStepBetweenAnOutputAndItsCheckLeavesTheCheckWithTheFetch(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nRUN true\nCHECK command -v htop\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	fetch := requests[len(requests)-2]
+	require.IsType(t, protocol.Fetch{}, fetch.Message)
+	assert.Equal(t, []imagefile.Check{{Line: 5, Command: "command -v htop"}}, fetch.Checks)
+}
+
 func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT portable os.raw\n")

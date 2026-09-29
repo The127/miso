@@ -61,6 +61,8 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			requests = append(requests, importOf(stage))
 		}
 
+		// the plan puts an OUTPUT before every CHECK of its stage
+		fetched := -1
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
@@ -78,11 +80,11 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 				line, written := imagefile.Written(output)
 				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name}
 				requests = append(requests, fetch)
+				fetched = len(requests) - 1
 			}
 
 			if check, isCheck := step.Instruction.(imagefile.Check); isCheck {
-				last := &requests[len(requests)-1]
-				last.Checks = append(last.Checks, check)
+				requests[fetched].Checks = append(requests[fetched].Checks, check)
 			}
 
 			roots[step.Key] = under.after(step)
