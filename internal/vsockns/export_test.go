@@ -3,6 +3,9 @@ package vsockns
 import (
 	"path/filepath"
 	"testing"
+	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 // NoChildMode has the helpers a test opens find no way to make their
@@ -39,6 +42,38 @@ func NoDevice(t *testing.T) {
 // IsHelper is whether a program with the arguments and the file as its
 // channel is the helper.
 var IsHelper = isHelper
+
+// HangingChildMode has the helpers a test opens hang before their first
+// answer, on a FIFO nobody reads, and names the FIFO.
+func HangingChildMode(t *testing.T) string {
+	t.Helper()
+
+	fifo := filepath.Join(t.TempDir(), "child_ns_mode")
+	if err := unix.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	was := childModePath
+	childModePath = fifo
+	t.Cleanup(func() {
+		childModePath = was
+		// a helper still stuck would outlive the test
+		if reader, err := unix.Open(fifo, unix.O_RDONLY|unix.O_NONBLOCK, 0); err == nil {
+			_ = unix.Close(reader)
+		}
+	})
+
+	return fifo
+}
+
+// Impatient has Open give up on a helper after a moment.
+func Impatient(t *testing.T) {
+	t.Helper()
+
+	was := openPatience
+	openPatience = 100 * time.Millisecond
+	t.Cleanup(func() { openPatience = was })
+}
 
 // Conn is the number of miso's end of the channel to the helper.
 func Conn(n *Namespace) int {
