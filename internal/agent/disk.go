@@ -64,6 +64,34 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	// the ESP lies on the image as its efi, where the image's repart
+	// definitions take it from
+	esp := filepath.Join(scratch, "esp")
+	fallback := filepath.Join(esp, "efi", "EFI", "BOOT")
+	if err := os.MkdirAll(fallback, 0o755); err != nil { //nolint:gosec // an image's directories are open to all
+		return err
+	}
+
+	loader, err := os.ReadFile(filepath.Join(image, "usr", "lib", "systemd", "boot", "efi", "systemd-bootx64.efi"))
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(filepath.Join(fallback, "BOOTX64.EFI"), loader, 0o644); err != nil { //nolint:gosec // an image's files are open to all
+		return err
+	}
+
+	booting := filepath.Join(scratch, "booting")
+	if err := os.Mkdir(booting, 0o700); err != nil {
+		return err
+	}
+
+	if err := mountReadOnly(booting, append([]string{esp}, append(lowers, bottom)...)); err != nil {
+		return err
+	}
+
+	defer func() { _ = syscall.Unmount(booting, syscall.MNT_DETACH) }()
+
 	work, err := a.layers.Begin(request.Key)
 	if err != nil {
 		return err
@@ -95,7 +123,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		// the clone keeps the attributes of the image's mount, so a device in
 		// the image opens nothing of the builder's
-		clone, err := unix.OpenTree(unix.AT_FDCWD, image, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC)
+		clone, err := unix.OpenTree(unix.AT_FDCWD, booting, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC)
 		if err != nil {
 			return false, err
 		}

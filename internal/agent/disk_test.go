@@ -35,6 +35,20 @@ func TestADiskOfAnImageWithoutAKernelFailsNamingIt(t *testing.T) {
 	assert.ErrorIs(t, err, kernel.ErrNoKernel)
 }
 
+// bootable adds to the base the systemd-boot an image brings, and answers
+// the layers of that image.
+func bootable(t *testing.T, worker *agent.Agent) []string {
+	t.Helper()
+
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && echo loader > /usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+	run := protocol.Run{Key: "boot", Layers: []string{"base"}, Command: boot}
+	code, err := worker.Run(context.Background(), run, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+
+	return []string{"base", "boot"}
+}
+
 // writesDisk is a systemd-repart that writes disk into the last path it is
 // given.
 const writesDisk = `for last; do :; done
@@ -58,7 +72,7 @@ func TestADiskIsWhatItsToolsWriteKeptAsTheLayerOfItsKey(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk)}
+	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, writesDisk)}
 
 	// act
 	err := worker.Disk(context.Background(), disk, io.Discard)
@@ -75,12 +89,36 @@ func TestADiskIsMadeFromTheImageAsRepartsRoot(t *testing.T) {
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	mark := rand.Text()
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "echo " + mark + " > /etc/miso-image"}
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: "echo " + mark + " > /etc/miso-image"}
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
 	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
 cat "$root/etc/miso-image" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, mark+"\n", string(written))
+}
+
+func TestTheImagesSystemdBootIsTheFallbackLoaderOfTheESP(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	mark := rand.Text()
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && echo " + mark + " > /usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: boot}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/efi/EFI/BOOT/BOOTX64.EFI" > "$last"`
 	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, repart)}
 
 	// act
@@ -99,7 +137,7 @@ func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	worker := mountedBase(t, layers)
 	repart := `for last; do :; done
 echo "$@" > "$last"`
-	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, repart)}
+	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, repart)}
 
 	// act
 	err := worker.Disk(context.Background(), disk, io.Discard)
@@ -115,13 +153,13 @@ func TestTheToolsCannotOpenADeviceOfTheImage(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "mknod /etc/miso-null c 1 3"}
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: "mknod /etc/miso-null c 1 3"}
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
 	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
 if echo x 2>/dev/null > "$root/etc/miso-null"; then echo opened; else echo refused; fi > "$last"`
-	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, repart)}
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart)}
 
 	// act
 	err = worker.Disk(context.Background(), disk, io.Discard)
@@ -137,7 +175,7 @@ func TestADiskWhoseToolsFailFailsNamingTheExitCodeAndKeepsNoLayer(t *testing.T) 
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, "exit 3")}
+	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, "exit 3")}
 
 	// act
 	err := worker.Disk(context.Background(), disk, io.Discard)
