@@ -134,49 +134,14 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		defer unbindOutput()
 
-		unbindParts, err := bind(parts, filepath.Join(root, "run", "miso", "parts"))
-		if err != nil {
-			return false, err
-		}
-
-		unbindESP, err := bind(filepath.Join(esp, "efi"), filepath.Join(root, "run", "miso", "esp"))
-		if err != nil {
-			unbindParts()
-
-			return false, err
-		}
-
-		// a version from the image reaches the shell only as a value, never
-		// as its words
-		uki := protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + found.Version}}
-
-		code, err = sandbox.Run(ctx, root, uki, out)
-		unbindESP()
-		unbindParts()
+		code, err = buildUKI(ctx, root, parts, esp, found.Version, out)
 		if err != nil || code != 0 {
-			return false, err
-		}
-
-		seen := filepath.Join(root, "run", "miso", "image")
-		if err := os.Mkdir(seen, 0o700); err != nil {
 			return false, err
 		}
 
 		// the ESP is whole now, and no lower layer may change under a
 		// mounted overlay
-		if err := mountReadOnly(booting, append([]string{esp}, append(lowers, bottom)...)); err != nil {
-			return false, err
-		}
-
-		defer func() { _ = syscall.Unmount(booting, syscall.MNT_DETACH) }()
-
-		if err := cloneInto(booting, seen); err != nil {
-			return false, err
-		}
-
-		defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
-
-		code, err = sandbox.Run(ctx, root, protocol.Run{Command: repart}, out)
+		code, err = makeDisk(ctx, root, booting, append([]string{esp}, append(lowers, bottom)...), out)
 
 		return false, err
 	})
@@ -191,6 +156,51 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	}
 
 	return work.Finish()
+}
+
+// buildUKI has the tools in root build the UKI of the kernel of a version
+// into the ESP, from copies of the image's boot parts.
+func buildUKI(ctx context.Context, root, parts, esp, version string, out io.Writer) (int, error) {
+	unbindParts, err := bind(parts, filepath.Join(root, "run", "miso", "parts"))
+	if err != nil {
+		return 0, err
+	}
+
+	defer unbindParts()
+
+	unbindESP, err := bind(filepath.Join(esp, "efi"), filepath.Join(root, "run", "miso", "esp"))
+	if err != nil {
+		return 0, err
+	}
+
+	defer unbindESP()
+
+	// a version from the image reaches the shell only as a value, never as
+	// its words
+	return sandbox.Run(ctx, root, protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + version}}, out)
+}
+
+// makeDisk has the tools in root make the disk of the layers below, top
+// first, which it mounts at booting.
+func makeDisk(ctx context.Context, root, booting string, below []string, out io.Writer) (int, error) {
+	seen := filepath.Join(root, "run", "miso", "image")
+	if err := os.Mkdir(seen, 0o700); err != nil {
+		return 0, err
+	}
+
+	if err := mountReadOnly(booting, below); err != nil {
+		return 0, err
+	}
+
+	defer func() { _ = syscall.Unmount(booting, syscall.MNT_DETACH) }()
+
+	if err := cloneInto(booting, seen); err != nil {
+		return 0, err
+	}
+
+	defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
+
+	return sandbox.Run(ctx, root, protocol.Run{Command: repart}, out)
 }
 
 // bind shows a directory at a place, which it makes, and hands back what
