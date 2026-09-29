@@ -76,8 +76,26 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		defer func() { _ = unix.Unmount(output, unix.MNT_DETACH) }()
 
-		var err error
-		code, err = sandbox.Run(ctx, root, protocol.Run{Command: "systemd-repart /run/miso/out/disk.raw"}, out)
+		seen := filepath.Join(root, "run", "miso", "image")
+		if err := os.Mkdir(seen, 0o700); err != nil {
+			return false, err
+		}
+
+		// a clone keeps the image read-only and unable to act on the builder
+		clone, err := unix.OpenTree(unix.AT_FDCWD, image, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC)
+		if err != nil {
+			return false, err
+		}
+
+		err = unix.MoveMount(clone, "", unix.AT_FDCWD, seen, unix.MOVE_MOUNT_F_EMPTY_PATH)
+		_ = unix.Close(clone)
+		if err != nil {
+			return false, err
+		}
+
+		defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
+
+		code, err = sandbox.Run(ctx, root, protocol.Run{Command: "systemd-repart --root=/run/miso/image /run/miso/out/disk.raw"}, out)
 
 		return false, err
 	})

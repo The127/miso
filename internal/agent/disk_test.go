@@ -4,6 +4,7 @@ package agent_test
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -67,6 +68,29 @@ func TestADiskIsWhatItsToolsWriteKeptAsTheLayerOfItsKey(t *testing.T) {
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "disk\n", string(written))
+}
+
+func TestADiskIsMadeFromTheImageAsRepartsRoot(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	mark := rand.Text()
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "echo " + mark + " > /etc/miso-image"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/etc/miso-image" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, mark+"\n", string(written))
 }
 
 func TestADiskWhoseToolsFailFailsNamingTheExitCodeAndKeepsNoLayer(t *testing.T) {
