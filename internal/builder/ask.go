@@ -37,9 +37,10 @@ func patienceFor(vm VM) time.Duration {
 
 // Ask asks the agent each request in order, on a connection of its own,
 // because the agent answers one request per connection. What the agent
-// writes goes to out, and a copy takes what it carries from files. Once ctx
-// is done the running step is cancelled.
-func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, out io.Writer) error {
+// writes goes to out, a copy takes what it carries from files and a fetch
+// writes into the file outputs creates for it. Once ctx is done the running
+// step is cancelled.
+func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, outputs Outputs, out io.Writer) error {
 	booted := time.After(patienceFor(vm))
 	for _, request := range requests {
 		conn, err := connect(ctx, vm, dial, booted)
@@ -50,7 +51,7 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 		// once the agent listened, a step may take as long as it takes
 		booted = nil
 
-		err = ask(ctx, conn, agent, request.Message, files, out)
+		err = ask(ctx, conn, agent, request, files, outputs, out)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -65,15 +66,20 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 
 // ask asks the agent one request on a connection and closes it. Once ctx is
 // done the connection closes early, which cancels the step in the agent.
-func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request protocol.Message, files Files, out io.Writer) error {
+func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request build.Request, files Files, outputs Outputs, out io.Writer) error {
 	closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
 
 	var err error
+	copying, isCopy := request.Message.(protocol.Copy)
+	fetching, isFetch := request.Message.(protocol.Fetch)
+	switch {
 	// a stage's files are in the builder, so the host has none to send
-	if copying, isCopy := request.(protocol.Copy); isCopy && copying.Stage == "" {
+	case isCopy && copying.Stage == "":
 		err = protocol.New(agent, conn, conn).AskCopy(copying, hosted(files(copying)), out)
-	} else {
-		err = protocol.New(agent, conn, conn).Ask(request, out)
+	case isFetch:
+		err = fetch(protocol.New(agent, conn, conn), fetching, request.Output, outputs, out)
+	default:
+		err = protocol.New(agent, conn, conn).Ask(request.Message, out)
 	}
 
 	closeOnCancel()

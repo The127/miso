@@ -32,6 +32,10 @@ type Request struct {
 	Line    int
 	Written string
 	Message protocol.Message
+
+	// the name of the file a fetch writes, taken from the plan and never
+	// from the agent
+	Output string
 }
 
 // Requests are what the agent is asked, in the order it is asked. A run
