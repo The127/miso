@@ -141,6 +141,19 @@ func TestADiskWithoutChecksWhoseFetchFailsLeavesNoFile(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(dir, "os.raw"))
 }
 
+func TestADiskWhoseAgentCannotBeReachedLeavesNoFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	requests := []build.Request{{Message: protocol.Fetch{Key: "disk"}, Output: "os.raw"}}
+
+	// act
+	err := builder.Ask(t.Context(), stopped{errors.New("QEMU stopped: exit status 1")}, unreachable, agentName, requests, nil, builder.OutputsIn(dir, nil), io.Discard)
+
+	// assert
+	require.Error(t, err)
+	assert.NoFileExists(t, filepath.Join(dir, "os.raw"))
+}
+
 func TestADiskItsOutputsGiveNoFileIsNotFetched(t *testing.T) {
 	// arrange
 	agent := &sending{disk: "disk\n"}

@@ -57,6 +57,10 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 		}
 
 		conn, err := connect(ctx, vm, dial, booted)
+		if err != nil && file != nil {
+			return errors.Join(err, file.Discard())
+		}
+
 		if err != nil {
 			return err
 		}
