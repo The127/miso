@@ -89,7 +89,10 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	// removing scratch must never reach into the image, so it goes first
 	defer func() { _ = syscall.Unmount(image, syscall.MNT_DETACH) }()
 
-	found, err := kernel.Find(os.DirFS(image), "")
+	// links in the image mean places in the image, never in the builder VM
+	imageFS := place.Open(image).FS()
+
+	found, err := kernel.Find(imageFS, "")
 	if err != nil {
 		return err
 	}
@@ -122,7 +125,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	loader, err := fs.ReadFile(place.Open(image).FS(), systemdBoot)
+	loader, err := fs.ReadFile(imageFS, systemdBoot)
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
 	}
