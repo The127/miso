@@ -17,6 +17,7 @@ import (
 
 type runner struct {
 	writes string
+	disk   string
 	code   int
 	err    error
 }
@@ -51,6 +52,15 @@ func (r runner) Disk(context.Context, protocol.Disk, io.Writer) error {
 
 func (r runner) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, _ io.Writer) error {
 	return r.err
+}
+
+func (r runner) Fetch(_ context.Context, _ protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
+	size := int64(len(r.disk))
+	if err := pieces.Length(size); err != nil {
+		return err
+	}
+
+	return pieces.Piece(protocol.Piece{Size: size}, strings.NewReader(r.disk))
 }
 
 func TestARunThatWorksIsDone(t *testing.T) {
@@ -104,6 +114,32 @@ func TestADiskThatWorksIsDone(t *testing.T) {
 	require.NoError(t, err)
 	done, err := host.Receive()
 	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestAFetchSendsTheLengthAndPiecesOfTheDiskAndIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Fetch{Key: "abc"}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{disk: "hello\n"})
+
+	// assert
+	require.NoError(t, err)
+	length, err := host.Receive()
+	require.NoError(t, err)
+	piece, err := host.Receive()
+	require.NoError(t, err)
+	content, err := io.ReadAll(host.Content())
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Length{Size: 6}, length)
+	assert.Equal(t, protocol.Piece{Size: 6}, piece)
+	assert.Equal(t, "hello\n", string(content))
 	assert.Equal(t, protocol.Done{}, done)
 }
 
@@ -213,6 +249,10 @@ func (w *watched) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return nil
 }
 
+func (w *watched) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
+	return nil
+}
+
 func (w *watched) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return nil
 }
@@ -257,6 +297,12 @@ func (w *waiting) Import(ctx context.Context, _ protocol.Import, _ io.Writer) er
 }
 
 func (w *waiting) Disk(ctx context.Context, _ protocol.Disk, _ io.Writer) error {
+	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
+
+	return err
+}
+
+func (w *waiting) Fetch(ctx context.Context, _ protocol.Fetch, _ protocol.Pieces, _ io.Writer) error {
 	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
 
 	return err
@@ -370,6 +416,10 @@ func (r *reading) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return nil
 }
 
+func (r *reading) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
+	return nil
+}
+
 func (r *reading) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
 	for {
 		entry, content, err := entries.Next()
@@ -431,6 +481,10 @@ func (b breaking) Import(context.Context, protocol.Import, io.Writer) error {
 }
 
 func (b breaking) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return nil
+}
+
+func (b breaking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
 
@@ -499,6 +553,10 @@ func (c checking) Import(context.Context, protocol.Import, io.Writer) error {
 }
 
 func (c checking) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return nil
+}
+
+func (c checking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
 

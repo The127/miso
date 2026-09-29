@@ -457,6 +457,12 @@ func (r *recording) Disk(_ context.Context, request protocol.Disk, _ io.Writer) 
 	return nil
 }
 
+func (r *recording) Fetch(_ context.Context, request protocol.Fetch, _ protocol.Pieces, _ io.Writer) error {
+	r.note(request)
+
+	return nil
+}
+
 func (r *recording) Copy(_ context.Context, request protocol.Copy, _ protocol.Entries, _ io.Writer) error {
 	r.note(request)
 
@@ -494,6 +500,12 @@ func (s saying) Disk(_ context.Context, _ protocol.Disk, out io.Writer) error {
 	return err
 }
 
+func (s saying) Fetch(_ context.Context, _ protocol.Fetch, _ protocol.Pieces, out io.Writer) error {
+	_, err := io.WriteString(out, s.words)
+
+	return err
+}
+
 func (s saying) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, out io.Writer) error {
 	_, err := io.WriteString(out, s.words)
 
@@ -517,6 +529,10 @@ func (e exiting) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return nil
 }
 
+func (e exiting) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
+	return nil
+}
+
 func (e exiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
 	return nil
 }
@@ -535,6 +551,10 @@ func (f failing) Import(context.Context, protocol.Import, io.Writer) error {
 }
 
 func (f failing) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return f.err
+}
+
+func (f failing) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return f.err
 }
 
@@ -561,6 +581,10 @@ func (w waiting) Import(context.Context, protocol.Import, io.Writer) error {
 }
 
 func (w waiting) Disk(context.Context, protocol.Disk, io.Writer) error {
+	return nil
+}
+
+func (w waiting) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
 
