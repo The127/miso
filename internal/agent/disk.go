@@ -127,35 +127,21 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 	code := 0
 	err = a.overlaid(request.Tools, sandbox.Floor, nil, upper, func(root string) (bool, error) {
-		output := filepath.Join(root, "run", "miso", "out")
-		if err := os.MkdirAll(output, 0o700); err != nil {
+		unbindOutput, err := bind(work.Dir(), filepath.Join(root, "run", "miso", "out"))
+		if err != nil {
 			return false, err
 		}
 
-		if err := unix.Mount(work.Dir(), output, "", unix.MS_BIND, ""); err != nil {
+		defer unbindOutput()
+
+		unbindParts, err := bind(parts, filepath.Join(root, "run", "miso", "parts"))
+		if err != nil {
 			return false, err
 		}
 
-		defer func() { _ = unix.Unmount(output, unix.MNT_DETACH) }()
-
-		given := filepath.Join(root, "run", "miso", "parts")
-		if err := os.Mkdir(given, 0o700); err != nil {
-			return false, err
-		}
-
-		if err := unix.Mount(parts, given, "", unix.MS_BIND, ""); err != nil {
-			return false, err
-		}
-
-		building := filepath.Join(root, "run", "miso", "esp")
-		if err := os.Mkdir(building, 0o700); err != nil {
-			_ = unix.Unmount(given, unix.MNT_DETACH)
-
-			return false, err
-		}
-
-		if err := unix.Mount(filepath.Join(esp, "efi"), building, "", unix.MS_BIND, ""); err != nil {
-			_ = unix.Unmount(given, unix.MNT_DETACH)
+		unbindESP, err := bind(filepath.Join(esp, "efi"), filepath.Join(root, "run", "miso", "esp"))
+		if err != nil {
+			unbindParts()
 
 			return false, err
 		}
@@ -164,10 +150,9 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		// as its words
 		uki := protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + found.Version}}
 
-		var err error
 		code, err = sandbox.Run(ctx, root, uki, out)
-		_ = unix.Unmount(building, unix.MNT_DETACH)
-		_ = unix.Unmount(given, unix.MNT_DETACH)
+		unbindESP()
+		unbindParts()
 		if err != nil || code != 0 {
 			return false, err
 		}
@@ -206,6 +191,20 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	}
 
 	return work.Finish()
+}
+
+// bind shows a directory at a place, which it makes, and hands back what
+// takes it away again.
+func bind(dir, at string) (func(), error) {
+	if err := os.MkdirAll(at, 0o700); err != nil {
+		return nil, err
+	}
+
+	if err := unix.Mount(dir, at, "", unix.MS_BIND, ""); err != nil {
+		return nil, err
+	}
+
+	return func() { _ = unix.Unmount(at, unix.MNT_DETACH) }, nil
 }
 
 // cloneInto shows a mount at another place. The clone keeps the attributes
