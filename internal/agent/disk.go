@@ -105,13 +105,19 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	// the image's root shows the mode of the top layer, which the ESP is
+	// the image's root shows the mode and owner of the top layer, which the
+	// ESP is
 	root, err := os.Stat(image)
 	if err != nil {
 		return err
 	}
 
 	if err := os.Chmod(esp, root.Mode().Perm()); err != nil {
+		return err
+	}
+
+	owner, _ := root.Sys().(*syscall.Stat_t)
+	if err := os.Lchown(esp, int(owner.Uid), int(owner.Gid)); err != nil {
 		return err
 	}
 
