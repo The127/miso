@@ -115,6 +115,12 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	if request.ElTorito {
+		if err := bootsFromCD(filepath.Join(parts, "stub")); err != nil {
+			return err
+		}
+	}
+
 	booting := filepath.Join(scratch, "booting")
 	if err := os.Mkdir(booting, 0o700); err != nil {
 		return err
