@@ -54,7 +54,21 @@ func enter(childMode string) error {
 		return err
 	}
 
-	return unix.Unshare(unix.CLONE_NEWNET)
+	if err := unix.Unshare(unix.CLONE_NEWNET); err != nil {
+		return err
+	}
+
+	// a kernel may take the write and still not make the namespace local
+	now, _, err := mode("", nil)
+	if err != nil {
+		return err
+	}
+
+	if now != "local" {
+		return fmt.Errorf("the namespace's vsock mode is %s, not local", now)
+	}
+
+	return nil
 }
 
 // handler answers one kind of question, with the files it hands over. The

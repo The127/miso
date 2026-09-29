@@ -36,3 +36,14 @@ func TestANamespaceThatCannotBeMadeLocalIsRefused(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, vsockns.ErrNotPrivate)
 }
+
+func TestANamespaceWhoseModeDidNotTakeIsRefused(t *testing.T) {
+	// arrange
+	vsockns.UnheededChildMode(t)
+
+	// act
+	_, err := vsockns.Open()
+
+	// assert
+	assert.ErrorIs(t, err, vsockns.ErrNotPrivate)
+}
