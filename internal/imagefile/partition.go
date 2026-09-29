@@ -22,8 +22,6 @@ type Setting struct {
 	Value string
 }
 
-func (Partition) instruction() {}
-
 func readPartition(line int, arguments string) ([]Instruction, error) {
 	fields := strings.Fields(arguments)
 	if len(fields) == 0 {

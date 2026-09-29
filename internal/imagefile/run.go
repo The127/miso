@@ -14,8 +14,6 @@ type Run struct {
 	Command string
 }
 
-func (Run) instruction() {}
-
 func readRun(line int, arguments string) ([]Instruction, error) {
 	// options come first, the command after them stays verbatim
 	var flags []string

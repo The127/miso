@@ -95,12 +95,12 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		}
 
 		steps = append(steps, step)
-		switch instruction.(type) {
-		case imagefile.Output, imagefile.Check:
+		switch imagefile.RoleOf(instruction) {
+		case imagefile.Artifact:
 			artifacts = append(artifacts, step.Key)
-		case imagefile.Partition, imagefile.Cmdline:
+		case imagefile.ForDisks:
 			forDisks = append(forDisks, step.Key)
-		default:
+		case imagefile.Builds:
 			rootfs = step.Key
 		}
 	}

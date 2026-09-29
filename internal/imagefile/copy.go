@@ -15,8 +15,6 @@ type Copy struct {
 	Destination string
 }
 
-func (Copy) instruction() {}
-
 func readCopy(line int, arguments string) ([]Instruction, error) {
 	found, err := words(arguments)
 	if err != nil {

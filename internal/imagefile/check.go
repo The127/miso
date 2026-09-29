@@ -7,8 +7,6 @@ type Check struct {
 	Command string
 }
 
-func (Check) instruction() {}
-
 func readCheck(line int, arguments string) ([]Instruction, error) {
 	command, err := shellCommand(arguments)
 	if err != nil {

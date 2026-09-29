@@ -12,8 +12,6 @@ type Env struct {
 	Value string
 }
 
-func (Env) instruction() {}
-
 var errEnvUsage = errors.New("needs KEY=VALUE")
 
 func readEnv(line int, arguments string) ([]Instruction, error) {

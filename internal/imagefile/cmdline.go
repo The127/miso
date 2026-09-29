@@ -12,8 +12,6 @@ type Cmdline struct {
 	Text string
 }
 
-func (Cmdline) instruction() {}
-
 func readCmdline(line int, arguments string) ([]Instruction, error) {
 	text := strings.TrimSpace(arguments)
 	if text == "" {

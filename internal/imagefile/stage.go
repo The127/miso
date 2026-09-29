@@ -8,8 +8,9 @@ type Stage struct {
 	Instructions []Instruction
 }
 
-// Instruction is one step of a stage: a Run, an Env, a Copy, an Output or
-// a Check.
+// Instruction is one step of a stage: a Run, an Env, a Copy, a Partition, a
+// Cmdline, an Output or a Check. Each says what it does to its stage, and
+// none can be added without.
 type Instruction interface {
-	instruction()
+	role() Role
 }

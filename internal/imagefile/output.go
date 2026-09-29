@@ -14,8 +14,6 @@ type Output struct {
 	Options map[string]string
 }
 
-func (Output) instruction() {}
-
 func readOutput(line int, arguments string) ([]Instruction, error) {
 	fields, options, err := splitOptions(strings.Fields(arguments))
 	if err != nil {
