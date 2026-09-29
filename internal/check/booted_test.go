@@ -202,3 +202,18 @@ func TestABootTakesTheNoticesOfItsOwnMachineOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint32(machine), said.asked)
 }
+
+func TestANoticeIsReadOnlyUpToTheSizeSystemdSends(t *testing.T) {
+	// arrange
+	long := &late{Reader: strings.NewReader(strings.Repeat("X", 5000)), Writer: io.Discard, closed: make(chan bool, 1)}
+	said := &notices{sent: make(chan io.ReadWriteCloser, 2)}
+	said.sent <- long
+	said.sent <- notice{strings.NewReader("READY=1"), io.Discard}
+
+	// act
+	err := booted(t, said)
+
+	// assert
+	require.NoError(t, err)
+	assert.False(t, <-long.closed)
+}

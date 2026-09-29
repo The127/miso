@@ -53,10 +53,15 @@ func take(notices noticeListener, cid uint32) (string, error) {
 	return heard(conn), nil
 }
 
+// noticeSize is the most a notice may say, the PIPE_BUF up to which
+// systemd itself takes a notice. More is never read, so no image has the
+// host keep all it sends.
+const noticeSize = 4096
+
 // heard is what a notice said, up to where it broke. A line cut off there
 // is never a whole READY=1.
 func heard(notice io.Reader) string {
-	said, _ := io.ReadAll(notice)
+	said, _ := io.ReadAll(io.LimitReader(notice, noticeSize))
 
 	return string(said)
 }
