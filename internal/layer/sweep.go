@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+func unfinished(name string) bool {
+	return strings.HasPrefix(name, working) || strings.HasPrefix(name, scratch)
+}
+
 // Sweep removes what a builder stopped halfway left behind. Only while
 // nothing uses the store, before the first layer is begun.
 func (s *Store) Sweep() error {
@@ -15,7 +19,7 @@ func (s *Store) Sweep() error {
 	}
 
 	for _, entry := range entries {
-		if !strings.HasPrefix(entry.Name(), working) && !strings.HasPrefix(entry.Name(), scratch) {
+		if !unfinished(entry.Name()) {
 			continue
 		}
 
