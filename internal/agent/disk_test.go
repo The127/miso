@@ -16,6 +16,7 @@ import (
 
 	"github.com/The127/miso/internal/agent"
 	"github.com/The127/miso/internal/kernel"
+	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -215,6 +216,27 @@ func TestADiskOfAnImageWithoutAUKIStubFailsNamingWhereItShouldBe(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, err, "the image has no UKI stub at /usr/lib/systemd/boot/efi/linuxx64.efi.stub")
+}
+
+func TestADiskWhoseLayerIsThereAlreadyIsNotMadeAgain(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	store := layer.Open(layers)
+	for _, key := range []string{"bare", "disk"} {
+		work, err := store.Begin(key)
+		require.NoError(t, err)
+		require.NoError(t, work.Finish())
+	}
+
+	worker := agent.New(layers, t.TempDir())
+	// bare has no kernel and no tools, so making a disk of it would fail
+	disk := protocol.Disk{Key: "disk", Layers: []string{"bare"}, Tools: []string{"bare"}}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
 }
 
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
