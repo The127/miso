@@ -30,11 +30,12 @@ func TestChecksReturnOnlyOnceTheirQEMUIsGone(t *testing.T) {
 	// arrange
 	var console bytes.Buffer
 	boot := check.Boot{
-		Driver:   lingering(t),
-		Image:    qemu.Disk{Path: "/o/image.raw", Format: "raw", Serial: "image", Access: qemu.Snapshot},
-		Dir:      t.TempDir(),
-		Console:  &console,
-		Patience: 100 * time.Millisecond,
+		Driver:    lingering(t),
+		Namespace: private(t),
+		Image:     qemu.Disk{Path: "/o/image.raw", Format: "raw", Serial: "image", Access: qemu.Snapshot},
+		Dir:       t.TempDir(),
+		Console:   &console,
+		Patience:  100 * time.Millisecond,
 	}
 
 	// act

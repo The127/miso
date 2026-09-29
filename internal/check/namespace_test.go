@@ -1,10 +1,7 @@
-//go:build kvm
-
 package check_test
 
 import (
 	"errors"
-	"io"
 	"testing"
 	"time"
 
@@ -12,13 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/check"
-	"github.com/The127/miso/internal/kvmtest"
-	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/vsockns"
 )
 
-func TestChecksRunInAnImageBootedInAVsockNamespaceWithKVM(t *testing.T) {
-	// arrange
+// private is a vsock namespace held for the test, which is skipped on a host
+// that cannot keep vsock private.
+func private(t *testing.T) *vsockns.Namespace {
+	t.Helper()
+
 	namespace, err := vsockns.Open()
 	if errors.Is(err, vsockns.ErrNotPrivate) {
 		t.Skip("this host cannot keep vsock private")
@@ -26,20 +24,17 @@ func TestChecksRunInAnImageBootedInAVsockNamespaceWithKVM(t *testing.T) {
 
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, namespace.Close()) })
-	boot := check.Boot{
-		Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
-		Namespace: namespace,
-		Firmware:  kvmtest.Firmware(t),
-		Image:     kvmtest.Image(t, "debian:sid"),
-		Dir:       t.TempDir(),
-		Console:   io.Discard,
-		Patience:  time.Minute,
-	}
+
+	return namespace
+}
+
+func TestABootWithoutAVsockNamespaceIsRefused(t *testing.T) {
+	// arrange
+	boot := check.Boot{Dir: t.TempDir(), Patience: time.Second}
 
 	// act
-	results, err := boot.Run(t.Context(), []string{"command -v sh"})
+	_, err := boot.Run(t.Context(), []string{"true"})
 
 	// assert
-	require.NoError(t, err)
-	assert.Equal(t, []check.Result{{Output: "/usr/bin/sh\n", Code: 0}}, results)
+	assert.ErrorIs(t, err, check.ErrNoNamespace)
 }

@@ -15,9 +15,7 @@ import (
 
 // Boot is an image booted for its checks.
 type Boot struct {
-	Driver qemu.Driver
-
-	// the host's own vsock when nil
+	Driver    qemu.Driver
 	Namespace Namespace
 
 	Firmware firmware.Firmware
@@ -34,6 +32,10 @@ type Boot struct {
 
 // Run boots the image and runs each check in it, one after the other.
 func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
+	if b.Namespace == nil {
+		return nil, ErrNoNamespace
+	}
+
 	flash, err := b.flash()
 	if err != nil {
 		return nil, err
@@ -72,9 +74,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 // start is the VM the image boots in, told where to send its notices.
 func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (*qemu.VM, error) {
 	driver := b.Driver
-	if b.Namespace != nil {
-		driver.OpenVsock = b.Namespace.Device
-	}
+	driver.OpenVsock = b.Namespace.Device
 
 	return driver.Start(ctx, qemu.Machine{
 		Boot:        flash,
