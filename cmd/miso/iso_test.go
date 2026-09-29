@@ -23,9 +23,8 @@ RUN v=$(ls /usr/lib/modules | sort -V | tail -1) && \
     dracut --force --no-hostonly --add-drivers "erofs sr_mod loop" \
       --install "/usr/bin/systemd-dissect /usr/lib/systemd/system/systemd-loop@.service /usr/lib/udev/rules.d/99-systemd.rules" \
       --kver "$v" "/boot/initrd.img-$v"
-RUN : > /etc/fstab && \
-    mkdir -p /etc/kernel && \
-    printf 'ro rootfstype=erofs systemd.volatile=overlay console=ttyS0\n' > /etc/kernel/cmdline
+RUN : > /etc/fstab
+CMDLINE ro rootfstype=erofs systemd.volatile=overlay console=ttyS0
 PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
 PARTITION root Type=root Format=erofs CopyFiles=/:/ ExcludeFiles=/efi/ Minimize=best ReadOnly=yes
 OUTPUT iso os.iso

@@ -17,6 +17,9 @@ type Disk struct {
 
 	// the partitions of the disk, in the order they are laid out
 	Partitions []Partition
+
+	// the kernel command line of the disk, empty for the image's own
+	Cmdline string
 }
 
 // Partition is a definition for systemd-repart, named as its file is.

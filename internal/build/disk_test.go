@@ -168,3 +168,16 @@ func TestADiskIsMadeOfThePartitionsAboveIt(t *testing.T) {
 		{Name: "root", Settings: []protocol.Setting{{Key: "Format", Value: "ext4"}, {Key: "SizeMinBytes", Value: "3G"}}},
 	}, disksOf(requests)[0].Partitions)
 }
+
+func TestADiskGetsTheCmdlineLinesAboveItJoinedByASpace(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nCMDLINE rw\nCMDLINE console=ttyS0\nOUTPUT disk os.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, "rw console=ttyS0", disksOf(requests)[0].Cmdline)
+}

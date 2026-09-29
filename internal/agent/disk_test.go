@@ -56,10 +56,11 @@ const writesDisk = `for last; do :; done
 echo disk > "$last"`
 
 // ukify is a ukify that writes its arguments into its output, and after
-// them the kernel it is given.
-const ukify = `for arg; do case $arg in --output=*) output=${arg#--output=} ;; --linux=*) linux=${arg#--linux=} ;; esac; done
+// them the kernel and the command line file it is given.
+const ukify = `for arg; do case $arg in --output=*) output=${arg#--output=} ;; --linux=*) linux=${arg#--linux=} ;; --cmdline=@*) cmdline=${arg#--cmdline=@} ;; esac; done
 echo "$@" > "$output"
-cat "$linux" >> "$output"`
+cat "$linux" >> "$output"
+if [ -n "$cmdline" ]; then cat "$cmdline" >> "$output"; fi`
 
 // fakeTools adds to the base a systemd-repart that runs the script and a
 // ukify, and answers the layers of those tools.
@@ -189,6 +190,30 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
 	require.NoError(t, err)
 	assert.Contains(t, string(written), " --cmdline=@/run/miso/parts/cmdline")
+}
+
+func TestTheUKITakesTheCmdlineOfTheBuildBeforeTheImagesOwn(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 /etc/kernel && touch /usr/lib/modules/99.0/vmlinuz /usr/lib/modules/99.0/initrd && echo from-image > /etc/kernel/cmdline"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, repart), Cmdline: "from-build"}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Contains(t, string(written), "from-build")
+	assert.NotContains(t, string(written), "from-image")
 }
 
 func TestADiskOfAnImageWithoutSystemdBootFailsNamingWhereItShouldBe(t *testing.T) {

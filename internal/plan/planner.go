@@ -77,7 +77,7 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 	var steps []Step
 	rootfs := from
 	var artifacts []string
-	var partitions []string
+	var forDisks []string
 	for _, instruction := range stage.Instructions {
 		builtOn := []string{rootfs}
 		if _, isCheck := instruction.(imagefile.Check); isCheck {
@@ -86,7 +86,7 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		}
 
 		if _, isOutput := instruction.(imagefile.Output); isOutput {
-			builtOn = append(builtOn, partitions...)
+			builtOn = append(builtOn, forDisks...)
 		}
 
 		step, err := p.step(builtOn, instruction)
@@ -98,8 +98,8 @@ func (p *planner) steps(from string, stage imagefile.Stage) ([]Step, string, err
 		switch instruction.(type) {
 		case imagefile.Output, imagefile.Check:
 			artifacts = append(artifacts, step.Key)
-		case imagefile.Partition:
-			partitions = append(partitions, step.Key)
+		case imagefile.Partition, imagefile.Cmdline:
+			forDisks = append(forDisks, step.Key)
 		default:
 			rootfs = step.Key
 		}

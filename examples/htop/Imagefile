@@ -8,11 +8,12 @@ FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 
 # The cloud image's fstab names the cloud image's partitions, which the new
-# disk does not have. The root partition has the root type, so the initrd
-# finds it and the command line needs no root=.
-RUN : > /etc/fstab && \
-    mkdir -p /etc/kernel && \
-    printf 'rw console=ttyS0\n' > /etc/kernel/cmdline
+# disk does not have.
+RUN : > /etc/fstab
+
+# The root partition has the root type, so the initrd finds it and the
+# command line needs no root=.
+CMDLINE rw console=ttyS0
 
 # The layout of the disk, in repart's own settings. It stays out of the image.
 PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M

@@ -40,6 +40,8 @@ func words(instruction imagefile.Instruction) []string {
 		}
 	case imagefile.Check:
 		found = []string{"CHECK", step.Command}
+	case imagefile.Cmdline:
+		found = []string{"CMDLINE", step.Text}
 	case imagefile.Partition:
 		found = []string{"PARTITION", step.Name}
 		for _, setting := range step.Settings {

@@ -102,9 +102,8 @@ func TestABuildOnAHostThatCannotKeepVsockPrivateSaysSoAndStillRunsOnTheBuilderKe
 // partitions are lines of its own, and miso's tools make the disk of them.
 const bootable = `FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
-RUN : > /etc/fstab && \
-    mkdir -p /etc/kernel && \
-    printf 'rw console=ttyS0\n' > /etc/kernel/cmdline
+RUN : > /etc/fstab
+CMDLINE rw console=ttyS0
 
 PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
 PARTITION root Type=root Format=ext4 CopyFiles=/:/ SizeMinBytes=3G
@@ -161,7 +160,7 @@ func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKe
 
 	// assert
 	require.Error(t, err)
-	assert.Contains(t, string(said), file+":10: CHECK false: exit code 1")
+	assert.Contains(t, string(said), file+":9: CHECK false: exit code 1")
 	assert.NoFileExists(t, filepath.Join(out, "os.raw"))
 }
 
@@ -177,5 +176,5 @@ func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testin
 
 	// assert
 	require.Error(t, err)
-	assert.Contains(t, string(said), file+":10: CHECK false: exit code 1")
+	assert.Contains(t, string(said), file+":9: CHECK false: exit code 1")
 }

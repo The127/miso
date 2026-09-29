@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/plan"
@@ -12,7 +13,7 @@ import (
 
 // diskRequest is what an output of a disk or an ISO asks for on the root
 // file system under it, with the tools taken from where their stage ends.
-func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, partitions []protocol.Partition) (protocol.Disk, error) {
+func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Disk, error) {
 	var refused error
 	unknown, hasUnknown := unknownOption(instruction.Options)
 	switch {
@@ -28,7 +29,7 @@ func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, too
 		return protocol.Disk{}, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
 	}
 
-	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == "iso", Partitions: slices.Clone(partitions)}, nil
+	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == "iso", Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
 }
 
 // unknownOption is the first option in sorted order, so the same build file
@@ -39,6 +40,21 @@ func unknownOption(options map[string]string) (string, bool) {
 	}
 
 	return "", false
+}
+
+// diskInputs are what the lines above an output say about its disk.
+type diskInputs struct {
+	partitions []protocol.Partition
+	cmdline    []string
+}
+
+func (d *diskInputs) add(instruction imagefile.Instruction) {
+	switch step := instruction.(type) {
+	case imagefile.Partition:
+		d.partitions = append(d.partitions, partitionOf(step))
+	case imagefile.Cmdline:
+		d.cmdline = append(d.cmdline, step.Text)
+	}
 }
 
 func partitionOf(partition imagefile.Partition) protocol.Partition {

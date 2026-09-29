@@ -63,15 +63,13 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 		// the plan puts an OUTPUT before every CHECK of its stage
 		fetched := -1
-		var partitions []protocol.Partition
+		var inputs diskInputs
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
-			if partition, isPartition := step.Instruction.(imagefile.Partition); isPartition {
-				partitions = append(partitions, partitionOf(partition))
-			}
+			inputs.add(step.Instruction)
 
-			message, err := messageOf(step, under, ends, network, partitions)
+			message, err := messageOf(step, under, ends, network, inputs)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +106,7 @@ func importOf(stage plan.Stage) Request {
 
 // messageOf is what the agent is asked for a step on the root file system
 // under it, or nothing for a step the agent has no part in.
-func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, partitions []protocol.Partition) (protocol.Message, error) {
+func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs) (protocol.Message, error) {
 	switch instruction := step.Instruction.(type) {
 	case imagefile.Run:
 		run := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command}
@@ -120,7 +118,7 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return diskRequest(step, instruction, under, ends[plan.BuiltinTools], partitions)
+		return diskRequest(step, instruction, under, ends[plan.BuiltinTools], inputs)
 	}
 
 	return nil, nil

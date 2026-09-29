@@ -118,6 +118,12 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	if request.Cmdline != "" {
+		if err := os.WriteFile(filepath.Join(parts, "cmdline"), []byte(request.Cmdline+"\n"), 0o600); err != nil {
+			return err
+		}
+	}
+
 	if request.ElTorito {
 		if err := bootsFromCD(filepath.Join(parts, "stub")); err != nil {
 			return err
