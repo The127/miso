@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,8 +16,8 @@ import (
 // Fetch sends the host the disk kept as the output of a key.
 func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
 	// the tools that wrote the disk run the build's code, so its name may be
-	// a link to anything in the builder
-	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), "disk.raw"), os.O_RDONLY|unix.O_NOFOLLOW, 0)
+	// a link to anything in the builder, or a FIFO no one ever writes to
+	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), "disk.raw"), os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return err
 	}
@@ -26,6 +27,10 @@ func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol
 	info, err := disk.Stat()
 	if err != nil {
 		return err
+	}
+
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("the disk of %s is no regular file", request.Key)
 	}
 
 	if err := pieces.Length(info.Size()); err != nil {

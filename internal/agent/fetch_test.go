@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,4 +119,26 @@ func TestAFetchNeverFollowsTheDiskAsALink(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, unix.ELOOP)
 	assert.Empty(t, sent.disk)
+}
+
+func TestAFetchRefusesADiskThatIsNoRegularFile(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(layers, "disk"), 0o700))
+	require.NoError(t, unix.Mkfifo(filepath.Join(layers, "disk", "disk.raw"), 0o600))
+	worker := agent.New(layers, t.TempDir())
+	fetched := make(chan error, 1)
+
+	// act
+	go func() {
+		fetched <- worker.Fetch(context.Background(), protocol.Fetch{Key: "disk"}, &received{}, io.Discard)
+	}()
+
+	// assert
+	select {
+	case err := <-fetched:
+		assert.EqualError(t, err, "the disk of disk is no regular file")
+	case <-time.After(time.Second):
+		assert.Fail(t, "the fetch waits for a writer")
+	}
 }
