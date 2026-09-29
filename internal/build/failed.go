@@ -1,6 +1,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/The127/miso/internal/imagefile"
@@ -9,6 +10,11 @@ import (
 // Failed is why the request failed, said at the line of the build file it
 // came from and as its author wrote it there.
 func (r Request) Failed(err error) error {
+	// a check of the request fails at its own line
+	if _, atLine := errors.AsType[*imagefile.Error](err); atLine {
+		return err
+	}
+
 	return &imagefile.Error{Line: r.Line, Err: fmt.Errorf("%s: %w", r.Written, err)}
 }
 
