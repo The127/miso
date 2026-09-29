@@ -6,12 +6,16 @@ import (
 )
 
 // Disk is a disk image the machine sees as a virtio disk, which the agent
-// finds by its serial.
+// finds by its serial, or as a CD.
 type Disk struct {
 	Path   string
 	Format string
 	Serial string
 	Access Access
+
+	// the machine sees the image as a CD in an optical drive, which it can
+	// never write
+	CD bool
 }
 
 // Access is what a boot may do to a disk.
@@ -38,11 +42,19 @@ const serialBytes = 20
 func drives(machine Machine) ([]string, error) {
 	var args []string
 	for i, disk := range machine.Disks {
+		id := fmt.Sprintf("disk%d", i)
+		if disk.CD {
+			args = append(args,
+				"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,media=cdrom,readonly=on", escaped(disk.Path), disk.Format, id),
+				"-device", "ide-cd,drive="+id)
+
+			continue
+		}
+
 		if len(disk.Serial) > serialBytes {
 			return nil, fmt.Errorf("the serial %s is longer than the %d bytes a virtio disk shows", disk.Serial, serialBytes)
 		}
 
-		id := fmt.Sprintf("disk%d", i)
 		args = append(args,
 			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", escaped(disk.Path), disk.Format, id, access(disk)),
 			"-device", fmt.Sprintf("virtio-blk-pci,drive=%s,serial=%s", id, escaped(disk.Serial)))

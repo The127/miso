@@ -93,3 +93,16 @@ func TestASnapshotDiskIsWrittenToAndForgotten(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "file=/o/image.raw,format=raw,if=none,id=disk0,snapshot=on", valueOf(t, args, "-drive"))
 }
+
+func TestACDIsInAnOpticalDriveAndNeverWritten(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Disks: []qemu.Disk{{Path: "/o/os.iso", Format: "raw", Access: qemu.Snapshot, CD: true}}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "file=/o/os.iso,format=raw,if=none,id=disk0,media=cdrom,readonly=on", valueOf(t, args, "-drive"))
+	assert.Equal(t, "ide-cd,drive=disk0", valueOf(t, args, "-device"))
+}
