@@ -81,7 +81,8 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 			return false, err
 		}
 
-		// a clone keeps the image read-only and unable to act on the builder
+		// the clone keeps the attributes of the image's mount, so a device in
+		// the image opens nothing of the builder's
 		clone, err := unix.OpenTree(unix.AT_FDCWD, image, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC)
 		if err != nil {
 			return false, err

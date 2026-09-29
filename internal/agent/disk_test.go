@@ -93,6 +93,28 @@ cat "$root/etc/miso-image" > "$last"`
 	assert.Equal(t, mark+"\n", string(written))
 }
 
+func TestTheToolsCannotOpenADeviceOfTheImage(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "mknod /etc/miso-null c 1 3"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+if echo x 2>/dev/null > "$root/etc/miso-null"; then echo opened; else echo refused; fi > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "refused\n", string(written))
+}
+
 func TestADiskWhoseToolsFailFailsNamingTheExitCodeAndKeepsNoLayer(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
