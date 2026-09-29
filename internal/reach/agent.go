@@ -1,12 +1,17 @@
 package reach
 
 import (
+	"errors"
 	"io"
 	"os"
 
 	"github.com/The127/miso/internal/vport"
 	"github.com/The127/miso/internal/vsock"
 )
+
+// ErrNoSockets is a VM on vsock without the sockets of its namespace. The
+// host's own vsock would share the VM with everything else on it.
+var ErrNoSockets = errors.New("a VM on vsock is reached only through the sockets of its namespace")
 
 // VM is a builder VM whose agent the host connects to.
 type VM interface {
@@ -20,7 +25,7 @@ type VM interface {
 
 // Agent is how the host connects to the agent of the VM, once for each
 // request. Socket makes the sockets the host dials on, in the vsock
-// namespace the VM runs in. The host's own vsock when nil.
+// namespace the VM runs in.
 func Agent(vm VM, socket func() (*os.File, error)) (func() (io.ReadWriteCloser, error), error) {
 	if port := vm.Port(); port != nil {
 		dialer, err := vport.Connect(port)
@@ -32,7 +37,7 @@ func Agent(vm VM, socket func() (*os.File, error)) (func() (io.ReadWriteCloser, 
 	}
 
 	if socket == nil {
-		return func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }, nil
+		return nil, ErrNoSockets
 	}
 
 	return func() (io.ReadWriteCloser, error) {

@@ -72,3 +72,18 @@ func TestTheAgentOfAVMWithAVirtioPortIsReachedOverIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(got))
 }
+
+// onVsock is a VM the host reaches over vsock, which has no virtio port.
+type onVsock struct{}
+
+func (onVsock) CID() uint32 { return 3 }
+
+func (onVsock) Port() *os.File { return nil }
+
+func TestTheAgentOfAVMWithoutAVirtioPortIsNotReachedWithoutSockets(t *testing.T) {
+	// act
+	_, err := reach.Agent(onVsock{}, nil)
+
+	// assert
+	assert.ErrorIs(t, err, reach.ErrNoSockets)
+}
