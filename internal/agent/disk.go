@@ -22,16 +22,22 @@ const systemdBoot = "usr/lib/systemd/boot/efi/systemd-bootx64.efi"
 // stub is where an image brings the stub a UKI is built on.
 const stub = "usr/lib/systemd/boot/efi/linuxx64.efi.stub"
 
-// repart makes the disk of the image from the definitions the image ships.
-// Without --dry-run=no it writes nothing. OVMF cannot read an ESP of 4096
-// byte sectors, which repart may pick for a file.
-const repart = `systemd-repart \
+// repart makes the disk of the image from the definitions the image ships,
+// with a boot catalog for optical drives when asked. Without --dry-run=no
+// it writes nothing. OVMF cannot read an ESP of 4096 byte sectors, which
+// repart may pick for a file.
+const repart = `set --
+if [ -n "$MISO_EL_TORITO" ]; then
+	set -- --el-torito=yes
+fi
+systemd-repart \
 	--dry-run=no \
 	--root=/run/miso/image \
 	--offline=yes \
 	--sector-size=512 \
 	--empty=create \
 	--size=auto \
+	"$@" \
 	/run/miso/out/disk.raw`
 
 // ukify builds the UKI of the image's kernel into the ESP from copies of
@@ -141,7 +147,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		// the ESP is whole now, and no lower layer may change under a
 		// mounted overlay
-		code, err = makeDisk(ctx, root, booting, append([]string{esp}, append(lowers, bottom)...), out)
+		code, err = makeDisk(ctx, root, booting, append([]string{esp}, append(lowers, bottom)...), request.ElTorito, out)
 
 		return false, err
 	})
@@ -181,8 +187,9 @@ func buildUKI(ctx context.Context, root, parts, esp, version string, out io.Writ
 }
 
 // makeDisk has the tools in root make the disk of the layers below, top
-// first, which it mounts at booting.
-func makeDisk(ctx context.Context, root, booting string, below []string, out io.Writer) (int, error) {
+// first, which it mounts at booting, one that boots from optical drives too
+// when elTorito.
+func makeDisk(ctx context.Context, root, booting string, below []string, elTorito bool, out io.Writer) (int, error) {
 	seen := filepath.Join(root, "run", "miso", "image")
 	if err := os.Mkdir(seen, 0o700); err != nil {
 		return 0, err
@@ -200,7 +207,12 @@ func makeDisk(ctx context.Context, root, booting string, below []string, out io.
 
 	defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
 
-	return sandbox.Run(ctx, root, protocol.Run{Command: repart}, out)
+	run := protocol.Run{Command: repart}
+	if elTorito {
+		run.Env = []string{"MISO_EL_TORITO=1"}
+	}
+
+	return sandbox.Run(ctx, root, run, out)
 }
 
 // bind shows a directory at a place, which it makes, and hands back what

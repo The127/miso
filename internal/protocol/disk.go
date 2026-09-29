@@ -11,6 +11,9 @@ type Disk struct {
 	// the keys of the layers of the stage that brings the tools, lowest
 	// first
 	Tools []string
+
+	// the disk boots from an optical drive too, as an ISO
+	ElTorito bool
 }
 
 func (d Disk) into(e *envelope) { e.Disk = &d }

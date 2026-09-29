@@ -428,6 +428,24 @@ echo "$@" > "$last"`
 	assert.Equal(t, "--dry-run=no --root=/run/miso/image --offline=yes --sector-size=512 --empty=create --size=auto /run/miso/out/disk.raw\n", string(written))
 }
 
+func TestADiskThatBootsFromACDHasRepartWriteItsBootCatalog(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	repart := `for last; do :; done
+echo "$@" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: bootable(t, worker), Tools: fakeTools(t, worker, repart), ElTorito: true}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "--dry-run=no --root=/run/miso/image --offline=yes --sector-size=512 --empty=create --size=auto --el-torito=yes /run/miso/out/disk.raw\n", string(written))
+}
+
 func TestTheToolsCannotOpenADeviceOfTheImage(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
