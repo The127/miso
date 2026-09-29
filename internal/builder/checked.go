@@ -62,3 +62,15 @@ func (c checked) Discard() error {
 
 	return root.Remove(c.name)
 }
+
+// OnlyChecked are outputs for the disks with checks alone, so a build that
+// writes no outputs still boots what it must check.
+func OnlyChecked(outputs Outputs) Outputs {
+	return func(request build.Request) (Output, error) {
+		if len(request.Checks) == 0 {
+			return nil, nil
+		}
+
+		return outputs(request)
+	}
+}

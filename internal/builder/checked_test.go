@@ -81,6 +81,34 @@ func TestADiskWhoseChecksFailLeavesNoFile(t *testing.T) {
 	assert.Empty(t, names(t, dir))
 }
 
+func TestOnlyCheckedGiveADiskWithoutChecksNoFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	outputs := builder.OnlyChecked(builder.OutputsIn(dir, nil))
+
+	// act
+	output, err := outputs(build.Request{Output: "os.raw"})
+
+	// assert
+	require.NoError(t, err)
+	assert.Nil(t, output)
+	assert.Empty(t, names(t, dir))
+}
+
+func TestOnlyCheckedGiveADiskWithChecksItsFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	outputs := builder.OnlyChecked(builder.OutputsIn(dir, nil))
+
+	// act
+	output, err := outputs(build.Request{Output: "os.raw", Checks: []imagefile.Check{{Line: 4, Command: "true"}}})
+
+	// assert
+	require.NoError(t, err)
+	assert.NotNil(t, output)
+	assert.Equal(t, []string{".os.raw.unchecked"}, names(t, dir))
+}
+
 func TestADiskWhoseFetchFailsIsNotBootedAndLeavesNoFile(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
