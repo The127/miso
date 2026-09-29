@@ -20,6 +20,9 @@ import (
 // systemdBoot is where an image brings systemd-boot.
 const systemdBoot = "usr/lib/systemd/boot/efi/systemd-bootx64.efi"
 
+// stub is where an image brings the stub a UKI is built on.
+const stub = "usr/lib/systemd/boot/efi/linuxx64.efi.stub"
+
 // repart makes the disk of the image from the definitions the image ships.
 // Without --dry-run=no it writes nothing. OVMF cannot read an ESP of 4096
 // byte sectors, which repart may pick for a file.
@@ -41,7 +44,7 @@ fi
 ukify build \
 	--linux="/run/miso/image/$MISO_LINUX" \
 	--initrd="/run/miso/image/$MISO_INITRD" \
-	--stub=/run/miso/image/usr/lib/systemd/boot/efi/linuxx64.efi.stub \
+	--stub=/run/miso/image/` + stub + ` \
 	--os-release=@/run/miso/image/etc/os-release \
 	--uname="$MISO_VERSION" \
 	--output="/run/miso/esp/EFI/Linux/$MISO_VERSION.efi" \
@@ -100,6 +103,15 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	loader, err := os.ReadFile(filepath.Join(image, systemdBoot))
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filepath.Join(image, stub))
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("the image has no UKI stub at /%s", stub)
 	}
 
 	if err != nil {

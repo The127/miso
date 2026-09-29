@@ -35,12 +35,12 @@ func TestADiskOfAnImageWithoutAKernelFailsNamingIt(t *testing.T) {
 	assert.ErrorIs(t, err, kernel.ErrNoKernel)
 }
 
-// bootable adds to the base the systemd-boot an image brings, and answers
-// the layers of that image.
+// bootable adds to the base the systemd-boot and UKI stub an image brings,
+// and answers the layers of that image.
 func bootable(t *testing.T, worker *agent.Agent) []string {
 	t.Helper()
 
-	boot := "mkdir -p /usr/lib/systemd/boot/efi && echo loader > /usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo loader > systemd-bootx64.efi && echo stub > linuxx64.efi.stub"
 	run := protocol.Run{Key: "boot", Layers: []string{"base"}, Command: boot}
 	code, err := worker.Run(context.Background(), run, io.Discard)
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestTheImagesSystemdBootIsTheFallbackLoaderOfTheESP(t *testing.T) {
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	mark := rand.Text()
-	boot := "mkdir -p /usr/lib/systemd/boot/efi && echo " + mark + " > /usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo " + mark + " > systemd-bootx64.efi && echo stub > linuxx64.efi.stub"
 	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: boot}
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
@@ -198,6 +198,23 @@ func TestADiskOfAnImageWithoutSystemdBootFailsNamingWhereItShouldBe(t *testing.T
 
 	// assert
 	assert.EqualError(t, err, "the image has no systemd-boot at /usr/lib/systemd/boot/efi/systemd-bootx64.efi")
+}
+
+func TestADiskOfAnImageWithoutAUKIStubFailsNamingWhereItShouldBe(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && echo loader > /usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: boot}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "the image has no UKI stub at /usr/lib/systemd/boot/efi/linuxx64.efi.stub")
 }
 
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
