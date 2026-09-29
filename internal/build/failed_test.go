@@ -51,3 +51,17 @@ func TestAFailedImportNamesTheLineOfItsFrom(t *testing.T) {
 	// assert
 	assert.EqualError(t, failed, "line 3: FROM debian:13: agent failed")
 }
+
+func TestAFailedCheckNamesItsLineAndWhatItPrinted(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nCHECK command -v htop\n")
+	requests, err := build.Requests(source, network)
+	require.NoError(t, err)
+	fetch := requests[len(requests)-1]
+
+	// act
+	failed := fetch.CheckFailed(0, 1, "no htop\n")
+
+	// assert
+	assert.EqualError(t, failed, "line 4: CHECK command -v htop: exit code 1\nno htop\n")
+}
