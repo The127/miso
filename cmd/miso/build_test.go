@@ -104,10 +104,10 @@ const bootable = `FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 RUN : > /etc/fstab && \
     mkdir -p /etc/kernel && \
-    printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline
+    printf 'rw console=ttyS0\n' > /etc/kernel/cmdline
 
 PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
-PARTITION root Type=root Format=ext4 CopyFiles=/:/ UUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f SizeMinBytes=3G
+PARTITION root Type=root Format=ext4 CopyFiles=/:/ SizeMinBytes=3G
 OUTPUT disk os.raw
 `
 
@@ -153,7 +153,7 @@ func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKe
 	dir := t.TempDir()
 	out := t.TempDir()
 	file := filepath.Join(dir, "Imagefile")
-	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK command -v nothing-of-that-name\n", 1)
+	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK false\n", 1)
 	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
 
 	// act
@@ -161,7 +161,7 @@ func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKe
 
 	// assert
 	require.Error(t, err)
-	assert.Contains(t, string(said), file+":12: CHECK command -v nothing-of-that-name: exit code 1")
+	assert.Contains(t, string(said), file+":10: CHECK false: exit code 1")
 	assert.NoFileExists(t, filepath.Join(out, "os.raw"))
 }
 
@@ -169,7 +169,7 @@ func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testin
 	// arrange
 	dir := t.TempDir()
 	file := filepath.Join(dir, "Imagefile")
-	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK command -v nothing-of-that-name\n", 1)
+	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK false\n", 1)
 	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
 
 	// act
@@ -177,5 +177,5 @@ func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testin
 
 	// assert
 	require.Error(t, err)
-	assert.Contains(t, string(said), file+":12: CHECK command -v nothing-of-that-name: exit code 1")
+	assert.Contains(t, string(said), file+":10: CHECK false: exit code 1")
 }

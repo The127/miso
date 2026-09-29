@@ -8,14 +8,15 @@ FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 
 # The cloud image's fstab names the cloud image's partitions, which the new
-# disk does not have. The kernel finds its root by the UUID repart gives it,
-# and repart lays the disk out from the image's own definitions.
+# disk does not have. The root partition has the root type, so the initrd
+# finds it and the command line needs no root=.
 RUN : > /etc/fstab && \
     mkdir -p /etc/kernel && \
-    printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline
+    printf 'rw console=ttyS0\n' > /etc/kernel/cmdline
 
+# The layout of the disk, in repart's own settings. It stays out of the image.
 PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
-PARTITION root Type=root Format=ext4 CopyFiles=/:/ UUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f SizeMinBytes=3G
+PARTITION root Type=root Format=ext4 CopyFiles=/:/ SizeMinBytes=3G
 
 OUTPUT disk os.raw
 
