@@ -108,6 +108,10 @@ func (c *Conn) Receive() (Message, error) {
 	}
 
 	if piece, isPiece := message.(Piece); isPiece {
+		if piece.Size < 0 {
+			return nil, fmt.Errorf("piece at %d: %w: %d", piece.Offset, ErrNegativeSize, piece.Size)
+		}
+
 		c.content = &sized{r: c.r, left: piece.Size}
 	}
 

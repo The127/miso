@@ -34,3 +34,17 @@ func TestTheBytesOfAPieceFollowIt(t *testing.T) {
 	assert.Equal(t, "hello\n", string(content))
 	assert.Equal(t, protocol.Done{}, next)
 }
+
+func TestAPieceWithANegativeSizeIsRefused(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	agent := protocol.New("miso 1.2.0", &wire, &wire)
+	host := protocol.New("miso 1.2.0", &wire, &wire)
+	require.NoError(t, agent.Send(protocol.Piece{Offset: 4096, Size: -1}))
+
+	// act
+	_, err := host.Receive()
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrNegativeSize)
+}

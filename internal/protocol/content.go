@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// ErrNegativeSize is an entry that says less than nothing follows it.
+// ErrNegativeSize is an entry or piece that says less than nothing follows it.
 var ErrNegativeSize = errors.New("negative size")
 
 // SendEntry writes an entry to the other side and its content right after
