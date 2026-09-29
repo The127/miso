@@ -160,3 +160,14 @@ func TestAFetchRefusesAKeyThatIsNoLayerName(t *testing.T) {
 	assert.ErrorIs(t, err, layer.ErrBadKey)
 	assert.Empty(t, sent.disk)
 }
+
+func TestAFetchOfAKeyWithoutALayerFailsNamingIt(t *testing.T) {
+	// arrange
+	worker := agent.New(t.TempDir(), t.TempDir())
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk"}, &received{}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "no disk is kept for disk")
+}

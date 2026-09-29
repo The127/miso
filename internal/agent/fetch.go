@@ -15,8 +15,13 @@ import (
 
 // Fetch sends the host the disk kept as the output of a key.
 func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
-	if _, err := a.layers.Has(request.Key); err != nil {
+	there, err := a.layers.Has(request.Key)
+	if err != nil {
 		return err
+	}
+
+	if !there {
+		return fmt.Errorf("no disk is kept for %s", request.Key)
 	}
 
 	// the tools that wrote the disk run the build's code, so its name may be
