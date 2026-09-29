@@ -75,6 +75,18 @@ func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 	assert.Equal(t, "os.raw", last.Output)
 }
 
+func TestTheFetchOfAnISOSaysItIsCheckedAsACD(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT iso os.iso --tools=tools\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	assert.True(t, requests[len(requests)-1].CD)
+}
+
 func TestTheFetchOfADiskCarriesTheChecksAfterItsOutput(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nCHECK command -v htop\n")

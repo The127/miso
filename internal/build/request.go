@@ -39,6 +39,9 @@ type Request struct {
 
 	// what a fetched disk must pass when booted
 	Checks []imagefile.Check
+
+	// the fetched disk is an ISO, booted from a CD when checked
+	CD bool
 }
 
 // Requests are what the agent is asked, in the order it is asked. A run
@@ -78,7 +81,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 			if output, isOutput := step.Instruction.(imagefile.Output); isOutput {
 				line, written := imagefile.Written(output)
-				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name}
+				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name, CD: output.Kind == "iso"}
 				requests = append(requests, fetch)
 				fetched = len(requests) - 1
 			}
