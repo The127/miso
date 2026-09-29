@@ -18,6 +18,7 @@ import (
 type received struct {
 	length int64
 	disk   []byte
+	bytes  int64
 }
 
 func (r *received) Length(size int64) error {
@@ -37,6 +38,7 @@ func (r *received) Piece(piece protocol.Piece, content io.Reader) error {
 	}
 
 	copy(r.disk[piece.Offset:], data)
+	r.bytes += int64(len(data))
 
 	return nil
 }
@@ -76,4 +78,25 @@ func TestAFetchSendsTheDataOfTheDisk(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "hello, disk\n", string(sent.disk))
+}
+
+func TestAFetchSkipsTheHolesOfTheDisk(t *testing.T) {
+	// arrange
+	layers := keptDisk(t, "disk", nil)
+	disk, err := os.OpenFile(filepath.Join(layers, "disk", "disk.raw"), os.O_WRONLY, 0)
+	require.NoError(t, err)
+	require.NoError(t, disk.Truncate(1<<20))
+	_, err = disk.WriteAt([]byte("hello"), 1<<19)
+	require.NoError(t, err)
+	require.NoError(t, disk.Close())
+	worker := agent.New(layers, t.TempDir())
+	sent := &received{}
+
+	// act
+	err = worker.Fetch(context.Background(), protocol.Fetch{Key: "disk"}, sent, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Less(t, sent.bytes, int64(1<<20))
+	assert.Equal(t, "hello", string(sent.disk[1<<19:1<<19+5]))
 }

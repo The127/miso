@@ -2,9 +2,12 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -27,5 +30,27 @@ func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol
 		return err
 	}
 
-	return pieces.Piece(protocol.Piece{Size: info.Size()}, disk)
+	for offset := int64(0); ; {
+		data, err := disk.Seek(offset, unix.SEEK_DATA)
+		// past the last data, the rest of the disk is a hole
+		if errors.Is(err, unix.ENXIO) {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		hole, err := disk.Seek(data, unix.SEEK_HOLE)
+		if err != nil {
+			return err
+		}
+
+		piece := protocol.Piece{Offset: data, Size: hole - data}
+		if err := pieces.Piece(piece, io.NewSectionReader(disk, data, piece.Size)); err != nil {
+			return err
+		}
+
+		offset = hole
+	}
 }
