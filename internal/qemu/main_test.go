@@ -118,6 +118,12 @@ func guestListener() (protocol.Listener, error) {
 	return vport.Listen(port)
 }
 
+// hostVsock is the host's own vsock device, which only a test of the driver
+// hands it.
+func hostVsock() (*os.File, error) {
+	return os.OpenFile("/dev/vhost-vsock", os.O_RDWR, 0)
+}
+
 // fakeDriver runs this test binary as its QEMU, which writes the arguments it
 // was given to the file whose path comes back.
 func fakeDriver(t *testing.T) (qemu.Driver, string) {

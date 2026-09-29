@@ -22,6 +22,7 @@ import (
 func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	// arrange
 	driver, recorded := fakeDriver(t)
+	driver.OpenVsock = hostVsock
 	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
@@ -60,10 +61,11 @@ func TestACancelledMachineIsStopped(t *testing.T) {
 func TestAMachinesCIDStaysHeldWhileQEMURuns(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
+	driver.OpenVsock = hostVsock
 	t.Setenv("MISO_FAKE_QEMU_HANG", "1")
 	vm, err := driver.Start(t.Context(), qemu.Machine{})
 	require.NoError(t, err)
-	other, err := qemu.OpenVsock("/dev/vhost-vsock")
+	other, err := hostVsock()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = other.Close() })
 
@@ -321,4 +323,20 @@ func TestADriverClaimsItsCIDOnTheDeviceItIsHanded(t *testing.T) {
 	require.NoError(t, err)
 	<-vm.Done()
 	assert.ErrorIs(t, told, unix.ENOTTY)
+}
+
+func TestADriverHandedNoVsockDeviceGivesItsMachineAVirtioPort(t *testing.T) {
+	// arrange
+	driver, _ := fakeDriver(t)
+	var told error
+	driver.WithoutVsock = func(why error) { told = why }
+
+	// act
+	vm, err := driver.Start(t.Context(), qemu.Machine{})
+
+	// assert
+	require.NoError(t, err)
+	<-vm.Done()
+	assert.NotNil(t, vm.Port())
+	assert.ErrorIs(t, told, qemu.ErrNoVsockDevice)
 }

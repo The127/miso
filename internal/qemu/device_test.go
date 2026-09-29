@@ -2,7 +2,6 @@ package qemu_test
 
 import (
 	"math/rand/v2"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,24 +11,12 @@ import (
 	"github.com/The127/miso/internal/qemu"
 )
 
-func TestAHostWithoutTheVsockDeviceIsToldWhichModuleItNeeds(t *testing.T) {
-	// arrange
-	missing := filepath.Join(t.TempDir(), "vhost-vsock")
-
-	// act
-	_, err := qemu.OpenVsock(missing)
-
-	// assert
-	assert.ErrorContains(t, err, missing)
-	assert.ErrorContains(t, err, "vhost_vsock")
-}
-
 func TestACIDOneMachineHoldsIsRefusedToTheNext(t *testing.T) {
 	// arrange
-	first, err := qemu.OpenVsock("/dev/vhost-vsock")
+	first, err := hostVsock()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = first.Close() })
-	second, err := qemu.OpenVsock("/dev/vhost-vsock")
+	second, err := hostVsock()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = second.Close() })
 	// random, so a VM running on this host is left alone

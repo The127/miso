@@ -32,7 +32,7 @@ func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 	machine.Console = &console
 
 	// act
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64"}.Start(t.Context(), machine)
+	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: hostVsock}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		// QEMU writes to the console until it is gone

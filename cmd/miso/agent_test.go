@@ -21,34 +21,8 @@ import (
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/reach"
-	"github.com/The127/miso/internal/vsock"
 	"github.com/The127/miso/internal/vsockns"
 )
-
-func TestAnAgentBootedByTheBuilderKernelSaysWhyItDidNotStart(t *testing.T) {
-	// arrange
-	init, err := os.ReadFile(miso(t))
-	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
-	var console bytes.Buffer
-	machine.Console = &console
-
-	// act
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64"}.Start(t.Context(), machine)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		// QEMU writes to the console until it is gone
-		<-vm.Done()
-		t.Logf("QEMU: %v, its console:\n%s", vm.Err(), console.String())
-	})
-
-	// assert
-	dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), vsock.AgentPort) }
-	err = ask(t, vm, dial, protocol.Import{Key: "base", Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, 30*time.Second)
-	require.ErrorIs(t, err, protocol.ErrAgentFailed)
-	assert.ErrorContains(t, err, "agent did not start")
-	assert.ErrorContains(t, err, protocol.CacheSerial)
-}
 
 func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *testing.T) {
 	// arrange

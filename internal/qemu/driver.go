@@ -2,13 +2,15 @@ package qemu
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"slices"
 )
 
-// vhostVsock is the host's device on which a machine's CID is claimed.
-const vhostVsock = "/dev/vhost-vsock"
+// ErrNoVsockDevice is a driver handed no vsock device. The host's own would
+// share the machine with everything else on it.
+var ErrNoVsockDevice = errors.New("no vsock device of miso's own was handed to the driver")
 
 // deviceFD is where QEMU finds the vsock device or its end of the agent's
 // port, the first of a process's extra files after standard input, output
@@ -19,7 +21,7 @@ const deviceFD = 3
 type Driver struct {
 	Binary string
 
-	// OpenVsock opens the vsock device the machine runs on, the host's own
+	// OpenVsock opens the vsock device the machine runs on, a virtio port
 	// when nil. A VM is in the network namespace its device was opened in.
 	OpenVsock func() (*os.File, error)
 
@@ -88,11 +90,11 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 
 // openVsock opens the device the machine runs on.
 func (d Driver) openVsock() (*os.File, error) {
-	if d.OpenVsock != nil {
-		return d.OpenVsock()
+	if d.OpenVsock == nil {
+		return nil, ErrNoVsockDevice
 	}
 
-	return openVsock(vhostVsock)
+	return d.OpenVsock()
 }
 
 // withoutKVM is only a notice, the machine still runs, only slower.
