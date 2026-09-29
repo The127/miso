@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -60,7 +61,7 @@ ukify build \
 // Disk makes a bootable disk image of the image's layers with the tools of
 // another stage. A key whose layer is there already has its disk.
 func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) error {
-	there, err := a.layers.Has(request.Key)
+	there, err := a.found(request.Key, slices.Concat(request.Layers, request.Tools))
 	if err != nil || there {
 		return err
 	}

@@ -88,6 +88,27 @@ func TestACopyThatFindsItsLayerMarksItAndTheLayersOfBothStagesUsed(t *testing.T)
 	}
 }
 
+func TestADiskThatFindsItsLayerMarksItAndTheLayersOfImageAndToolsUsed(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	store := layer.Open(layers)
+	old := finishedLongAgo(t, store, "image", "tools", "disk")
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Disk{Key: "disk", Layers: []string{"image"}, Tools: []string{"tools"}}
+
+	// act
+	err := worker.Disk(context.Background(), request, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	entries, err := store.List()
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	for _, entry := range entries {
+		assert.True(t, entry.Used.After(old), entry.Key)
+	}
+}
+
 func TestAnImportThatFindsItsLayerMarksItUsed(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
