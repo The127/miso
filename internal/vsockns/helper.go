@@ -33,6 +33,8 @@ func Helper() {
 	// is done here
 	runtime.LockOSThread()
 
+	devicePath = os.Args[2]
+
 	if err := enter(os.Args[1]); err != nil {
 		_ = answerFailed(helperConn, err)
 		os.Exit(1)
@@ -129,9 +131,9 @@ func socket(string, []int) (string, []int, error) {
 
 // device is the host's vhost-vsock device opened inside.
 func device(string, []int) (string, []int, error) {
-	fd, err := unix.Open("/dev/vhost-vsock", unix.O_RDWR|unix.O_CLOEXEC, 0)
+	fd, err := unix.Open(devicePath, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("the host's vsock device %s needs the vhost_vsock module and access for this user: %w", devicePath, err)
 	}
 
 	return "", []int{fd}, nil

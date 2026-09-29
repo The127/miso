@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
+
+	"github.com/The127/miso/internal/vsockns"
 )
 
 // vhostVsockSetGuestCID is VHOST_VSOCK_SET_GUEST_CID of linux/vhost.h,
@@ -47,4 +49,17 @@ func TestADeviceOfTheNamespaceHasItsVMsOutOfMisosReach(t *testing.T) {
 	t.Cleanup(func() { _ = unix.Close(socket) })
 	err = unix.Connect(socket, &unix.SockaddrVM{CID: cid, Port: 1024})
 	assert.ErrorIs(t, err, unix.ENODEV)
+}
+
+func TestAHostWithoutTheVsockDeviceIsToldWhichModuleItNeeds(t *testing.T) {
+	// arrange
+	vsockns.NoDevice(t)
+	namespace := opened(t)
+
+	// act
+	_, err := namespace.Device()
+
+	// assert
+	assert.ErrorContains(t, err, "/nonexistent/vhost-vsock")
+	assert.ErrorContains(t, err, "vhost_vsock module")
 }

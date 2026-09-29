@@ -12,6 +12,16 @@ func NoChildMode(t *testing.T) {
 	t.Cleanup(func() { childModePath = was })
 }
 
+// NoDevice has the helpers a test opens find no vsock device, as on a host
+// without the vhost_vsock module.
+func NoDevice(t *testing.T) {
+	t.Helper()
+
+	was := devicePath
+	devicePath = "/nonexistent/vhost-vsock"
+	t.Cleanup(func() { devicePath = was })
+}
+
 // Ask puts any question to the helper.
 func Ask(n *Namespace, question string) (string, error) {
 	text, _, err := n.ask(question)

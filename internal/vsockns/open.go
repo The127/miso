@@ -17,6 +17,9 @@ var ErrNotPrivate = errors.New("vsock cannot be kept private on this host")
 // childModePath is where the helper makes the namespaces it starts local.
 var childModePath = "/proc/sys/net/vsock/child_ns_mode"
 
+// devicePath is the host's vhost-vsock device, which the helper opens.
+var devicePath = "/dev/vhost-vsock"
+
 // Namespace is a vsock namespace of local mode, held by its helper.
 type Namespace struct {
 	helper *exec.Cmd
@@ -33,7 +36,7 @@ func Open() (*Namespace, error) {
 	theirs := os.NewFile(uintptr(fds[1]), "vsockns")
 	defer func() { _ = theirs.Close() }()
 
-	helper := exec.Command("/proc/self/exe", childModePath)
+	helper := exec.Command("/proc/self/exe", childModePath, devicePath)
 	helper.Args[0] = helperName
 	// the first of them becomes helperConn
 	helper.ExtraFiles = []*os.File{theirs}
