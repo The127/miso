@@ -15,7 +15,7 @@ func (c *Conn) Ask(request Message, out io.Writer) error {
 	return c.ask(request, nil, nil, out)
 }
 
-func (c *Conn) ask(request Message, files Files, disk io.WriterAt, out io.Writer) error {
+func (c *Conn) ask(request Message, files Files, disk DiskFile, out io.Writer) error {
 	if err := c.Send(request); err != nil {
 		return err
 	}
@@ -53,6 +53,10 @@ func (c *Conn) ask(request Message, files Files, disk io.WriterAt, out io.Writer
 			}
 
 			if _, err := io.Copy(io.NewOffsetWriter(disk, m.Offset), c.Content()); err != nil {
+				return err
+			}
+		case Length:
+			if err := disk.Truncate(m.Size); err != nil {
 				return err
 			}
 		case Done:
