@@ -52,7 +52,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
-	vm, err := b.start(ctx, flash, notices.Port())
+	vm, onPort, err := b.start(ctx, flash, notices.Port())
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +64,11 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		<-vm.Done()
 	}()
 
+	// the checks talk over vsock only, a VM on a port would never be heard
+	if onPort != nil {
+		return nil, fmt.Errorf("the image cannot be checked without vsock: %w", onPort)
+	}
+
 	if err := b.awaitBoot(ctx, vm, notices); err != nil {
 		return nil, err
 	}
@@ -72,11 +77,13 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 }
 
 // start is the VM the image boots in, told where to send its notices.
-func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (*qemu.VM, error) {
+func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (vm *qemu.VM, onPort, err error) {
 	driver := b.Driver
 	driver.OpenVsock = b.Namespace.Device
+	// a VM on a port fails the boot, it is not only a notice to pass on
+	driver.WithoutVsock = func(why error) { onPort = why }
 
-	return driver.Start(ctx, qemu.Machine{
+	vm, err = driver.Start(ctx, qemu.Machine{
 		Boot:        flash,
 		MemoryMiB:   2048,
 		CPUs:        2,
@@ -85,6 +92,8 @@ func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32)
 		Credentials: credentials(notifyPort),
 		Temp:        b.Dir,
 	})
+
+	return vm, onPort, err
 }
 
 // awaitBoot waits until the image has booted, the VM stopped, the caller
