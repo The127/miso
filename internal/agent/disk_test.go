@@ -283,6 +283,30 @@ stat -c %u:%g "$root" > "$last"`
 	assert.Equal(t, "7:8\n", string(written))
 }
 
+func TestSystemdBootIsReadThroughTheImagesOwnLinks(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo stub > linuxx64.efi.stub" +
+		" && echo image-loader > /etc/miso-loader && ln -s /etc/miso-loader systemd-bootx64.efi"
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: boot}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	repart := `for arg; do case $arg in --root=*) root=${arg#--root=} ;; esac; last=$arg; done
+cat "$root/efi/EFI/BOOT/BOOTX64.EFI" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "image-loader\n", string(written))
+}
+
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	// arrange
 	layers := t.TempDir()

@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/kernel"
+	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/sandbox"
 )
@@ -121,7 +122,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	loader, err := os.ReadFile(filepath.Join(image, systemdBoot))
+	loader, err := fs.ReadFile(place.Open(image).FS(), systemdBoot)
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
 	}
