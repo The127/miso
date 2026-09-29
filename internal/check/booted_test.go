@@ -1,9 +1,11 @@
 package check_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -56,7 +58,7 @@ func booted(t *testing.T, notices check.Notices) error {
 	t.Helper()
 
 	done := make(chan error, 1)
-	go func() { done <- check.Booted(notices, machine) }()
+	go func() { done <- check.Booted(t.Context(), notices, machine) }()
 
 	select {
 	case err := <-done:
@@ -219,4 +221,44 @@ func TestANoticeIsReadOnlyUpToTheSizeSystemdSends(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.False(t, <-long.closed)
+}
+
+// held is a notice whose sender never finishes it, open until it is closed.
+type held struct {
+	io.Writer
+
+	once   sync.Once
+	closed chan struct{}
+}
+
+func (h *held) Read([]byte) (int, error) {
+	<-h.closed
+
+	return 0, io.EOF
+}
+
+func (h *held) Close() error {
+	h.once.Do(func() { close(h.closed) })
+
+	return nil
+}
+
+func TestANoticeHeldOpenDoesNotOutlastTheWaitForTheBoot(t *testing.T) {
+	// arrange
+	said := &notices{sent: make(chan io.ReadWriteCloser, 1)}
+	said.sent <- &held{Writer: io.Discard, closed: make(chan struct{})}
+	wait, stop := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- check.Booted(wait, said, machine) }()
+
+	// act
+	stop()
+
+	// assert
+	select {
+	case err := <-done:
+		assert.ErrorIs(t, err, context.Canceled)
+	case <-time.After(time.Second):
+		assert.Fail(t, "the held notice outlasted the wait for the boot")
+	}
 }

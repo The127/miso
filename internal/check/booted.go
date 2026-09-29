@@ -1,6 +1,7 @@
 package check
 
 import (
+	"context"
 	"io"
 	"slices"
 	"strings"
@@ -14,12 +15,12 @@ type noticeListener interface {
 }
 
 // booted waits until the image's systemd in the VM with the context ID says
-// it is ready. Its notices are taken on after that until the owner of the
-// notices closes them, because systemd waits on a notice nobody takes and
-// then starts no check shell.
-func booted(notices noticeListener, cid uint32) error {
+// it is ready, or the wait ends. Its notices are taken on after that until
+// the owner of the notices closes them, because systemd waits on a notice
+// nobody takes and then starts no check shell.
+func booted(wait context.Context, notices noticeListener, cid uint32) error {
 	for {
-		said, err := take(notices, cid)
+		said, err := take(wait, notices, cid)
 		if err != nil {
 			return err
 		}
@@ -27,9 +28,12 @@ func booted(notices noticeListener, cid uint32) error {
 		// a notification is one assignment per line, and a free text such as
 		// STATUS= may hold anything
 		if slices.Contains(strings.Split(said, "\n"), "READY=1") {
+			// the notices after the boot outlive the wait for it
+			after := context.WithoutCancel(wait)
+
 			go func() {
 				for {
-					if _, err := take(notices, cid); err != nil {
+					if _, err := take(after, notices, cid); err != nil {
 						return
 					}
 				}
@@ -37,18 +41,27 @@ func booted(notices noticeListener, cid uint32) error {
 
 			return nil
 		}
+
+		if err := wait.Err(); err != nil {
+			return err
+		}
 	}
 }
 
-// take reads the next notice of the VM to its end. Only a failing Accept
-// ends the taking.
-func take(notices noticeListener, cid uint32) (string, error) {
+// take reads the next notice of the VM to its end, or until the wait ends.
+// Only a failing Accept ends the taking.
+func take(wait context.Context, notices noticeListener, cid uint32) (string, error) {
 	conn, err := notices.AcceptFrom(cid)
 	if err != nil {
 		return "", err
 	}
 
 	defer func() { _ = conn.Close() }()
+
+	// an image that holds its notice open would keep the host reading
+	// past its patience
+	stop := context.AfterFunc(wait, func() { _ = conn.Close() })
+	defer stop()
 
 	return heard(conn), nil
 }
