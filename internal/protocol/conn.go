@@ -21,7 +21,8 @@ type Conn struct {
 	r     io.Reader
 	w     io.Writer
 
-	// what follows the entry received last, as far as it is not read yet
+	// what follows the entry or piece received last, as far as it is not
+	// read yet
 	content io.Reader
 }
 
@@ -104,6 +105,10 @@ func (c *Conn) Receive() (Message, error) {
 		}
 
 		c.content = &sized{r: c.r, left: entry.Size}
+	}
+
+	if piece, isPiece := message.(Piece); isPiece {
+		c.content = &sized{r: c.r, left: piece.Size}
 	}
 
 	return message, nil

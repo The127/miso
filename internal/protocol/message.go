@@ -20,6 +20,7 @@ type envelope struct {
 	Disk   *Disk   `json:",omitempty"`
 	Fetch  *Fetch  `json:",omitempty"`
 	Entry  *Entry  `json:",omitempty"`
+	Piece  *Piece  `json:",omitempty"`
 	Send   *Send   `json:",omitempty"`
 	Sent   *Sent   `json:",omitempty"`
 	Output *Output `json:",omitempty"`
@@ -44,6 +45,8 @@ func (e envelope) open() Message {
 		return *e.Fetch
 	case e.Entry != nil:
 		return *e.Entry
+	case e.Piece != nil:
+		return *e.Piece
 	case e.Send != nil:
 		return *e.Send
 	case e.Sent != nil:

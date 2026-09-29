@@ -20,8 +20,8 @@ func (c *Conn) SendEntry(entry Entry, content io.Reader) error {
 	return err
 }
 
-// Content is what follows the entry received last. The next Receive skips
-// what is left of it.
+// Content is what follows the entry or piece received last. The next
+// Receive skips what is left of it.
 func (c *Conn) Content() io.Reader {
 	return c.content
 }
