@@ -120,4 +120,19 @@ func TestTheToolsComeFromAFixedDayOfTheDebianArchive(t *testing.T) {
 	assert.Regexp(t, `https://snapshot\.debian\.org/archive/debian/\d{8}T\d{6}Z/`, install.Command)
 }
 
+func TestTheToolsStageIsOnTheLineOfTheOutputThatNeedsIt(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nRUN true\nOUTPUT disk os.img\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 3, planned.Stages[0].Line)
+	install, isRun := planned.Stages[0].Steps[0].Instruction.(imagefile.Run)
+	require.True(t, isRun)
+	assert.Equal(t, 3, install.Line)
+}
+
 var toolsImages = images{"debian:sid": "sha256:sid"}
