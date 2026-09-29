@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/agent"
 	"github.com/The127/miso/internal/protocol"
@@ -99,4 +100,22 @@ func TestAFetchSkipsTheHolesOfTheDisk(t *testing.T) {
 	require.NoError(t, err)
 	assert.Less(t, sent.bytes, int64(1<<20))
 	assert.Equal(t, "hello", string(sent.disk[1<<19:1<<19+5]))
+}
+
+func TestAFetchNeverFollowsTheDiskAsALink(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "secret")
+	require.NoError(t, os.WriteFile(outside, []byte("secret"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(layers, "disk"), 0o700))
+	require.NoError(t, os.Symlink(outside, filepath.Join(layers, "disk", "disk.raw")))
+	worker := agent.New(layers, t.TempDir())
+	sent := &received{}
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk"}, sent, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, unix.ELOOP)
+	assert.Empty(t, sent.disk)
 }

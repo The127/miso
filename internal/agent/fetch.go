@@ -14,7 +14,9 @@ import (
 
 // Fetch sends the host the disk kept as the output of a key.
 func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
-	disk, err := os.Open(filepath.Join(a.layers.Path(request.Key), "disk.raw"))
+	// the tools that wrote the disk run the build's code, so its name may be
+	// a link to anything in the builder
+	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), "disk.raw"), os.O_RDONLY|unix.O_NOFOLLOW, 0)
 	if err != nil {
 		return err
 	}
