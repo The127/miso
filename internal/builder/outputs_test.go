@@ -115,6 +115,20 @@ func TestAnOutputReplacesAnOlderFileOfItsName(t *testing.T) {
 	assert.Equal(t, "ab", string(written))
 }
 
+func TestADiskItsOutputsGiveNoFileIsNotFetched(t *testing.T) {
+	// arrange
+	agent := &sending{disk: "disk\n"}
+	requests := []build.Request{{Message: protocol.Fetch{Key: "disk"}, Output: "os.raw"}}
+	outputs := func(build.Request) (builder.Output, error) { return nil, nil }
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(agent), agentName, requests, nil, outputs, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Empty(t, agent.asked)
+}
+
 func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
 	// arrange
 	agent := &sending{disk: "disk\n"}

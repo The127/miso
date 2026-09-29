@@ -19,15 +19,21 @@ type Output interface {
 // the caller decides where outputs go.
 type Outputs func(request build.Request) (Output, error)
 
-// fetch has the agent send the disk of a request into the file of its
-// output.
-func fetch(conn *protocol.Conn, request build.Request, fetching protocol.Fetch, outputs Outputs, out io.Writer) error {
-	file, err := outputs(request)
-	if err != nil {
-		return err
+// outputOf is the file a fetch request is written into, or none when the
+// disk stays in the cache, as a build without an output target does in
+// Docker.
+func outputOf(request build.Request, outputs Outputs) (Output, error) {
+	if outputs == nil {
+		return nil, nil
 	}
 
-	return errors.Join(conn.AskFetch(fetching, file, out), file.Close())
+	return outputs(request)
+}
+
+// fetch has the agent send the disk of a request into the file of its
+// output.
+func fetch(conn *protocol.Conn, request protocol.Fetch, file Output, out io.Writer) error {
+	return errors.Join(conn.AskFetch(request, file, out), file.Close())
 }
 
 // OutputsIn are outputs that are files in a directory. A disk with checks

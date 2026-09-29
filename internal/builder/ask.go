@@ -43,10 +43,17 @@ func patienceFor(vm VM) time.Duration {
 func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, outputs Outputs, out io.Writer) error {
 	booted := time.After(patienceFor(vm))
 	for _, request := range requests {
-		// without outputs the disk stays in the cache, as a build without an
-		// output target does in Docker
-		if _, isFetch := request.Message.(protocol.Fetch); isFetch && outputs == nil {
-			continue
+		var file Output
+		if _, isFetch := request.Message.(protocol.Fetch); isFetch {
+			var err error
+			file, err = outputOf(request, outputs)
+			if err != nil {
+				return request.Failed(err)
+			}
+
+			if file == nil {
+				continue
+			}
 		}
 
 		conn, err := connect(ctx, vm, dial, booted)
@@ -57,7 +64,7 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 		// once the agent listened, a step may take as long as it takes
 		booted = nil
 
-		err = ask(ctx, conn, agent, request, files, outputs, out)
+		err = ask(ctx, conn, agent, request, files, file, out)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -72,7 +79,7 @@ func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.R
 
 // ask asks the agent one request on a connection and closes it. Once ctx is
 // done the connection closes early, which cancels the step in the agent.
-func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request build.Request, files Files, outputs Outputs, out io.Writer) error {
+func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request build.Request, files Files, file Output, out io.Writer) error {
 	closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
 
 	var err error
@@ -83,7 +90,7 @@ func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request bui
 	case isCopy && copying.Stage == "":
 		err = protocol.New(agent, conn, conn).AskCopy(copying, hosted(files(copying)), out)
 	case isFetch:
-		err = fetch(protocol.New(agent, conn, conn), request, fetching, outputs, out)
+		err = fetch(protocol.New(agent, conn, conn), fetching, file, out)
 	default:
 		err = protocol.New(agent, conn, conn).Ask(request.Message, out)
 	}
