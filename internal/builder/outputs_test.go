@@ -85,7 +85,7 @@ func TestAnOutputInADirectoryIsTheFileOfItsName(t *testing.T) {
 	dir := t.TempDir()
 
 	// act
-	output, err := builder.OutputsIn(dir)(build.Request{Output: "os.raw"})
+	output, err := builder.OutputsIn(dir, nil)(build.Request{Output: "os.raw"})
 	require.NoError(t, err)
 	_, err = output.WriteAt([]byte("disk\n"), 0)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestAnOutputReplacesAnOlderFileOfItsName(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "os.raw"), []byte("XXXXXXXX"), 0o600))
 
 	// act
-	output, err := builder.OutputsIn(dir)(build.Request{Output: "os.raw"})
+	output, err := builder.OutputsIn(dir, nil)(build.Request{Output: "os.raw"})
 	require.NoError(t, err)
 	_, err = output.WriteAt([]byte("ab"), 0)
 	require.NoError(t, err)

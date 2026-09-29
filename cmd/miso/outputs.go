@@ -26,5 +26,5 @@ func outputsOf(command *cli.Command) (builder.Outputs, error) {
 		return nil, err
 	}
 
-	return builder.OutputsIn(dir), nil
+	return builder.OutputsIn(dir, nil), nil
 }

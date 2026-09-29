@@ -30,8 +30,9 @@ func fetch(conn *protocol.Conn, request build.Request, fetching protocol.Fetch, 
 	return errors.Join(conn.AskFetch(fetching, file, out), file.Close())
 }
 
-// OutputsIn are outputs that are files in a directory.
-func OutputsIn(dir string) Outputs {
+// OutputsIn are outputs that are files in a directory. A disk with checks
+// is booted through check before it gets its name.
+func OutputsIn(dir string, check Check) Outputs {
 	return func(request build.Request) (Output, error) {
 		root, err := os.OpenRoot(dir)
 		if err != nil {
@@ -40,11 +41,20 @@ func OutputsIn(dir string) Outputs {
 
 		defer func() { _ = root.Close() }()
 
+		name := request.Output
+		if len(request.Checks) > 0 {
+			name = unchecked(name)
+		}
+
 		// the holes of a disk are never written, so an older file under the
 		// name would show through them
-		file, err := root.OpenFile(request.Output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			return nil, err
+		}
+
+		if len(request.Checks) > 0 {
+			return checked{File: file, dir: dir, name: name, request: request, check: check}, nil
 		}
 
 		return file, nil
