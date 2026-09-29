@@ -188,6 +188,18 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	assert.Contains(t, string(written), " --cmdline=@/run/miso/image/etc/kernel/cmdline")
 }
 
+func TestADiskOfAnImageWithoutSystemdBootFailsNamingWhereItShouldBe(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk)}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "the image has no systemd-boot at /usr/lib/systemd/boot/efi/systemd-bootx64.efi")
+}
+
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	// arrange
 	layers := t.TempDir()

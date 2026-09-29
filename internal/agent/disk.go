@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -14,6 +16,9 @@ import (
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/sandbox"
 )
+
+// systemdBoot is where an image brings systemd-boot.
+const systemdBoot = "usr/lib/systemd/boot/efi/systemd-bootx64.efi"
 
 // repart makes the disk of the image from the definitions the image ships.
 // Without --dry-run=no it writes nothing. OVMF cannot read an ESP of 4096
@@ -92,7 +97,11 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	loader, err := os.ReadFile(filepath.Join(image, "usr", "lib", "systemd", "boot", "efi", "systemd-bootx64.efi"))
+	loader, err := os.ReadFile(filepath.Join(image, systemdBoot))
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
+	}
+
 	if err != nil {
 		return err
 	}
