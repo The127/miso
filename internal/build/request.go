@@ -71,6 +71,12 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 				requests = append(requests, Request{Line: line, Written: written, Message: message})
 			}
 
+			if output, isOutput := step.Instruction.(imagefile.Output); isOutput {
+				line, written := imagefile.Written(output)
+				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name}
+				requests = append(requests, fetch)
+			}
+
 			roots[step.Key] = under.after(step)
 		}
 

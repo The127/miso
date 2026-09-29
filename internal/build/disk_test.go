@@ -40,6 +40,21 @@ func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testin
 	}, disksOf(requests)[0])
 }
 
+func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\n")
+	output := source.Stages[1].Steps[0]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	last := requests[len(requests)-1]
+	assert.Equal(t, protocol.Fetch{Key: output.Key}, last.Message)
+	assert.Equal(t, "os.raw", last.Output)
+}
+
 func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT portable os.raw\n")
