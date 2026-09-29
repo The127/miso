@@ -9,10 +9,12 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-// Output is a file a disk is fetched into.
+// Output is a file a disk is fetched into. Close delivers it, Discard
+// throws away one whose fetch failed.
 type Output interface {
 	protocol.DiskFile
 	Close() error
+	Discard() error
 }
 
 // Outputs create the file of the output a fetch request names, handed in so
@@ -33,7 +35,11 @@ func outputOf(request build.Request, outputs Outputs) (Output, error) {
 // fetch has the agent send the disk of a request into the file of its
 // output.
 func fetch(conn *protocol.Conn, request protocol.Fetch, file Output, out io.Writer) error {
-	return errors.Join(conn.AskFetch(request, file, out), file.Close())
+	if err := conn.AskFetch(request, file, out); err != nil {
+		return errors.Join(err, file.Discard())
+	}
+
+	return file.Close()
 }
 
 // OutputsIn are outputs that are files in a directory. A disk with checks
@@ -63,6 +69,15 @@ func OutputsIn(dir string, check Check) Outputs {
 			return checked{File: file, dir: dir, name: name, request: request, check: check}, nil
 		}
 
-		return file, nil
+		return plain{file}, nil
 	}
+}
+
+// plain is the file of a disk without checks.
+type plain struct {
+	*os.File
+}
+
+func (p plain) Discard() error {
+	return p.Close()
 }

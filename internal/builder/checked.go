@@ -46,3 +46,19 @@ func (c checked) Close() error {
 
 	return root.Rename(c.name, c.request.Output)
 }
+
+// Discard throws the disk away without booting it.
+func (c checked) Discard() error {
+	if err := c.File.Close(); err != nil {
+		return err
+	}
+
+	root, err := os.OpenRoot(c.dir)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = root.Close() }()
+
+	return root.Remove(c.name)
+}

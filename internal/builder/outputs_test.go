@@ -42,11 +42,18 @@ func (f *file) Close() error {
 	return nil
 }
 
+func (f *file) Discard() error {
+	return nil
+}
+
 // sending is an agent that sends a disk for every fetch.
 type sending struct {
 	recording
 
 	disk string
+
+	// why the fetch fails after the disk was sent
+	err error
 }
 
 func (s *sending) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
@@ -56,7 +63,11 @@ func (s *sending) Fetch(_ context.Context, request protocol.Fetch, pieces protoc
 		return err
 	}
 
-	return pieces.Piece(protocol.Piece{Size: int64(len(s.disk))}, strings.NewReader(s.disk))
+	if err := pieces.Piece(protocol.Piece{Size: int64(len(s.disk))}, strings.NewReader(s.disk)); err != nil {
+		return err
+	}
+
+	return s.err
 }
 
 func TestAFetchedDiskIsWrittenIntoTheFileItsOutputNames(t *testing.T) {

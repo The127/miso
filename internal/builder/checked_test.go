@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/imagefile"
+	"github.com/The127/miso/internal/protocol"
 )
 
 // names are the names of the files in a directory.
@@ -76,5 +78,26 @@ func TestADiskWhoseChecksFailLeavesNoFile(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, failing)
+	assert.Empty(t, names(t, dir))
+}
+
+func TestADiskWhoseFetchFailsIsNotBootedAndLeavesNoFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	agent := &sending{disk: "disk\n", err: errors.New("the agent broke off")}
+	requests := []build.Request{{Message: protocol.Fetch{Key: "disk"}, Output: "os.raw", Checks: []imagefile.Check{{Line: 4, Command: "true"}}}}
+	booted := false
+	check := func(string, build.Request) error {
+		booted = true
+
+		return nil
+	}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(agent), agentName, requests, nil, builder.OutputsIn(dir, check), io.Discard)
+
+	// assert
+	require.Error(t, err)
+	assert.False(t, booted)
 	assert.Empty(t, names(t, dir))
 }
