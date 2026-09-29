@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/The127/miso/internal/kernel"
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/sandbox"
@@ -73,61 +72,20 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 	defer func() { _ = os.RemoveAll(scratch) }()
 
-	image := filepath.Join(scratch, "image")
-	if err := os.Mkdir(image, 0o700); err != nil {
-		return err
-	}
-
-	lowers, err := a.lowers(request.Layers)
+	image, err := a.mountImage(scratch, request.Layers)
 	if err != nil {
-		return err
-	}
-
-	// overlay without an upper layer wants two below
-	bottom, err := empty(scratch)
-	if err != nil {
-		return err
-	}
-
-	if err := mountReadOnly(image, append(lowers, bottom)); err != nil {
 		return err
 	}
 
 	// removing scratch must never reach into the image, so it goes first
-	defer func() { _ = syscall.Unmount(image, syscall.MNT_DETACH) }()
+	defer image.unmount()
 
 	// links in the image mean places in the image, never in the builder VM
-	imageFS := place.Open(image).FS()
+	imageFS := place.Open(image.dir).FS()
 
-	found, err := kernel.Find(imageFS, "")
+	boot, err := prepareBoot(imageFS, image.dir, scratch, request)
 	if err != nil {
 		return err
-	}
-
-	esp := filepath.Join(scratch, "esp")
-	if err := makeESP(imageFS, image, esp); err != nil {
-		return err
-	}
-
-	parts := filepath.Join(scratch, "parts")
-	if err := os.Mkdir(parts, 0o700); err != nil {
-		return err
-	}
-
-	if err := copyParts(imageFS, found, parts); err != nil {
-		return err
-	}
-
-	if request.Cmdline != "" {
-		if err := os.WriteFile(filepath.Join(parts, "cmdline"), []byte(request.Cmdline+"\n"), 0o600); err != nil {
-			return err
-		}
-	}
-
-	if request.ElTorito {
-		if err := bootsFromCD(filepath.Join(parts, "stub")); err != nil {
-			return err
-		}
 	}
 
 	booting := filepath.Join(scratch, "booting")
@@ -140,12 +98,8 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	definitions := filepath.Join(scratch, "definitions")
-	if err := os.Mkdir(definitions, 0o700); err != nil {
-		return err
-	}
-
-	if err := writeDefinitions(definitions, request.Partitions); err != nil {
+	definitions, err := makeDefinitions(scratch, request.Partitions)
+	if err != nil {
 		return err
 	}
 
@@ -155,32 +109,22 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
+	in := toolsInput{
+		output:      work.Dir(),
+		definitions: definitions,
+		partitions:  len(request.Partitions) > 0,
+		boot:        boot,
+		booting:     booting,
+		// the ESP is whole once the UKI is in it, and no lower layer may
+		// change under a mounted overlay
+		below:    append([]string{boot.esp}, image.below...),
+		elTorito: request.ElTorito,
+	}
+
 	code := 0
 	err = a.overlaid(request.Tools, sandbox.Floor, nil, upper, func(root string) (bool, error) {
-		unbindOutput, err := bind(work.Dir(), filepath.Join(root, "run", "miso", "out"))
-		if err != nil {
-			return false, err
-		}
-
-		defer unbindOutput()
-
-		if len(request.Partitions) > 0 {
-			unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
-			if err != nil {
-				return false, err
-			}
-
-			defer unbindDefinitions()
-		}
-
-		code, err = buildUKI(ctx, root, parts, esp, found.Version, out)
-		if err != nil || code != 0 {
-			return false, err
-		}
-
-		// the ESP is whole now, and no lower layer may change under a
-		// mounted overlay
-		code, err = makeDisk(ctx, root, booting, append([]string{esp}, append(lowers, bottom)...), request.ElTorito, out)
+		var err error
+		code, err = runTools(ctx, root, in, out)
 
 		return false, err
 	})
@@ -195,6 +139,79 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 	}
 
 	return work.Finish()
+}
+
+// mountedImage is the image's layers mounted read-only at dir, and the
+// directories they are mounted from, top first.
+type mountedImage struct {
+	dir   string
+	below []string
+}
+
+func (m mountedImage) unmount() {
+	_ = syscall.Unmount(m.dir, syscall.MNT_DETACH)
+}
+
+func (a *Agent) mountImage(scratch string, layers []string) (mountedImage, error) {
+	dir := filepath.Join(scratch, "image")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		return mountedImage{}, err
+	}
+
+	below, err := a.lowers(layers)
+	if err != nil {
+		return mountedImage{}, err
+	}
+
+	// overlay without an upper layer wants two below
+	bottom, err := empty(scratch)
+	if err != nil {
+		return mountedImage{}, err
+	}
+
+	below = append(below, bottom)
+	if err := mountReadOnly(dir, below); err != nil {
+		return mountedImage{}, err
+	}
+
+	return mountedImage{dir: dir, below: below}, nil
+}
+
+// toolsInput is what the tools in their root are shown to make a disk.
+type toolsInput struct {
+	output      string
+	definitions string
+	partitions  bool
+	boot        boot
+	booting     string
+	below       []string
+	elTorito    bool
+}
+
+// runTools has the tools in root build the UKI and make the disk.
+func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (int, error) {
+	unbindOutput, err := bind(in.output, filepath.Join(root, "run", "miso", "out"))
+	if err != nil {
+		return 0, err
+	}
+
+	defer unbindOutput()
+
+	if in.partitions {
+		unbindDefinitions, err := bind(in.definitions, filepath.Join(root, "run", "miso", "definitions"))
+		if err != nil {
+			return 0, err
+		}
+
+		defer unbindDefinitions()
+	}
+
+	code, err := buildUKI(ctx, root, in.boot.parts, in.boot.esp, in.boot.kernel.Version, out)
+	if err != nil || code != 0 {
+		return code, err
+	}
+
+	return makeDisk(ctx, root, in.booting, in.below, in.elTorito, out)
 }
 
 // buildUKI has the tools in root build the UKI of the kernel of a version
