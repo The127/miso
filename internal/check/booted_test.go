@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,8 +26,10 @@ func (notice) Close() error { return nil }
 // notices hands out the notifications in order, then waits, and remembers
 // which machine they were asked from.
 type notices struct {
-	sent  chan io.ReadWriteCloser
-	asked uint32
+	sent chan io.ReadWriteCloser
+
+	// the taking goes on after the boot, while the test reads it
+	asked atomic.Uint32
 }
 
 func sending(said ...string) *notices {
@@ -39,7 +42,7 @@ func sending(said ...string) *notices {
 }
 
 func (n *notices) AcceptFrom(cid uint32) (io.ReadWriteCloser, error) {
-	n.asked = cid
+	n.asked.Store(cid)
 
 	return <-n.sent, nil
 }
@@ -200,7 +203,7 @@ func TestABootTakesTheNoticesOfItsOwnMachineOnly(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, uint32(machine), said.asked)
+	assert.Equal(t, uint32(machine), said.asked.Load())
 }
 
 func TestANoticeIsReadOnlyUpToTheSizeSystemdSends(t *testing.T) {
