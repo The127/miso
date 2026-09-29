@@ -6,10 +6,11 @@ import (
 )
 
 // Entry is a finished layer as the store lists it. Used is when a build
-// last made use of it.
+// last made use of it, and Size the bytes it takes on the disk.
 type Entry struct {
 	Key  string
 	Used time.Time
+	Size int64
 }
 
 // List gives the finished layers.
@@ -31,7 +32,12 @@ func (s *Store) List() ([]Entry, error) {
 			return nil, err
 		}
 
-		entries = append(entries, Entry{Key: name.Name(), Used: info.ModTime()})
+		size, err := usage(s.Path(name.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, Entry{Key: name.Name(), Used: info.ModTime(), Size: size})
 	}
 
 	return entries, nil

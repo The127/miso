@@ -1,6 +1,8 @@
 package layer_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,6 +27,24 @@ func TestTheListHoldsOnlyFinishedLayers(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "abc", entries[0].Key)
+}
+
+func TestTheListSaysHowMuchDiskALayerTakes(t *testing.T) {
+	// arrange
+	store := layer.Open(t.TempDir())
+	work, err := store.Begin("abc")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(work.Dir(), "big"), make([]byte, 1<<20), 0o600))
+	require.NoError(t, work.Finish())
+
+	// act
+	entries, err := store.List()
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.GreaterOrEqual(t, entries[0].Size, int64(1<<20))
+	assert.Less(t, entries[0].Size, int64(2<<20))
 }
 
 func TestTheListSaysWhenALayerWasLastUsed(t *testing.T) {
