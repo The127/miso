@@ -1,6 +1,7 @@
 package builder_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,4 +61,20 @@ func TestADiskWithChecksGetsItsNameOnlyAfterTheyPassed(t *testing.T) {
 	written, err := os.ReadFile(filepath.Join(dir, "os.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "disk\n", string(written))
+}
+
+func TestADiskWhoseChecksFailLeavesNoFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	failing := errors.New("exit code 1")
+	check := func(string, build.Request) error { return failing }
+
+	// act
+	output, err := builder.OutputsIn(dir, check)(build.Request{Output: "os.raw", Checks: []imagefile.Check{{Line: 4, Command: "false"}}})
+	require.NoError(t, err)
+	err = output.Close()
+
+	// assert
+	assert.ErrorIs(t, err, failing)
+	assert.Empty(t, names(t, dir))
 }

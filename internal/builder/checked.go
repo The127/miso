@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -32,16 +33,16 @@ func (c checked) Close() error {
 		return err
 	}
 
-	if err := c.check(filepath.Join(c.dir, c.name), c.request); err != nil {
-		return err
-	}
-
 	root, err := os.OpenRoot(c.dir)
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = root.Close() }()
+
+	if err := c.check(filepath.Join(c.dir, c.name), c.request); err != nil {
+		return errors.Join(err, root.Remove(c.name))
+	}
 
 	return root.Rename(c.name, c.request.Output)
 }
