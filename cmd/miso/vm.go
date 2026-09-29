@@ -12,7 +12,6 @@ import (
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/reach"
-	"github.com/The127/miso/internal/vsockns"
 )
 
 // bootFiles writes the builder kernel and an initramfs with this very miso
@@ -72,21 +71,12 @@ func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Wr
 		},
 	}
 
-	var socket func() (*os.File, error)
-
-	namespace, opening := vsockns.Open()
-	switch {
-	case errors.Is(opening, vsockns.ErrNotPrivate):
-		// the driver then reaches the VM over its virtio port and says why
-		driver.OpenVsock = func() (*os.File, error) { return nil, opening }
-	case opening != nil:
-		return opening
-	default:
-		defer func() { _ = namespace.Close() }()
-
-		driver.OpenVsock = namespace.Device
-		socket = namespace.Socket
+	socket, closeVsock, err := privateVsock(&driver)
+	if err != nil {
+		return err
 	}
+
+	defer closeVsock()
 
 	vm, err := driver.Start(running, machine)
 	if err != nil {
