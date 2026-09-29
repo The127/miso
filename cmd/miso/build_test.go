@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,4 +95,41 @@ func TestABuildOnAHostThatCannotKeepVsockPrivateSaysSoAndStillRunsOnTheBuilderKe
 	require.NoError(t, err, string(said))
 	assert.Contains(t, string(said), "vsock cannot be kept private on this host")
 	assert.Contains(t, string(said), word+"\n")
+}
+
+// bootable is a build file of a disk: its image brings a kernel and its own
+// repart definitions, its tools stage what makes the disk of them.
+const bootable = `FROM debian:sid AS tools
+RUN apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools e2fsprogs
+
+FROM debian:sid
+RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi
+RUN : > /etc/fstab && \
+    mkdir -p /etc/kernel /usr/lib/repart.d && \
+    printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline && \
+    printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
+    printf '[Partition]\nType=root\nFormat=ext4\nCopyFiles=/:/\nUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f\nSizeMinBytes=3G\n' > /usr/lib/repart.d/20-root.conf
+OUTPUT disk os.raw --tools=tools
+`
+
+func TestADiskOutputIsWrittenSparseIntoTheOutputDirectoryOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	out := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(bootable), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", "-o", out, dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	disk, err := os.ReadFile(filepath.Join(out, "os.raw"))
+	require.NoError(t, err)
+	require.Greater(t, len(disk), 520)
+	assert.Equal(t, "EFI PART", string(disk[512:520]))
+	info, err := os.Stat(filepath.Join(out, "os.raw"))
+	require.NoError(t, err)
+	stat, isStat := info.Sys().(*syscall.Stat_t)
+	require.True(t, isStat)
+	assert.Less(t, stat.Blocks*512, info.Size())
 }

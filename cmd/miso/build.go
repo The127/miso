@@ -25,6 +25,7 @@ var buildCommand = &cli.Command{
 	ArgsUsage: "[context]",
 	Flags: []cli.Flag{
 		fileFlag(),
+		outputFlag(),
 	},
 	Action: runBuild,
 }
@@ -57,6 +58,11 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
+	outputs, err := outputsOf(command)
+	if err != nil {
+		return err
+	}
+
 	dir := filepath.Join(cache, "builder")
 	held, err := lockedCache(dir, command.Root().ErrWriter)
 	if err != nil {
@@ -85,7 +91,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	}
 
 	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
-		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), nil, command.Root().Writer))
+		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), outputs, command.Root().Writer))
 	})
 }
 
