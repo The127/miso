@@ -83,7 +83,7 @@ func ask(ctx context.Context, conn io.ReadWriteCloser, agent string, request bui
 	case isCopy && copying.Stage == "":
 		err = protocol.New(agent, conn, conn).AskCopy(copying, hosted(files(copying)), out)
 	case isFetch:
-		err = fetch(protocol.New(agent, conn, conn), fetching, request.Output, outputs, out)
+		err = fetch(protocol.New(agent, conn, conn), request, fetching, outputs, out)
 	default:
 		err = protocol.New(agent, conn, conn).Ask(request.Message, out)
 	}
