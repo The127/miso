@@ -53,6 +53,17 @@ func copyPart(image fs.FS, path, to string) error {
 
 	defer func() { _ = from.Close() }()
 
+	info, err := from.Stat()
+	if err != nil {
+		return err
+	}
+
+	if !info.Mode().IsRegular() {
+		// a kernel's path holds a name from the image, which may come from
+		// anyone
+		return fmt.Errorf("the image's %q is no regular file", "/"+path)
+	}
+
 	into, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err

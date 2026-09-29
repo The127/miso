@@ -357,6 +357,42 @@ cat "$root/efi/EFI/Linux/99.0.efi" > "$last"`
 	assert.Contains(t, string(written), "\nimage-kernel\n")
 }
 
+func TestABootPartThatIsNoRegularFileFailsNamingIt(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	boot := "mkdir -p /usr/lib/systemd/boot/efi && cd /usr/lib/systemd/boot/efi && echo loader > systemd-bootx64.efi && mkfifo linuxx64.efi.stub"
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: boot}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, `the image's "/usr/lib/systemd/boot/efi/linuxx64.efi.stub" is no regular file`)
+}
+
+func TestAKernelNameOfTheImageIsQuotedWhenItsKernelIsNoRegularFile(t *testing.T) {
+	// arrange
+	worker := mountedBase(t, t.TempDir())
+	kernel := `version=$(printf '99.0\033[2J') && mkdir -p "/usr/lib/modules/$version" && cd "/usr/lib/modules/$version" && touch initrd && mkfifo vmlinuz`
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, writesDisk)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "\x1b")
+	assert.ErrorContains(t, err, `"/usr/lib/modules/99.0\x1b[2J/vmlinuz"`)
+}
+
 func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
