@@ -36,6 +36,9 @@ type Request struct {
 	// the name of the file a fetch writes, taken from the plan and never
 	// from the agent
 	Output string
+
+	// what a fetched disk must pass when booted
+	Checks []imagefile.Check
 }
 
 // Requests are what the agent is asked, in the order it is asked. A run
@@ -75,6 +78,11 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 				line, written := imagefile.Written(output)
 				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name}
 				requests = append(requests, fetch)
+			}
+
+			if check, isCheck := step.Instruction.(imagefile.Check); isCheck {
+				last := &requests[len(requests)-1]
+				last.Checks = append(last.Checks, check)
 			}
 
 			roots[step.Key] = under.after(step)

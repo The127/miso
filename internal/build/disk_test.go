@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/build"
+	"github.com/The127/miso/internal/imagefile"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -53,6 +54,19 @@ func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 	last := requests[len(requests)-1]
 	assert.Equal(t, protocol.Fetch{Key: output.Key}, last.Message)
 	assert.Equal(t, "os.raw", last.Output)
+}
+
+func TestTheFetchOfADiskCarriesTheChecksAfterItsOutput(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nCHECK command -v htop\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	last := requests[len(requests)-1]
+	assert.Equal(t, []imagefile.Check{{Line: 4, Command: "command -v htop"}}, last.Checks)
 }
 
 func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
