@@ -67,6 +67,27 @@ func TestARunThatMustBuildMarksTheLayersBelowUsed(t *testing.T) {
 	assert.True(t, entries[0].Used.After(old))
 }
 
+func TestACopyThatFindsItsLayerMarksItAndTheLayersOfBothStagesUsed(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	store := layer.Open(layers)
+	old := finishedLongAgo(t, store, "base", "other", "copy")
+	worker := agent.New(layers, t.TempDir())
+	request := protocol.Copy{Key: "copy", Layers: []string{"base"}, Stage: "tools", From: []string{"other"}}
+
+	// act
+	err := worker.Copy(context.Background(), request, nil, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	entries, err := store.List()
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	for _, entry := range entries {
+		assert.True(t, entry.Used.After(old), entry.Key)
+	}
+}
+
 func TestAnImportThatFindsItsLayerMarksItUsed(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
