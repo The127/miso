@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/agent"
+	"github.com/The127/miso/internal/layer"
 	"github.com/The127/miso/internal/protocol"
 )
 
@@ -45,20 +46,21 @@ func (r *received) Piece(piece protocol.Piece, content io.Reader) error {
 	return nil
 }
 
-// keptDisk is a layers directory holding a disk as the output of the key.
-func keptDisk(t *testing.T, key string, content []byte) string {
+// keptDisk is a layers directory holding a disk as the output of the key
+// "disk".
+func keptDisk(t *testing.T, content []byte) string {
 	t.Helper()
 
 	layers := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(layers, key), 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(layers, key, "disk.raw"), content, 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(layers, "disk"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(layers, "disk", "disk.raw"), content, 0o600))
 
 	return layers
 }
 
 func TestAFetchSendsTheLengthOfTheDisk(t *testing.T) {
 	// arrange
-	worker := agent.New(keptDisk(t, "disk", make([]byte, 16)), t.TempDir())
+	worker := agent.New(keptDisk(t, make([]byte, 16)), t.TempDir())
 	sent := &received{}
 
 	// act
@@ -71,7 +73,7 @@ func TestAFetchSendsTheLengthOfTheDisk(t *testing.T) {
 
 func TestAFetchSendsTheDataOfTheDisk(t *testing.T) {
 	// arrange
-	worker := agent.New(keptDisk(t, "disk", []byte("hello, disk\n")), t.TempDir())
+	worker := agent.New(keptDisk(t, []byte("hello, disk\n")), t.TempDir())
 	sent := &received{}
 
 	// act
@@ -84,7 +86,7 @@ func TestAFetchSendsTheDataOfTheDisk(t *testing.T) {
 
 func TestAFetchSkipsTheHolesOfTheDisk(t *testing.T) {
 	// arrange
-	layers := keptDisk(t, "disk", nil)
+	layers := keptDisk(t, nil)
 	disk, err := os.OpenFile(filepath.Join(layers, "disk", "disk.raw"), os.O_WRONLY, 0)
 	require.NoError(t, err)
 	require.NoError(t, disk.Truncate(1<<20))
@@ -141,4 +143,20 @@ func TestAFetchRefusesADiskThatIsNoRegularFile(t *testing.T) {
 	case <-time.After(time.Second):
 		assert.Fail(t, "the fetch waits for a writer")
 	}
+}
+
+func TestAFetchRefusesAKeyThatIsNoLayerName(t *testing.T) {
+	// arrange
+	outside := keptDisk(t, []byte("outside"))
+	layers := filepath.Join(outside, "layers")
+	require.NoError(t, os.Mkdir(layers, 0o700))
+	worker := agent.New(layers, t.TempDir())
+	sent := &received{}
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "../disk"}, sent, io.Discard)
+
+	// assert
+	assert.ErrorIs(t, err, layer.ErrBadKey)
+	assert.Empty(t, sent.disk)
 }
