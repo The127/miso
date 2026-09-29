@@ -99,18 +99,15 @@ func TestABuildOnAHostThatCannotKeepVsockPrivateSaysSoAndStillRunsOnTheBuilderKe
 }
 
 // bootable is a build file of a disk: its image brings a kernel and its own
-// repart definitions, its tools stage what makes the disk of them.
-const bootable = `FROM debian:sid AS tools
-RUN apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools e2fsprogs
-
-FROM debian:sid
+// repart definitions, and miso's own tools make the disk of them.
+const bootable = `FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 RUN : > /etc/fstab && \
     mkdir -p /etc/kernel /usr/lib/repart.d && \
     printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline && \
     printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
     printf '[Partition]\nType=root\nFormat=ext4\nCopyFiles=/:/\nUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f\nSizeMinBytes=3G\n' > /usr/lib/repart.d/20-root.conf
-OUTPUT disk os.raw --tools=tools
+OUTPUT disk os.raw
 `
 
 func TestADiskOutputIsWrittenSparseIntoTheOutputDirectoryOnTheBuilderKernel(t *testing.T) {
@@ -139,7 +136,7 @@ func TestADiskWhoseChecksPassIsWrittenOnTheBuilderKernel(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
 	out := t.TempDir()
-	checked := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v htop\n", 1)
+	checked := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK command -v htop\n", 1)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(checked), 0o600))
 
 	// act
@@ -155,7 +152,7 @@ func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKe
 	dir := t.TempDir()
 	out := t.TempDir()
 	file := filepath.Join(dir, "Imagefile")
-	failing := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v nothing-of-that-name\n", 1)
+	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK command -v nothing-of-that-name\n", 1)
 	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
 
 	// act
@@ -171,7 +168,7 @@ func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testin
 	// arrange
 	dir := t.TempDir()
 	file := filepath.Join(dir, "Imagefile")
-	failing := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v nothing-of-that-name\n", 1)
+	failing := strings.Replace(bootable, "OUTPUT disk os.raw\n", "OUTPUT disk os.raw\nCHECK command -v nothing-of-that-name\n", 1)
 	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
 
 	// act

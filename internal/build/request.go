@@ -115,12 +115,7 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		tools, hasTools := instruction.Options[plan.Tools]
-		if !hasTools {
-			tools = plan.BuiltinTools
-		}
-
-		return diskRequest(step, instruction, under, ends[tools])
+		return diskRequest(step, instruction, under, ends[plan.BuiltinTools])
 	}
 
 	return nil, nil

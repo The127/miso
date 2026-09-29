@@ -23,25 +23,7 @@ func disksOf(requests []build.Request) []protocol.Disk {
 	return disks
 }
 
-func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testing.T) {
-	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nRUN apt-get install systemd-repart\nFROM debian:13\nRUN apt-get install htop\nOUTPUT disk os.raw --tools=tools\n")
-	tools, image := source.Stages[0], source.Stages[1]
-
-	// act
-	requests, err := build.Requests(source, network)
-
-	// assert
-	require.NoError(t, err)
-	require.Len(t, disksOf(requests), 1)
-	assert.Equal(t, protocol.Disk{
-		Key:    image.Steps[1].Key,
-		Layers: []string{image.BaseKey, image.Steps[0].Key},
-		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
-	}, disksOf(requests)[0])
-}
-
-func TestADiskWithoutToolsIsMadeWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
+func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT disk os.raw\n")
 	tools, image := source.Stages[0], source.Stages[1]
@@ -61,7 +43,7 @@ func TestADiskWithoutToolsIsMadeWithTheLayersOfTheToolsStageMisoAdds(t *testing.
 
 func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nRUN apt-get install htop\nOUTPUT iso os.iso --tools=tools\n")
+	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT iso os.iso\n")
 	tools, image := source.Stages[0], source.Stages[1]
 
 	// act
@@ -73,14 +55,14 @@ func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 	assert.Equal(t, protocol.Disk{
 		Key:      image.Steps[1].Key,
 		Layers:   []string{image.BaseKey, image.Steps[0].Key},
-		Tools:    []string{tools.BaseKey},
+		Tools:    []string{tools.BaseKey, tools.Steps[0].Key},
 		ElTorito: true,
 	}, disksOf(requests)[0])
 }
 
 func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\n")
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\n")
 	output := source.Stages[1].Steps[0]
 
 	// act
@@ -95,7 +77,7 @@ func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 
 func TestTheFetchOfAnISOSaysItIsCheckedAsACD(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT iso os.iso --tools=tools\n")
+	source := planned(t, "FROM debian:13\nOUTPUT iso os.iso\n")
 
 	// act
 	requests, err := build.Requests(source, network)
@@ -107,7 +89,7 @@ func TestTheFetchOfAnISOSaysItIsCheckedAsACD(t *testing.T) {
 
 func TestTheFetchOfADiskCarriesTheChecksAfterItsOutput(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nCHECK command -v htop\n")
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\nCHECK command -v htop\n")
 
 	// act
 	requests, err := build.Requests(source, network)
@@ -115,12 +97,12 @@ func TestTheFetchOfADiskCarriesTheChecksAfterItsOutput(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	last := requests[len(requests)-1]
-	assert.Equal(t, []imagefile.Check{{Line: 4, Command: "command -v htop"}}, last.Checks)
+	assert.Equal(t, []imagefile.Check{{Line: 3, Command: "command -v htop"}}, last.Checks)
 }
 
 func TestAStepBetweenAnOutputAndItsCheckLeavesTheCheckWithTheFetch(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\nRUN true\nCHECK command -v htop\n")
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\nRUN true\nCHECK command -v htop\n")
 
 	// act
 	requests, err := build.Requests(source, network)
@@ -129,7 +111,7 @@ func TestAStepBetweenAnOutputAndItsCheckLeavesTheCheckWithTheFetch(t *testing.T)
 	require.NoError(t, err)
 	fetch := requests[len(requests)-2]
 	require.IsType(t, protocol.Fetch{}, fetch.Message)
-	assert.Equal(t, []imagefile.Check{{Line: 5, Command: "command -v htop"}}, fetch.Checks)
+	assert.Equal(t, []imagefile.Check{{Line: 4, Command: "command -v htop"}}, fetch.Checks)
 }
 
 func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
@@ -147,7 +129,20 @@ func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 
 func TestADiskWithAnOptionMisoDoesNotKnowFailsAtItsLine(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools --kernal=6.1\n")
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw --kernal=6.1\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrUnknownOption)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "kernal")
+}
+
+func TestAToolsOptionOnADiskIsAnOptionMisoDoesNotKnow(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\n")
 
 	// act
 	_, err := build.Requests(source, network)
@@ -155,5 +150,5 @@ func TestADiskWithAnOptionMisoDoesNotKnowFailsAtItsLine(t *testing.T) {
 	// assert
 	require.ErrorIs(t, err, build.ErrUnknownOption)
 	assert.ErrorContains(t, err, "line 3")
-	assert.ErrorContains(t, err, "kernal")
+	assert.ErrorContains(t, err, "--tools")
 }

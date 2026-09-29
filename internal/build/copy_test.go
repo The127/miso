@@ -81,7 +81,7 @@ func TestACopyFromAStageIsBuiltFromTheLayersOfThatStage(t *testing.T) {
 
 func TestACopyFromAStageIsBuiltFromWhereThatStageEndsPastItsOutputsAndChecks(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13 AS build\nRUN a\nOUTPUT disk a.raw --tools=tools\nRUN b\nCHECK c\nFROM scratch\nCOPY --from=build /usr /usr\n")
+	source := planned(t, "FROM debian:13 AS build\nRUN a\nOUTPUT disk a.raw\nRUN b\nCHECK c\nFROM scratch\nCOPY --from=build /usr /usr\n")
 	built := source.Stages[1]
 
 	// act
@@ -110,14 +110,14 @@ func TestACopyFromAStageWithoutStepsIsBuiltFromItsBase(t *testing.T) {
 
 func TestACopyOfAnOutputOfAStageFailsAtItsLine(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13 AS build\nOUTPUT disk a.raw --tools=tools\nFROM scratch\nCOPY --from=build /usr a.raw /x/\n")
+	source := planned(t, "FROM debian:13 AS build\nOUTPUT disk a.raw\nFROM scratch\nCOPY --from=build /usr a.raw /x/\n")
 
 	// act
 	_, err := build.Requests(source, network)
 
 	// assert
 	assert.ErrorIs(t, err, build.ErrOutputNotBuilt)
-	assert.EqualError(t, err, "line 5: COPY --from=build /usr a.raw /x/: output not built yet")
+	assert.EqualError(t, err, "line 4: COPY --from=build /usr a.raw /x/: output not built yet")
 }
 
 func TestACopyRequestKnowsItsLineOfTheBuildFile(t *testing.T) {

@@ -4,11 +4,6 @@
 #
 # leaves out/os.raw, a GPT disk that boots under UEFI.
 
-# The tools that make the disk. They run in the builder, none of them ends
-# up in the image.
-FROM debian:sid AS tools
-RUN apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools e2fsprogs
-
 FROM debian:sid
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 
@@ -21,7 +16,7 @@ RUN : > /etc/fstab && \
     printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
     printf '[Partition]\nType=root\nFormat=ext4\nCopyFiles=/:/\nUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f\nSizeMinBytes=3G\n' > /usr/lib/repart.d/20-root.conf
 
-OUTPUT disk os.raw --tools=tools
+OUTPUT disk os.raw
 
 # Boots the disk and runs in it. A failing check fails the build and leaves
 # no disk.

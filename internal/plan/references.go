@@ -17,31 +17,11 @@ var ErrUnknownOutput = errors.New("unknown output")
 
 func checkReferences(stage imagefile.Stage, known map[string]map[string]bool) error {
 	for _, instruction := range stage.Instructions {
-		var err error
-		switch step := instruction.(type) {
-		case imagefile.Output:
-			err = checkTools(step, known)
-		case imagefile.Copy:
-			err = checkCopyFrom(step, known)
+		if step, isCopy := instruction.(imagefile.Copy); isCopy {
+			if err := checkCopyFrom(step, known); err != nil {
+				return err
+			}
 		}
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// checkTools checks that an output takes its tools from an earlier stage.
-func checkTools(output imagefile.Output, known map[string]map[string]bool) error {
-	tools, hasTools := output.Options[Tools]
-	if !hasTools {
-		return nil
-	}
-
-	if _, isStage := known[tools]; !isStage {
-		return at(output.Line, fmt.Errorf("OUTPUT --tools=%s: %w", tools, ErrUnknownStage))
 	}
 
 	return nil

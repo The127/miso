@@ -8,10 +8,6 @@ import (
 	"github.com/The127/miso/internal/imagefile"
 )
 
-// Tools is the option of an OUTPUT that names the stage bringing the tools
-// to make it.
-const Tools = "tools"
-
 // ErrNotAFileName is an output name that is more than the name of a file,
 // so the host would write it somewhere else than where outputs go.
 var ErrNotAFileName = errors.New("not a plain file name")

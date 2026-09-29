@@ -31,13 +31,11 @@ func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, too
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == "iso"}, nil
 }
 
-// unknownOption is the first option in sorted order that a disk does not
-// take, so the same build file always names the same one.
+// unknownOption is the first option in sorted order, so the same build file
+// always names the same one. A disk takes none.
 func unknownOption(options map[string]string) (string, bool) {
 	for _, name := range slices.Sorted(maps.Keys(options)) {
-		if name != plan.Tools {
-			return name, true
-		}
+		return name, true
 	}
 
 	return "", false

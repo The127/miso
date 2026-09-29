@@ -43,16 +43,3 @@ func TestACopyOfAnOutputTheStageDoesNotHaveIsRejected(t *testing.T) {
 	assert.ErrorContains(t, err, "line 4")
 	assert.ErrorContains(t, err, "tools.raw")
 }
-
-func TestAnOutputWithToolsOfAnUnknownStageIsRejected(t *testing.T) {
-	// arrange
-	stages := parse(t, "FROM debian:sid\nOUTPUT disk image.raw --tools=nope\n")
-
-	// act
-	err := plan.Validate(stages)
-
-	// assert
-	assert.ErrorIs(t, err, plan.ErrUnknownStage)
-	assert.ErrorContains(t, err, "line 2")
-	assert.ErrorContains(t, err, "nope")
-}

@@ -15,10 +15,7 @@ import (
 // bootableFromCD is a build file of an ISO. Its image brings a kernel with
 // an initrd that finds a root on a CD, which Debian's dracut does only with
 // systemd's loop unit and systemd-dissect added, and a read-only root.
-const bootableFromCD = `FROM debian:sid AS tools
-RUN apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools erofs-utils
-
-FROM debian:sid
+const bootableFromCD = `FROM debian:sid
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade && \
     DEBIAN_FRONTEND=noninteractive apt-get purge -y 'linux-image-*cloud*' && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-image-amd64 dracut systemd-boot-efi systemd-container
@@ -31,7 +28,7 @@ RUN : > /etc/fstab && \
     printf 'ro rootfstype=erofs systemd.volatile=overlay console=ttyS0\n' > /etc/kernel/cmdline && \
     printf '[Partition]\nType=esp\nFormat=vfat\nCopyFiles=/efi:/\nSizeMinBytes=256M\nSizeMaxBytes=256M\n' > /usr/lib/repart.d/10-esp.conf && \
     printf '[Partition]\nType=root\nFormat=erofs\nCopyFiles=/:/\nExcludeFiles=/efi/\nMinimize=best\nReadOnly=yes\n' > /usr/lib/repart.d/20-root.conf
-OUTPUT iso os.iso --tools=tools
+OUTPUT iso os.iso
 CHECK test -b /dev/sr0
 `
 
