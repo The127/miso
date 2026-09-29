@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/vsockns"
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 // vhostVsockSetGuestCID is VHOST_VSOCK_SET_GUEST_CID of linux/vhost.h,
@@ -35,7 +36,7 @@ func claimed(t *testing.T, device *os.File) uint32 {
 
 func TestADeviceOfTheNamespaceHasItsVMsOutOfMisosReach(t *testing.T) {
 	// arrange
-	namespace := opened(t)
+	namespace := vsocknstest.Private(t)
 
 	// act
 	device, err := namespace.Device()
@@ -54,7 +55,7 @@ func TestADeviceOfTheNamespaceHasItsVMsOutOfMisosReach(t *testing.T) {
 func TestAHostWithoutTheVsockDeviceIsToldWhichModuleItNeeds(t *testing.T) {
 	// arrange
 	vsockns.NoDevice(t)
-	namespace := opened(t)
+	namespace := vsocknstest.Private(t)
 
 	// act
 	_, err := namespace.Device()

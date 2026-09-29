@@ -1,4 +1,4 @@
-package vsockns_test
+package vsocknstest
 
 import (
 	"errors"
@@ -10,9 +10,9 @@ import (
 	"github.com/The127/miso/internal/vsockns"
 )
 
-// opened is a namespace held for the test, which is skipped on a host that
-// cannot keep vsock private.
-func opened(t *testing.T) *vsockns.Namespace {
+// Private is a vsock namespace held for the test, which is skipped on a host
+// that cannot keep vsock private.
+func Private(t *testing.T) *vsockns.Namespace {
 	t.Helper()
 
 	namespace, err := vsockns.Open()

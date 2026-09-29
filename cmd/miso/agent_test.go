@@ -21,7 +21,7 @@ import (
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/reach"
-	"github.com/The127/miso/internal/vsockns"
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *testing.T) {
@@ -54,13 +54,7 @@ func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *
 
 func TestAnAgentBootedByTheBuilderKernelInAVsockNamespaceIsReachedThroughIt(t *testing.T) {
 	// arrange
-	namespace, err := vsockns.Open()
-	if errors.Is(err, vsockns.ErrNotPrivate) {
-		t.Skip("this host cannot keep vsock private")
-	}
-
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, namespace.Close()) })
+	namespace := vsocknstest.Private(t)
 	init, err := os.ReadFile(miso(t))
 	require.NoError(t, err)
 	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")

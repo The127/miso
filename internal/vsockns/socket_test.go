@@ -5,11 +5,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 func TestASocketOfTheNamespaceIsNotInMisosOwn(t *testing.T) {
 	// arrange
-	namespace := opened(t)
+	namespace := vsocknstest.Private(t)
 
 	// act
 	socket, err := namespace.Socket()

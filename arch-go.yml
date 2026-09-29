@@ -349,6 +349,15 @@ dependenciesRules:
         - '**.cmd.**'
       standard:
         - net
+  # the vsocknstest holds a vsock namespace for tests. It knows nothing of
+  # ours but the vsockns and never touches the network
+  - package: '**.internal.vsockns.vsocknstest$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.vsockns$'
+    shouldNotDependsOn:
+      standard:
+        - net
   # the vsock connects the host and its builder VM. It knows nothing of ours
   # and never starts a process or touches the network
   - package: '**.internal.vsock$'

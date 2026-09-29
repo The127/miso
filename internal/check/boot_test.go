@@ -16,13 +16,14 @@ import (
 	"github.com/The127/miso/internal/check"
 	"github.com/The127/miso/internal/kvmtest"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 func TestChecksRunInABootedImageAndGiveTheirExitCodesWithKVM(t *testing.T) {
 	// arrange
 	boot := check.Boot{
 		Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
-		Namespace: private(t),
+		Namespace: vsocknstest.Private(t),
 		Firmware:  kvmtest.Firmware(t),
 		Image:     kvmtest.Image(t, "debian:sid"),
 		Dir:       t.TempDir(),
@@ -42,7 +43,7 @@ func TestAnImageThatCannotBeBootedFailsItsChecksWithQEMUsReasonWithKVM(t *testin
 	// arrange
 	boot := check.Boot{
 		Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
-		Namespace: private(t),
+		Namespace: vsocknstest.Private(t),
 		Firmware:  kvmtest.Firmware(t),
 		Image:     qemu.Disk{Path: "/nonexistent/image.qcow2", Format: "qcow2", Serial: "image", Access: qemu.Snapshot},
 		Dir:       t.TempDir(),
@@ -71,7 +72,7 @@ func TestChecksGivenUpBeforeTheBootSayTheyWereGivenUpWithKVM(t *testing.T) {
 	// arrange
 	boot := check.Boot{
 		Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
-		Namespace: private(t),
+		Namespace: vsocknstest.Private(t),
 		Firmware:  kvmtest.Firmware(t),
 		Image:     kvmtest.Image(t, "debian:sid"),
 		Dir:       t.TempDir(),
@@ -94,7 +95,7 @@ func TestAnImageTheFirmwareCannotBootFailsItsChecksOnceThePatienceIsUpWithKVM(t 
 	require.NoError(t, os.WriteFile(blank, make([]byte, 1<<20), 0o600))
 	boot := check.Boot{
 		Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
-		Namespace: private(t),
+		Namespace: vsocknstest.Private(t),
 		Firmware:  kvmtest.Firmware(t),
 		Image:     qemu.Disk{Path: blank, Format: "raw", Serial: "image", Access: qemu.Snapshot},
 		Dir:       t.TempDir(),

@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
+
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 // cookie names the network namespace a socket lives in.
@@ -40,7 +42,7 @@ func ours(t *testing.T) *os.File {
 
 func TestAListenerOfTheNamespaceIsNotInMisosOwn(t *testing.T) {
 	// arrange
-	namespace := opened(t)
+	namespace := vsocknstest.Private(t)
 
 	// act
 	listener, err := namespace.Listen(unix.VMADDR_PORT_ANY)

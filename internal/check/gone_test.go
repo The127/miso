@@ -12,6 +12,7 @@ import (
 
 	"github.com/The127/miso/internal/check"
 	"github.com/The127/miso/internal/qemu"
+	"github.com/The127/miso/internal/vsockns/vsocknstest"
 )
 
 // lingering is a QEMU whose console is written to a moment after it was
@@ -31,7 +32,7 @@ func TestChecksReturnOnlyOnceTheirQEMUIsGone(t *testing.T) {
 	var console bytes.Buffer
 	boot := check.Boot{
 		Driver:    lingering(t),
-		Namespace: private(t),
+		Namespace: vsocknstest.Private(t),
 		Image:     qemu.Disk{Path: "/o/image.raw", Format: "raw", Serial: "image", Access: qemu.Snapshot},
 		Dir:       t.TempDir(),
 		Console:   &console,
