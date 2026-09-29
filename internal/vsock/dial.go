@@ -6,7 +6,6 @@ import (
 	"os"
 
 	mdsocket "github.com/mdlayher/socket"
-	mdvsock "github.com/mdlayher/vsock"
 	"golang.org/x/sys/unix"
 )
 
@@ -16,16 +15,6 @@ type Conn interface {
 
 	// CloseWrite the other side reads to its end, and can still answer
 	CloseWrite() error
-}
-
-// Dial connects to a port of the machine with a context ID.
-func Dial(cid, port uint32) (Conn, error) {
-	conn, err := mdvsock.Dial(cid, port, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
 }
 
 // DialOn connects a socket that the maker makes elsewhere to a port of the

@@ -69,7 +69,7 @@ func TestAMachineOnADeviceOfAVsockNamespaceIsOutOfTheHostsReachWithKVM(t *testin
 	require.Equal(t, "miso\n", said, "the guest listens inside")
 
 	// act
-	_, err = vsock.Dial(vm.CID(), guestPort)
+	_, err = vsock.DialOn(plainSocket, vm.CID(), guestPort)
 
 	// assert
 	assert.Error(t, err)

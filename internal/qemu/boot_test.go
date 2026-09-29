@@ -41,7 +41,7 @@ func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 	})
 
 	// assert
-	dial := func() (io.ReadWriteCloser, error) { return vsock.Dial(vm.CID(), guestPort) }
+	dial := func() (io.ReadWriteCloser, error) { return vsock.DialOn(plainSocket, vm.CID(), guestPort) }
 	said, err := answer(vm, dial)
 	require.NoError(t, err)
 	assert.Equal(t, "miso\n", said)

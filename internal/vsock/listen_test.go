@@ -25,7 +25,7 @@ func dialing(t *testing.T, port uint32) (*vsock.Listener, vsock.Conn) {
 	t.Helper()
 	listener, err := vsock.Listen(port)
 	require.NoError(t, err)
-	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, port)
+	dialed, err := vsock.DialOn(unconnected, unix.VMADDR_CID_LOCAL, port)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
 
@@ -140,7 +140,7 @@ func TestAListenerOnAnyPortTellsWhichItGot(t *testing.T) {
 	port := listener.Port()
 
 	// assert
-	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, port)
+	dialed, err := vsock.DialOn(unconnected, unix.VMADDR_CID_LOCAL, port)
 	require.NoError(t, err)
 	assert.NoError(t, dialed.Close())
 }
@@ -192,7 +192,7 @@ func TestAListenerOfAListeningSocketTakesItsConnections(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, listener.Close()) })
-	dialed, err := vsock.Dial(unix.VMADDR_CID_LOCAL, listener.Port())
+	dialed, err := vsock.DialOn(unconnected, unix.VMADDR_CID_LOCAL, listener.Port())
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, dialed.Close()) })
 	accepted, err := listener.Accept()

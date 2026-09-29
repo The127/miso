@@ -118,7 +118,7 @@ func dialHost(port string) string {
 		return err.Error()
 	}
 
-	conn, err := vsock.Dial(unix.VMADDR_CID_HOST, uint32(number))
+	conn, err := vsock.DialOn(plainSocket, unix.VMADDR_CID_HOST, uint32(number))
 	if err != nil {
 		return "not reached: " + err.Error()
 	}
@@ -146,6 +146,17 @@ func guestListener() (protocol.Listener, error) {
 	}
 
 	return vport.Listen(port)
+}
+
+// plainSocket is a vsock socket of the namespace this process runs in, on
+// the host the one everything else shares.
+func plainSocket() (*os.File, error) {
+	fd, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.NewFile(uintptr(fd), "vsock"), nil
 }
 
 // hostVsock is the host's own vsock device, which only a test of the driver
