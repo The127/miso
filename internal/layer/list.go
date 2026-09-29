@@ -1,10 +1,15 @@
 package layer
 
-import "os"
+import (
+	"os"
+	"time"
+)
 
-// Entry is a finished layer as the store lists it.
+// Entry is a finished layer as the store lists it. Used is when a build
+// last made use of it.
 type Entry struct {
-	Key string
+	Key  string
+	Used time.Time
 }
 
 // List gives the finished layers.
@@ -21,7 +26,12 @@ func (s *Store) List() ([]Entry, error) {
 			continue
 		}
 
-		entries = append(entries, Entry{Key: name.Name()})
+		info, err := name.Info()
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, Entry{Key: name.Name(), Used: info.ModTime()})
 	}
 
 	return entries, nil
