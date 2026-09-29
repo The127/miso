@@ -2,13 +2,26 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/The127/miso/internal/protocol"
 )
 
-// Fetch fails, the agent sends no disks yet.
-func (a *Agent) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return errors.New("the agent sends no disks yet")
+// Fetch sends the host the disk kept as the output of a key.
+func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
+	disk, err := os.Open(filepath.Join(a.layers.Path(request.Key), "disk.raw"))
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = disk.Close() }()
+
+	info, err := disk.Stat()
+	if err != nil {
+		return err
+	}
+
+	return pieces.Length(info.Size())
 }
