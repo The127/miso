@@ -24,7 +24,7 @@ func Start(serial, dir string) (*Agent, error) {
 		return nil, err
 	}
 
-	if err := layer.Open(layers).Sweep(); err != nil {
+	if _, err := layer.Open(layers).Sweep(); err != nil {
 		return nil, err
 	}
 

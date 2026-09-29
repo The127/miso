@@ -37,6 +37,7 @@ func TestARemovalStoppedHalfwayLeavesNoLayerUnderItsKey(t *testing.T) {
 	has, err := store.Has("abc")
 	require.NoError(t, err)
 	assert.False(t, has)
-	require.NoError(t, store.Sweep())
+	_, err = store.Sweep()
+	require.NoError(t, err)
 	assert.NoDirExists(t, left)
 }
