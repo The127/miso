@@ -11,7 +11,7 @@ import (
 // Run runs a command on top of layers and keeps what it writes as the layer
 // of the key. A key whose layer is there already has run before.
 func (a *Agent) Run(ctx context.Context, run protocol.Run, out io.Writer) (int, error) {
-	there, err := a.found(run.Key, run.Layers)
+	there, at, err := a.found(run.Key, run.Layers)
 	if err != nil || there {
 		return 0, err
 	}
@@ -28,7 +28,7 @@ func (a *Agent) Run(ctx context.Context, run protocol.Run, out io.Writer) (int, 
 		return code, err
 	}
 
-	return 0, work.Finish()
+	return 0, work.FinishAt(at)
 }
 
 // runOn runs a command on top of layers with what it writes going into a

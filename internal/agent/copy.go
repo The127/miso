@@ -26,7 +26,7 @@ var ErrUnknownKind = errors.New("unknown kind of entry")
 // on top of layers and keeps it as the layer of the key. A key whose layer
 // is there already needs nothing sent.
 func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.Entries, _ io.Writer) error {
-	there, err := a.found(request.Key, slices.Concat(request.Layers, request.From))
+	there, at, err := a.found(request.Key, slices.Concat(request.Layers, request.From))
 	if err != nil || there {
 		return err
 	}
@@ -61,7 +61,7 @@ func (a *Agent) Copy(_ context.Context, request protocol.Copy, entries protocol.
 		return err
 	}
 
-	return work.Finish()
+	return work.FinishAt(at)
 }
 
 // empty is the bottom of a copy, with nothing of a run's in it, so that

@@ -27,7 +27,7 @@ func New(layers, scratch string) *Agent {
 
 // Import keeps the root file system of a base image as the layer of a key.
 func (a *Agent) Import(_ context.Context, request protocol.Import, _ io.Writer) error {
-	there, err := a.found(request.Key, nil)
+	there, at, err := a.found(request.Key, nil)
 	if err != nil || there {
 		return err
 	}
@@ -43,7 +43,7 @@ func (a *Agent) Import(_ context.Context, request protocol.Import, _ io.Writer) 
 		return err
 	}
 
-	return work.Finish()
+	return work.FinishAt(at)
 }
 
 // fill copies the root file system of the base image with a digest into a

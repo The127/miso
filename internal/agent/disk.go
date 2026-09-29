@@ -61,7 +61,7 @@ ukify build \
 // Disk makes a bootable disk image of the image's layers with the tools of
 // another stage. A key whose layer is there already has its disk.
 func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) error {
-	there, err := a.found(request.Key, slices.Concat(request.Layers, request.Tools))
+	there, at, err := a.found(request.Key, slices.Concat(request.Layers, request.Tools))
 	if err != nil || there {
 		return err
 	}
@@ -139,7 +139,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 		return err
 	}
 
-	return work.Finish()
+	return work.FinishAt(at)
 }
 
 // mountedImage is the image's layers mounted read-only at dir, and the
