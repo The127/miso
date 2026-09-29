@@ -41,3 +41,17 @@ func TestANamespaceClosedTwiceLeavesTheFileNowAtItsNumber(t *testing.T) {
 	_, err := unix.FcntlInt(uintptr(number), unix.F_GETFD, 0)
 	assert.NoError(t, err)
 }
+
+func TestANamespaceAskedAfterItsCloseSaysItIsClosed(t *testing.T) {
+	// arrange
+	namespace := vsocknstest.Private(t)
+	number := vsockns.Conn(namespace)
+	require.NoError(t, namespace.Close())
+	reusing(t, number)
+
+	// act
+	_, err := namespace.Socket()
+
+	// assert
+	assert.ErrorIs(t, err, vsockns.ErrClosed)
+}

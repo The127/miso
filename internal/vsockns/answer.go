@@ -48,6 +48,10 @@ func (n *Namespace) ask(question string) (string, []int, error) {
 	n.asking.Lock()
 	defer n.asking.Unlock()
 
+	if n.gone {
+		return "", nil, ErrClosed
+	}
+
 	if err := say(n.conn, question); err != nil {
 		return "", nil, err
 	}

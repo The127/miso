@@ -30,8 +30,10 @@ type Namespace struct {
 	helper *exec.Cmd
 	conn   int
 
-	// a question and its answer share the channel with no other
+	// a question and its answer share the channel with no other, and none
+	// is put once the channel is closed
 	asking sync.Mutex
+	gone   bool
 
 	closing sync.Once
 	closed  error
