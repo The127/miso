@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+// temporary starts the name of a download that has not arrived whole, and a
+// digest is hex, so none is named like it
+const temporary = "download-"
+
 // Store keeps bytes on the host under the digest of what arrived.
 type Store struct {
 	dir    string
@@ -35,7 +39,7 @@ func (s *Store) keep(body io.Reader) (string, error) {
 		return "", err
 	}
 
-	file, err := os.CreateTemp(s.blobs(), "download-*")
+	file, err := os.CreateTemp(s.blobs(), temporary+"*")
 	if err != nil {
 		return "", err
 	}
