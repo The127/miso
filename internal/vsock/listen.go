@@ -46,6 +46,24 @@ func (l *Listener) Accept() (io.ReadWriteCloser, error) {
 	return conn, nil
 }
 
+// AcceptFrom waits for the next connection the machine with the context ID
+// makes, and drops those of every other machine.
+func (l *Listener) AcceptFrom(cid uint32) (io.ReadWriteCloser, error) {
+	for {
+		conn, err := l.listener.Accept()
+		if err != nil {
+			return nil, err
+		}
+
+		// a vsock connection's address is always a vsock address
+		if conn.RemoteAddr().(*mdvsock.Addr).ContextID == cid {
+			return conn, nil
+		}
+
+		_ = conn.Close()
+	}
+}
+
 // Port is the port the listener takes connections on, the one the system
 // chose for a listener on any port.
 func (l *Listener) Port() uint32 {

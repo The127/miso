@@ -199,3 +199,38 @@ func TestAListenerOfAListeningSocketTakesItsConnections(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, accepted.Close())
 }
+
+func TestAListenerTakesTheConnectionsOfTheMachineItTakesThemFrom(t *testing.T) {
+	// arrange
+	listener, _ := dialing(t, 1029)
+
+	// act
+	accepted, err := listener.AcceptFrom(unix.VMADDR_CID_LOCAL)
+
+	// assert
+	require.NoError(t, err)
+	assert.NoError(t, accepted.Close())
+}
+
+func TestAListenerTakingConnectionsFromOneMachineDropsThoseOfAnother(t *testing.T) {
+	// arrange
+	listener, dialed := dialing(t, 1030)
+	taken := make(chan error, 1)
+
+	// act
+	go func() {
+		_, err := listener.AcceptFrom(42)
+		taken <- err
+	}()
+
+	// assert
+	_, _ = io.ReadAll(dialed)
+	select {
+	case <-taken:
+		assert.Fail(t, "a connection of another machine was taken")
+	default:
+	}
+
+	require.NoError(t, listener.Close())
+	assert.Error(t, <-taken)
+}
