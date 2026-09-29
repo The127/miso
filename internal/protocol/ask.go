@@ -48,6 +48,10 @@ func (c *Conn) ask(request Message, files Files, disk io.WriterAt, out io.Writer
 				return err
 			}
 		case Piece:
+			if disk == nil {
+				return noAnswer(m, request)
+			}
+
 			if _, err := io.Copy(io.NewOffsetWriter(disk, m.Offset), c.Content()); err != nil {
 				return err
 			}
