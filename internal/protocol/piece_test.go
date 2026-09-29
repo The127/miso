@@ -48,3 +48,17 @@ func TestAPieceWithANegativeSizeIsRefused(t *testing.T) {
 	// assert
 	assert.ErrorIs(t, err, protocol.ErrNegativeSize)
 }
+
+func TestAPieceWithANegativeOffsetIsRefused(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	agent := protocol.New("miso 1.2.0", &wire, &wire)
+	host := protocol.New("miso 1.2.0", &wire, &wire)
+	require.NoError(t, agent.Send(protocol.Piece{Offset: -4, Size: 6}))
+
+	// act
+	_, err := host.Receive()
+
+	// assert
+	assert.ErrorIs(t, err, protocol.ErrNegativeOffset)
+}
