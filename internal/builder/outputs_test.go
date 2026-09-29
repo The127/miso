@@ -47,7 +47,9 @@ type sending struct {
 	disk string
 }
 
-func (s *sending) Fetch(_ context.Context, _ protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
+func (s *sending) Fetch(_ context.Context, request protocol.Fetch, pieces protocol.Pieces, _ io.Writer) error {
+	s.note(request)
+
 	if err := pieces.Length(int64(len(s.disk))); err != nil {
 		return err
 	}
@@ -74,4 +76,17 @@ func TestAFetchedDiskIsWrittenIntoTheFileItsOutputNames(t *testing.T) {
 	require.Contains(t, created, "os.raw")
 	assert.Equal(t, "disk\n", string(created["os.raw"].bytes))
 	assert.True(t, created["os.raw"].closed)
+}
+
+func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
+	// arrange
+	agent := &sending{disk: "disk\n"}
+	requests := []build.Request{{Message: protocol.Fetch{Key: "disk"}, Output: "os.raw"}}
+
+	// act
+	err := builder.Ask(t.Context(), running{}, dialling(agent), agentName, requests, nil, nil, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Empty(t, agent.asked)
 }

@@ -43,6 +43,12 @@ func patienceFor(vm VM) time.Duration {
 func Ask(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, outputs Outputs, out io.Writer) error {
 	booted := time.After(patienceFor(vm))
 	for _, request := range requests {
+		// without outputs the disk stays in the cache, as a build without an
+		// output target does in Docker
+		if _, isFetch := request.Message.(protocol.Fetch); isFetch && outputs == nil {
+			continue
+		}
+
 		conn, err := connect(ctx, vm, dial, booted)
 		if err != nil {
 			return err
