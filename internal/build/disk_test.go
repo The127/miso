@@ -41,6 +41,25 @@ func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfItsTools(t *testin
 	}, disksOf(requests)[0])
 }
 
+func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nRUN apt-get install htop\nOUTPUT iso os.iso --tools=tools\n")
+	tools, image := source.Stages[0], source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, protocol.Disk{
+		Key:      image.Steps[1].Key,
+		Layers:   []string{image.BaseKey, image.Steps[0].Key},
+		Tools:    []string{tools.BaseKey},
+		ElTorito: true,
+	}, disksOf(requests)[0])
+}
+
 func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13 AS tools\nFROM debian:13\nOUTPUT disk os.raw --tools=tools\n")
