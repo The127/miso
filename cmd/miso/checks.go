@@ -59,7 +59,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			Namespace: namespace,
 			Firmware:  found,
 			// what the boot writes must not reach the disk that is delivered
-			Image:    qemu.Disk{Path: disk, Format: "raw", Serial: "image", Access: qemu.Snapshot},
+			Image:    qemu.Disk{Path: disk, Format: "raw", Serial: "image", Access: qemu.Snapshot, CD: request.CD},
 			Dir:      scratch,
 			Console:  console,
 			Patience: bootPatience,
