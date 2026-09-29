@@ -79,3 +79,22 @@ func TestAMachineOnADeviceOfAVsockNamespaceCannotReachTheHostWithKVM(t *testing.
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(said, "not reached"), said)
 }
+
+func TestAMachineOnADeviceOfAVsockNamespaceReachesTheHostInsideItWithKVM(t *testing.T) {
+	// arrange
+	namespace := vsocknstest.Private(t)
+	socket, err := namespace.Listen(unix.VMADDR_PORT_ANY)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = socket.Close() })
+	inside, err := vsock.Listening(socket)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = inside.Close() })
+
+	// act
+	vm := guestIn(t, namespace, fmt.Sprintf("MISO_GUEST_DIAL=%d", inside.Port()))
+
+	// assert
+	said, err := answer(vm, insideDial(namespace, vm))
+	require.NoError(t, err)
+	assert.Equal(t, "reached\n", said)
+}
