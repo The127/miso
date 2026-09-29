@@ -8,7 +8,7 @@ build:
 
 # test
 test:
-    go test ./...
+    go test -race ./...
 
 # test what needs root and a real kernel, inside vms (needs /dev/kvm), on
 # the host's kernel and on the base image's, all at once
@@ -34,7 +34,7 @@ test-cli: build
 
 # test with a coverage profile
 cover:
-    go test -coverprofile=coverage.out -covermode=atomic ./...
+    go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
 # lint
 lint:
