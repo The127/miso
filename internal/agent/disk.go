@@ -15,6 +15,18 @@ import (
 	"github.com/The127/miso/internal/sandbox"
 )
 
+// repart makes the disk of the image from the definitions the image ships.
+// Without --dry-run=no it writes nothing. OVMF cannot read an ESP of 4096
+// byte sectors, which repart may pick for a file.
+const repart = `systemd-repart \
+	--dry-run=no \
+	--root=/run/miso/image \
+	--offline=yes \
+	--sector-size=512 \
+	--empty=create \
+	--size=auto \
+	/run/miso/out/disk.raw`
+
 // Disk makes a bootable disk image of the image's layers with the tools of
 // another stage.
 func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) error {
@@ -96,7 +108,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 
 		defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
 
-		code, err = sandbox.Run(ctx, root, protocol.Run{Command: "systemd-repart --root=/run/miso/image /run/miso/out/disk.raw"}, out)
+		code, err = sandbox.Run(ctx, root, protocol.Run{Command: repart}, out)
 
 		return false, err
 	})

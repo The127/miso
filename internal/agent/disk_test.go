@@ -93,6 +93,24 @@ cat "$root/etc/miso-image" > "$last"`
 	assert.Equal(t, mark+"\n", string(written))
 }
 
+func TestRepartWritesANewDiskOfflineWith512ByteSectors(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	repart := `for last; do :; done
+echo "$@" > "$last"`
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base"}, Tools: fakeTools(t, worker, repart)}
+
+	// act
+	err := worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "disk", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "--dry-run=no --root=/run/miso/image --offline=yes --sector-size=512 --empty=create --size=auto /run/miso/out/disk.raw\n", string(written))
+}
+
 func TestTheToolsCannotOpenADeviceOfTheImage(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
