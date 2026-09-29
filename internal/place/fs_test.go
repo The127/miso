@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/place"
 )
@@ -29,4 +31,29 @@ func TestAnAbsoluteLinkIsReadAsAPlaceInTheImage(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "image\n", string(read))
+}
+
+func TestAFIFOOfTheImageOpensWithoutWaitingForAWriter(t *testing.T) {
+	// arrange
+	root := t.TempDir()
+	require.NoError(t, unix.Mkfifo(filepath.Join(root, "fifo"), 0o600))
+	opened := make(chan error, 1)
+
+	// act
+	go func() {
+		file, err := place.Open(root).FS().Open("fifo")
+		if err == nil {
+			_ = file.Close()
+		}
+
+		opened <- err
+	}()
+
+	// assert
+	select {
+	case err := <-opened:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		assert.Fail(t, "the open waits for a writer")
+	}
 }

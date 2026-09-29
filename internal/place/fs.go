@@ -28,7 +28,8 @@ func (i image) Open(name string) (fs.File, error) {
 
 	defer func() { _ = unix.Close(root) }()
 
-	fd, err := inImage(root, name, unix.O_RDONLY|unix.O_CLOEXEC)
+	// a FIFO of the image would wait for a writer that never comes
+	fd, err := inImage(root, name, unix.O_RDONLY|unix.O_NONBLOCK|unix.O_CLOEXEC)
 	if err != nil {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: err}
 	}
