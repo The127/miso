@@ -15,8 +15,9 @@ func outputFlag() *cli.StringFlag {
 }
 
 // outputsOf are the outputs in the directory -o names, which is made if it
-// is missing, or none without -o.
-func outputsOf(command *cli.Command) (builder.Outputs, error) {
+// is missing, or none without -o. A disk with checks is booted through check
+// before it gets its name.
+func outputsOf(command *cli.Command, check builder.Check) (builder.Outputs, error) {
 	dir := command.String(outputFlagName)
 	if dir == "" {
 		return nil, nil
@@ -26,5 +27,5 @@ func outputsOf(command *cli.Command) (builder.Outputs, error) {
 		return nil, err
 	}
 
-	return builder.OutputsIn(dir, nil), nil
+	return builder.OutputsIn(dir, check), nil
 }

@@ -58,11 +58,6 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	outputs, err := outputsOf(command)
-	if err != nil {
-		return err
-	}
-
 	dir := filepath.Join(cache, "builder")
 	held, err := lockedCache(dir, command.Root().ErrWriter)
 	if err != nil {
@@ -70,6 +65,19 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	}
 
 	defer func() { _ = held.Close() }()
+
+	// a checked disk's console, kept for when a check fails
+	console, err := os.Create(filepath.Join(dir, "check.log"))
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = console.Close() }()
+
+	outputs, err := outputsOf(command, checker(ctx, blobs, dir, console))
+	if err != nil {
+		return err
+	}
 
 	boot, err := bootFiles(ctx, blobs)
 	if err != nil {

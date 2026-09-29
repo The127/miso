@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -103,7 +104,7 @@ const bootable = `FROM debian:sid AS tools
 RUN apt-get update && apt-get install -y --no-install-recommends systemd-repart systemd-ukify systemd-boot-efi dosfstools mtools e2fsprogs
 
 FROM debian:sid
-RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi
+RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
 RUN : > /etc/fstab && \
     mkdir -p /etc/kernel /usr/lib/repart.d && \
     printf 'root=PARTUUID=5b0c3f5a-6b0e-4a4b-9a0e-6b3f1c2d4e5f rw console=ttyS0\n' > /etc/kernel/cmdline && \
@@ -132,4 +133,36 @@ func TestADiskOutputIsWrittenSparseIntoTheOutputDirectoryOnTheBuilderKernel(t *t
 	stat, isStat := info.Sys().(*syscall.Stat_t)
 	require.True(t, isStat)
 	assert.Less(t, stat.Blocks*512, info.Size())
+}
+
+func TestADiskWhoseChecksPassIsWrittenOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	out := t.TempDir()
+	checked := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v htop\n", 1)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(checked), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", "-o", out, dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.FileExists(t, filepath.Join(out, "os.raw"))
+}
+
+func TestADiskWhoseCheckFailsFailsTheBuildAtItsLineAndIsNotWrittenOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	out := t.TempDir()
+	file := filepath.Join(dir, "Imagefile")
+	failing := strings.Replace(bootable, "--tools=tools\n", "--tools=tools\nCHECK command -v nothing-of-that-name\n", 1)
+	require.NoError(t, os.WriteFile(file, []byte(failing), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", "-o", out, dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), file+":12: CHECK command -v nothing-of-that-name: exit code 1")
+	assert.NoFileExists(t, filepath.Join(out, "os.raw"))
 }
