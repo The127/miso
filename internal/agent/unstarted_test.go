@@ -66,3 +66,14 @@ func TestAFetchOnAnAgentThatDidNotStartFailsNamingWhy(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "agent did not start: mount cache disk miso-cache: no such device")
 }
+
+func TestAPruneOnAnAgentThatDidNotStartFailsNamingWhy(t *testing.T) {
+	// arrange
+	worker := agent.Unstarted{Err: errors.New("mount cache disk miso-cache: no such device")}
+
+	// act
+	err := worker.Prune(context.Background(), protocol.Prune{}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "agent did not start: mount cache disk miso-cache: no such device")
+}

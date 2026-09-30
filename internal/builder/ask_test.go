@@ -619,3 +619,13 @@ func (r *receiving) Copy(_ context.Context, _ protocol.Copy, entries protocol.En
 		r.contents = append(r.contents, string(read))
 	}
 }
+
+func (r *recording) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (s saying) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (e exiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (f failing) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (w waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }

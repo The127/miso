@@ -63,6 +63,16 @@ func (r runner) Fetch(_ context.Context, _ protocol.Fetch, pieces protocol.Piece
 	return pieces.Piece(protocol.Piece{Size: size}, strings.NewReader(r.disk))
 }
 
+func (r runner) Prune(_ context.Context, _ protocol.Prune, out io.Writer) error {
+	if r.err != nil || r.writes == "" {
+		return r.err
+	}
+
+	_, err := io.WriteString(out, r.writes)
+
+	return err
+}
+
 func TestARunThatWorksIsDone(t *testing.T) {
 	// arrange
 	var requests, replies bytes.Buffer
@@ -114,6 +124,26 @@ func TestADiskThatWorksIsDone(t *testing.T) {
 	require.NoError(t, err)
 	done, err := host.Receive()
 	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestAPruneSendsWhatItSaysAndIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Prune{OlderThan: time.Hour}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{writes: "removed 2 layers\n"})
+
+	// assert
+	require.NoError(t, err)
+	output, err := host.Receive()
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Output{Bytes: []byte("removed 2 layers\n")}, output)
 	assert.Equal(t, protocol.Done{}, done)
 }
 
@@ -627,3 +657,13 @@ func TestAHostGoneBeforeAllEntriesAreSentFailsTheCopy(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Failed{Reason: "host gone before all entries were sent: unexpected EOF"}, failed)
 }
+
+func (w *watched) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (w *waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (r *reading) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (b breaking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (c checking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }

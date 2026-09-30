@@ -132,3 +132,5 @@ func TestAConnectionIsClosedOnceAnswered(t *testing.T) {
 	require.ErrorIs(t, err, errClosed)
 	assert.True(t, answered.closed)
 }
+
+func (blocking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }

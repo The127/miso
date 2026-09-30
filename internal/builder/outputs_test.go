@@ -180,3 +180,5 @@ func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, agent.asked)
 }
+
+func (s *sending) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
