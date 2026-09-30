@@ -1,0 +1,28 @@
+package protocol_test
+
+import (
+	"bytes"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/protocol"
+)
+
+func TestAPruneSentIsThePruneReceived(t *testing.T) {
+	// arrange
+	var wire bytes.Buffer
+	conn := protocol.New("miso 1.2.0", &wire, &wire)
+	request := protocol.Prune{OlderThan: 30 * 24 * time.Hour, KeepStorage: 10 << 30}
+
+	// act
+	sent := conn.Send(request)
+	received, err := conn.Receive()
+
+	// assert
+	require.NoError(t, sent)
+	require.NoError(t, err)
+	assert.Equal(t, request, received)
+}

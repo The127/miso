@@ -19,6 +19,7 @@ type envelope struct {
 	Copy   *Copy   `json:",omitempty"`
 	Disk   *Disk   `json:",omitempty"`
 	Fetch  *Fetch  `json:",omitempty"`
+	Prune  *Prune  `json:",omitempty"`
 	Entry  *Entry  `json:",omitempty"`
 	Piece  *Piece  `json:",omitempty"`
 	Length *Length `json:",omitempty"`
@@ -44,6 +45,8 @@ func (e envelope) open() Message {
 		return *e.Disk
 	case e.Fetch != nil:
 		return *e.Fetch
+	case e.Prune != nil:
+		return *e.Prune
 	case e.Entry != nil:
 		return *e.Entry
 	case e.Piece != nil:
