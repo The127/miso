@@ -15,6 +15,7 @@ import (
 
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
+	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 )
@@ -24,7 +25,7 @@ var pruneCommand = &cli.Command{
 	Usage: "remove cached layers and downloads that were not used for a while",
 	Flags: []cli.Flag{
 		&cli.DurationFlag{Name: "older-than", Usage: "remove what no build used for longer than this, like 720h"},
-		&cli.StringFlag{Name: "keep-storage", Usage: "remove the least recently used until what stays takes no more than this, like 10GiB"},
+		&cli.StringFlag{Name: "keep-storage", Usage: "remove the least recently used until the layers, and the downloads, each take no more than this, like 10GiB"},
 	},
 	Action: runPrune,
 }
@@ -70,9 +71,21 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		KeepStorage: keep,
 	}}}
 
-	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
+	err = inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
 		return builder.Ask(ctx, vm, dial, agentName(), requests, nil, nil, command.Root().Writer)
 	})
+	if err != nil {
+		return err
+	}
+
+	swept, err := blobs.Prune(download.Policy{Now: time.Now(), OlderThan: age, KeepStorage: keep})
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(command.Root().Writer, "removed %d downloads, freed %d bytes\n", swept.Count, swept.Bytes)
+
+	return err
 }
 
 // limits are the age and the storage the flags set, and zero for a flag that
