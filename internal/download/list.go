@@ -1,10 +1,6 @@
 package download
 
 import (
-	"errors"
-	"io/fs"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -18,11 +14,7 @@ type Blob struct {
 // List gives the blobs the store holds. A download that has not arrived
 // yet is no blob.
 func (s *Store) List() ([]Blob, error) {
-	names, err := os.ReadDir(s.blobs())
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-
+	names, err := s.entries()
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +22,7 @@ func (s *Store) List() ([]Blob, error) {
 	var blobs []Blob
 
 	for _, name := range names {
-		if strings.HasPrefix(name.Name(), temporary) {
+		if unfinished(name) {
 			continue
 		}
 

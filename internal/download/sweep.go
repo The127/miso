@@ -1,11 +1,8 @@
 package download
 
 import (
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Swept is what a sweep removed.
@@ -20,17 +17,13 @@ type Swept struct {
 func (s *Store) Sweep() (Swept, error) {
 	var swept Swept
 
-	names, err := os.ReadDir(s.blobs())
-	if errors.Is(err, fs.ErrNotExist) {
-		return swept, nil
-	}
-
+	names, err := s.entries()
 	if err != nil {
 		return swept, err
 	}
 
 	for _, name := range names {
-		if !strings.HasPrefix(name.Name(), temporary) {
+		if !unfinished(name) {
 			continue
 		}
 

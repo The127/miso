@@ -3,7 +3,9 @@ package download
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -63,4 +65,18 @@ func (s *Store) keep(body io.Reader) (string, error) {
 
 func (s *Store) blobs() string {
 	return filepath.Join(s.dir, "sha256")
+}
+
+// entries are what lies in the blob directory, none if it was never made.
+func (s *Store) entries() ([]os.DirEntry, error) {
+	names, err := os.ReadDir(s.blobs())
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+
+	return names, err
+}
+
+func unfinished(name os.DirEntry) bool {
+	return strings.HasPrefix(name.Name(), temporary)
 }
