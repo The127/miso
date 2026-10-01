@@ -123,13 +123,13 @@ dependenciesRules:
         - net
         - syscall
   # the download fetches bytes into miso's cache and keeps them under the
-  # digest of what arrived. It knows nothing of ours, never starts a process
-  # and never touches the kernel. It is the one package that may use net
+  # digest of what arrived. It knows only the lru, which judges what it lets
+  # go, never starts a process and never touches the kernel. It is the one package that may use net
   - package: '**.internal.download$'
-    shouldNotDependsOn:
+    shouldOnlyDependsOn:
       internal:
-        - '**.internal.**'
-        - '**.cmd.**'
+        - '**.internal.lru$'
+    shouldNotDependsOn:
       standard:
         - os/exec
         - syscall
@@ -218,6 +218,18 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the lru judges what a cache lets go by when it was used and what it
+  # takes. It knows nothing else
+  - package: '**.internal.lru$'
+    shouldNotDependsOn:
+      internal:
+        - '**.internal.**'
+        - '**.cmd.**'
+      standard:
+        - os
+        - os/exec
+        - net
+        - syscall
   # the vercmp compares two versions and knows nothing else
   - package: '**.internal.vercmp$'
     shouldNotDependsOn:
@@ -264,14 +276,14 @@ dependenciesRules:
       standard:
         - os/exec
         - net
-  # the layer keeps the layers on the agent's cache disk. It knows nothing
-  # of ours, never touches a process or the network, and asks the kernel
+  # the layer keeps the layers on the agent's cache disk. It knows only the
+  # lru, which judges what it lets go, never touches a process or the network, and asks the kernel
   # only to put its file system on the disk before a key names a layer
   - package: '**.internal.layer$'
-    shouldNotDependsOn:
+    shouldOnlyDependsOn:
       internal:
-        - '**.internal.**'
-        - '**.cmd.**'
+        - '**.internal.lru$'
+    shouldNotDependsOn:
       standard:
         - os/exec
         - net
@@ -519,7 +531,8 @@ dependenciesRules:
   # disks through basemount, copies them through tree, puts what a COPY
   # sends through place and checks it through copydigest, keeps layers through layer and runs steps on them
   # through sandbox, finds what boots a disk through kernel, and compares
-  # the versions of an image's boot parts through vercmp. It touches the
+  # the versions of an image's boot parts through vercmp, and judges what a
+  # prune lets go through lru. It touches the
   # kernel, and never starts a process or opens a connection itself
   - package: '**.internal.agent$'
     shouldOnlyDependsOn:
@@ -531,6 +544,7 @@ dependenciesRules:
         - '**.internal.place$'
         - '**.internal.copydigest$'
         - '**.internal.layer$'
+        - '**.internal.lru$'
         - '**.internal.sandbox$'
         - '**.internal.kernel$'
         - '**.internal.vercmp$'

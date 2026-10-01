@@ -9,6 +9,7 @@ import (
 
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/download/downloadtest"
+	"github.com/The127/miso/internal/lru"
 )
 
 func TestAPruneRemovesTheStaleBlobsAndSaysWhatItRemoved(t *testing.T) {
@@ -22,7 +23,7 @@ func TestAPruneRemovesTheStaleBlobsAndSaysWhatItRemoved(t *testing.T) {
 	require.NoError(t, store.Use(now.Add(-time.Hour), fresh))
 
 	// act
-	swept, err := store.Prune(download.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
+	swept, err := store.Prune(lru.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
 
 	// assert
 	require.NoError(t, err)

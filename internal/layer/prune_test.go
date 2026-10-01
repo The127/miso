@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/layer"
+	"github.com/The127/miso/internal/lru"
 )
 
 func TestAPruneRemovesTheStaleLayersAndKeepsTheRest(t *testing.T) {
@@ -22,7 +23,7 @@ func TestAPruneRemovesTheStaleLayersAndKeepsTheRest(t *testing.T) {
 	require.NoError(t, store.Use(now.Add(-time.Hour), "new"))
 
 	// act
-	_, err := store.Prune(layer.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
+	_, err := store.Prune(lru.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
 
 	// assert
 	require.NoError(t, err)
@@ -45,7 +46,7 @@ func TestAPruneSaysHowManyLayersAndBytesItRemoved(t *testing.T) {
 	require.NoError(t, store.Use(now.Add(-10*24*time.Hour), "old"))
 
 	// act
-	swept, err := store.Prune(layer.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
+	swept, err := store.Prune(lru.Policy{Now: now, OlderThan: 5 * 24 * time.Hour})
 
 	// assert
 	require.NoError(t, err)

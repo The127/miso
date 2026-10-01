@@ -16,6 +16,7 @@ import (
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/lru"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/qemu"
 )
@@ -55,7 +56,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	swept, err := blobs.Prune(download.Policy{Now: time.Now(), OlderThan: limit.OlderThan, KeepStorage: limit.KeepStorage})
+	swept, err := blobs.Prune(lru.Policy{Now: time.Now(), OlderThan: limit.OlderThan, KeepStorage: limit.KeepStorage})
 	if err != nil {
 		return err
 	}
