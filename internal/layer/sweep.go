@@ -4,22 +4,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/The127/miso/internal/lru"
 )
 
 func unfinished(name string) bool {
 	return strings.HasPrefix(name, working) || strings.HasPrefix(name, scratch)
 }
 
-// Swept is what a sweep removed.
-type Swept struct {
-	Count int
-	Bytes int64
-}
-
 // Sweep removes what a builder stopped halfway left behind. Only while
 // nothing uses the store, before the first layer is begun.
-func (s *Store) Sweep() (Swept, error) {
-	var swept Swept
+func (s *Store) Sweep() (lru.Swept, error) {
+	var swept lru.Swept
 
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {

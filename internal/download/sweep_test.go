@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/lru"
 )
 
 func TestASweepOfAStoreThatHoldsNothingYetRemovesNothing(t *testing.T) {
@@ -21,7 +22,7 @@ func TestASweepOfAStoreThatHoldsNothingYetRemovesNothing(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, download.Swept{}, swept)
+	assert.Equal(t, lru.Swept{}, swept)
 }
 
 func TestASweepRemovesADownloadThatNeverArrivedAndKeepsTheBlobs(t *testing.T) {
@@ -41,5 +42,5 @@ func TestASweepRemovesADownloadThatNeverArrivedAndKeepsTheBlobs(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoFileExists(t, left)
 	assert.FileExists(t, store.Path(digest))
-	assert.Equal(t, download.Swept{Count: 1, Bytes: 4}, swept)
+	assert.Equal(t, lru.Swept{Count: 1, Bytes: 4}, swept)
 }

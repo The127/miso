@@ -3,19 +3,15 @@ package download
 import (
 	"os"
 	"path/filepath"
-)
 
-// Swept is what a sweep removed.
-type Swept struct {
-	Count int
-	Bytes int64
-}
+	"github.com/The127/miso/internal/lru"
+)
 
 // Sweep removes the downloads that never arrived whole, which a crash
 // leaves behind. Only while no download runs, or it takes one from under
 // its writer.
-func (s *Store) Sweep() (Swept, error) {
-	var swept Swept
+func (s *Store) Sweep() (lru.Swept, error) {
+	var swept lru.Swept
 
 	names, err := s.entries()
 	if err != nil {

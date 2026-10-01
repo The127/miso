@@ -27,7 +27,7 @@ func TestAPruneRemovesTheStaleBlobsAndSaysWhatItRemoved(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, download.Swept{Count: 1, Bytes: int64(len("the old kernel"))}, swept)
+	assert.Equal(t, lru.Swept{Count: 1, Bytes: int64(len("the old kernel"))}, swept)
 	assert.NoFileExists(t, store.Path(old))
 	assert.FileExists(t, store.Path(fresh))
 }
