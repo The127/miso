@@ -31,7 +31,7 @@ var pruneCommand = &cli.Command{
 }
 
 func runPrune(ctx context.Context, command *cli.Command) error {
-	age, keep, err := limits(command)
+	limit, err := limits(command)
 	if err != nil {
 		return err
 	}
@@ -51,6 +51,23 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 
 	defer func() { _ = held.Close() }()
 
+	if err = pruneLayers(ctx, command, dir, blobs, limit); err != nil {
+		return err
+	}
+
+	swept, err := blobs.Prune(download.Policy{Now: time.Now(), OlderThan: limit.OlderThan, KeepStorage: limit.KeepStorage})
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(command.Root().Writer, "removed %d downloads, freed %d bytes\n", swept.Count, swept.Bytes)
+
+	return err
+}
+
+// pruneLayers has the builder VM remove the layers the limit lets go, from
+// the cache disk in dir, which the caller holds.
+func pruneLayers(ctx context.Context, command *cli.Command, dir string, blobs *download.Store, limit protocol.Prune) error {
 	boot, err := bootFiles(ctx, blobs)
 	if err != nil {
 		return err
@@ -66,65 +83,66 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 	// a prune reaches nothing outside the VM
 	machine.Card = nil
 
-	requests := []build.Request{{Message: protocol.Prune{
-		OlderThan:   age,
-		KeepStorage: keep,
-	}}}
+	requests := []build.Request{{Message: limit}}
 
-	err = inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
+	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
 		return builder.Ask(ctx, vm, dial, agentName(), requests, nil, nil, command.Root().Writer)
 	})
-	if err != nil {
-		return err
-	}
-
-	swept, err := blobs.Prune(download.Policy{Now: time.Now(), OlderThan: age, KeepStorage: keep})
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(command.Root().Writer, "removed %d downloads, freed %d bytes\n", swept.Count, swept.Bytes)
-
-	return err
 }
 
-// limits are the age and the storage the flags set, and zero for a flag that
-// is not set. A limit that is not above zero is refused, because the agent
-// reads a negative one as "everything" and zero as "not set".
-func limits(command *cli.Command) (time.Duration, int64, error) {
+// limits are what the flags set, and zero for a flag that is not set. A
+// limit that is not above zero is refused, because the agent reads a negative
+// one as "everything" and zero as "not set".
+func limits(command *cli.Command) (protocol.Prune, error) {
 	if !command.IsSet("older-than") && !command.IsSet("keep-storage") {
-		return 0, 0, errors.New("prune removes nothing without a limit: set --older-than or --keep-storage")
+		return protocol.Prune{}, errors.New("prune removes nothing without a limit: set --older-than or --keep-storage")
 	}
 
-	var age time.Duration
-	var keep int64
+	var limit protocol.Prune
 
 	if command.IsSet("older-than") {
-		age = command.Duration("older-than")
-		if age <= 0 {
-			return 0, 0, fmt.Errorf("--older-than %s must be above zero", age)
+		age, err := ageLimit(command.Duration("older-than"))
+		if err != nil {
+			return protocol.Prune{}, err
 		}
+
+		limit.OlderThan = age
 	}
 
 	if command.IsSet("keep-storage") {
-		text := command.String("keep-storage")
-
-		size, err := humanize.ParseBytes(text)
+		keep, err := storageLimit(command.String("keep-storage"))
 		if err != nil {
-			return 0, 0, fmt.Errorf("--keep-storage %q is not a size like 10GiB: %w", text, err)
+			return protocol.Prune{}, err
 		}
 
-		// a wrapped size would be negative
-		if size > math.MaxInt64 {
-			return 0, 0, fmt.Errorf("--keep-storage %q is too large", text)
-		}
-
-		if size == 0 {
-			return 0, 0, fmt.Errorf("--keep-storage %q must be above zero", text)
-		}
-
-		keep = int64(size)
+		limit.KeepStorage = keep
 	}
 
-	return age, keep, nil
+	return limit, nil
+}
+
+func ageLimit(age time.Duration) (time.Duration, error) {
+	if age <= 0 {
+		return 0, fmt.Errorf("--older-than %s must be above zero", age)
+	}
+
+	return age, nil
+}
+
+func storageLimit(text string) (int64, error) {
+	size, err := humanize.ParseBytes(text)
+	if err != nil {
+		return 0, fmt.Errorf("--keep-storage %q is not a size like 10GiB: %w", text, err)
+	}
+
+	// a wrapped size would be negative
+	if size > math.MaxInt64 {
+		return 0, fmt.Errorf("--keep-storage %q is too large", text)
+	}
+
+	if size == 0 {
+		return 0, fmt.Errorf("--keep-storage %q must be above zero", text)
+	}
+
+	return int64(size), nil
 }
