@@ -10,6 +10,12 @@ import (
 // Failed is why the request failed, said at the line of the build file it
 // came from and as its author wrote it there.
 func (r Request) Failed(err error) error {
+	// a request that no line of the build file asked for, a prune, has none
+	// to be said at
+	if r.Line == 0 && r.Written == "" {
+		return err
+	}
+
 	// a check of the request fails at its own line
 	if _, atLine := errors.AsType[*imagefile.Error](err); atLine {
 		return err

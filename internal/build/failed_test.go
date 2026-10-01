@@ -1,6 +1,7 @@
 package build_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,4 +79,16 @@ func TestAFailureThatNamesItsLineKeepsIt(t *testing.T) {
 
 	// assert
 	assert.EqualError(t, failed, "line 3: CHECK command -v htop: exit code 1\nno htop\n")
+}
+
+func TestAFailedRequestOfNoBuildFileLineIsSaidAsItIs(t *testing.T) {
+	// arrange
+	request := build.Request{Message: protocol.Prune{}}
+	boom := errors.New("boom")
+
+	// act
+	failed := request.Failed(boom)
+
+	// assert
+	assert.Equal(t, boom, failed)
 }
