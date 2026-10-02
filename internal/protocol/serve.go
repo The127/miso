@@ -69,38 +69,33 @@ func (c *Conn) serveCopy(runner Runner, request Copy) error {
 }
 
 func (c *Conn) serveDisk(runner Runner, request Disk) error {
-	ctx, cancel := c.watched()
-	defer cancel()
-
-	return c.answer(runner.Disk(ctx, request, outputs{c}))
+	return c.watching(func(ctx context.Context) error {
+		return runner.Disk(ctx, request, outputs{c})
+	})
 }
 
 func (c *Conn) serveFetch(runner Runner, request Fetch) error {
-	ctx, cancel := c.watched()
-	defer cancel()
-
-	return c.answer(runner.Fetch(ctx, request, sending{c}, outputs{c}))
+	return c.watching(func(ctx context.Context) error {
+		return runner.Fetch(ctx, request, sending{c}, outputs{c})
+	})
 }
 
 func (c *Conn) serveImport(runner Runner, request Import) error {
-	ctx, cancel := c.watched()
-	defer cancel()
-
-	return c.answer(runner.Import(ctx, request, outputs{c}))
+	return c.watching(func(ctx context.Context) error {
+		return runner.Import(ctx, request, outputs{c})
+	})
 }
 
 func (c *Conn) servePrune(runner Runner, request Prune) error {
-	ctx, cancel := c.watched()
-	defer cancel()
-
-	return c.answer(runner.Prune(ctx, request, outputs{c}))
+	return c.watching(func(ctx context.Context) error {
+		return runner.Prune(ctx, request, outputs{c})
+	})
 }
 
 func (c *Conn) serveRootfs(runner Runner, request Rootfs) error {
-	ctx, cancel := c.watched()
-	defer cancel()
-
-	return c.answer(runner.Rootfs(ctx, request, outputs{c}))
+	return c.watching(func(ctx context.Context) error {
+		return runner.Rootfs(ctx, request, outputs{c})
+	})
 }
 
 func (c *Conn) serveRun(runner Runner, request Run) error {
@@ -113,6 +108,15 @@ func (c *Conn) serveRun(runner Runner, request Run) error {
 	}
 
 	return c.answer(err)
+}
+
+// watching does the work of a request until the host goes away, and tells
+// the host how it ended.
+func (c *Conn) watching(work func(ctx context.Context) error) error {
+	ctx, cancel := c.watched()
+	defer cancel()
+
+	return c.answer(work(ctx))
 }
 
 // watched is cancelled once the host goes away. The host sends nothing
