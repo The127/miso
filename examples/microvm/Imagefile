@@ -11,8 +11,21 @@
 #     -append "root=/dev/vda rootfstype=ext4 rw console=ttyS0" \
 #     -drive file=out/os.ext4,format=raw,if=virtio
 #
-# Firecracker wants the kernel as an ELF file: write OUTPUT kernel --elf
-# vmlinux instead. --format=erofs after rootfs makes an erofs image.
+# Firecracker wants the kernel as an ELF file, so write OUTPUT kernel --elf
+# vmlinux instead of OUTPUT kernel vmlinuz below. Save this config as fc.json.
+# It boots the outputs to a login prompt, tested with Firecracker 1.14.
+# run.ext4 is a copy of os.ext4, because the guest writes to it.
+#
+#   { "boot-source": { "kernel_image_path": "out/vmlinux",
+#       "initrd_path": "out/initrd.img",
+#       "boot_args": "console=ttyS0 reboot=k panic=1 root=/dev/vda rootfstype=ext4 rw" },
+#     "drives": [ { "drive_id": "rootfs", "path_on_host": "run.ext4",
+#       "is_root_device": true, "is_read_only": false } ],
+#     "machine-config": { "vcpu_count": 2, "mem_size_mib": 1024 } }
+#
+#   firecracker --api-sock fc.sock --config-file fc.json
+#
+# --format=erofs after rootfs makes an erofs image.
 
 FROM debian:sid
 
