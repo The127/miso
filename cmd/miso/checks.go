@@ -22,9 +22,9 @@ import (
 // an image with a stock kernel needs.
 const bootPatience = 5 * time.Minute
 
-// checker boots each checked disk under OVMF on a vsock of its own and runs
-// its checks. The boots write their scratch into dir and their console to
-// console.
+// checker boots each checked output on a vsock of its own and runs its checks:
+// a rootfs with its kernel and initrd, any other output under OVMF. The boots
+// write their scratch into dir and their console to console.
 func checker(ctx context.Context, blobs *download.Store, dir string, console io.Writer) builder.Check {
 	return func(disk string, request build.Request) error {
 		namespace, err := vsockns.Open()
@@ -45,11 +45,6 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 
 		defer func() { _ = os.RemoveAll(scratch) }()
 
-		commands := make([]string, 0, len(request.Checks))
-		for _, c := range request.Checks {
-			commands = append(commands, c.Command)
-		}
-
 		boot := check.Boot{
 			Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
 			Namespace: namespace,
@@ -60,22 +55,11 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			Patience: bootPatience,
 		}
 
-		if request.Boot != nil {
-			// the outputs of the kernel and the initrd are beside the rootfs
-			outputs := filepath.Dir(disk)
-			boot.Kernel = &qemu.Kernel{
-				Image:       filepath.Join(outputs, request.Boot.Kernel),
-				Initramfs:   filepath.Join(outputs, request.Boot.Initrd),
-				CommandLine: request.Boot.Cmdline,
-			}
-		} else {
-			boot.Firmware, err = firmware.Ready(ctx, blobs)
-			if err != nil {
-				return err
-			}
+		if err := bootsFrom(ctx, blobs, disk, request, &boot); err != nil {
+			return err
 		}
 
-		results, err := boot.Run(ctx, commands)
+		results, err := boot.Run(ctx, commandsOf(request))
 		if err != nil {
 			return err
 		}
@@ -88,4 +72,38 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 
 		return nil
 	}
+}
+
+// bootsFrom sets what boots the checked output: the kernel and initrd beside
+// a rootfs, the firmware for any other output.
+func bootsFrom(ctx context.Context, blobs *download.Store, disk string, request build.Request, boot *check.Boot) error {
+	if request.Boot == nil {
+		found, err := firmware.Ready(ctx, blobs)
+		if err != nil {
+			return err
+		}
+
+		boot.Firmware = found
+
+		return nil
+	}
+
+	outputs := filepath.Dir(disk)
+	boot.Kernel = &qemu.Kernel{
+		Image:       filepath.Join(outputs, request.Boot.Kernel),
+		Initramfs:   filepath.Join(outputs, request.Boot.Initrd),
+		CommandLine: request.Boot.Cmdline,
+	}
+
+	return nil
+}
+
+// commandsOf are the commands of the checks of a request, in their order.
+func commandsOf(request build.Request) []string {
+	commands := make([]string, 0, len(request.Checks))
+	for _, c := range request.Checks {
+		commands = append(commands, c.Command)
+	}
+
+	return commands
 }
