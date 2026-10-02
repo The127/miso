@@ -44,7 +44,7 @@ func TestARootfsIsWhatItsToolsWriteKeptAsTheLayerOfItsKey(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeMkfs(t, worker, writesRootfs)}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeMkfs(t, worker, writesRootfs), Format: protocol.FormatExt4}
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
@@ -84,7 +84,7 @@ func madeOfTinyImage(t *testing.T) (size, inodes int) {
 	code, err := worker.Run(context.Background(), du, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: append(tools, "du")}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: append(tools, "du"), Format: protocol.FormatExt4}
 	require.NoError(t, worker.Rootfs(context.Background(), rootfs, io.Discard))
 	said, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestARootfsIsMadeFromTheImageAsMkfsCopiesIt(t *testing.T) {
 	require.Equal(t, 0, code)
 	mkfs := `for arg; do if [ "$prev" = -d ]; then dir=$arg; fi; prev=$arg; last=$arg; done
 cat "$dir/etc/miso-image" > "$last"`
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeMkfs(t, worker, mkfs)}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeMkfs(t, worker, mkfs), Format: protocol.FormatExt4}
 
 	// act
 	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
@@ -149,7 +149,7 @@ func TestARootfsWhoseLayerIsThereAlreadyIsNotMadeAgain(t *testing.T) {
 
 	worker := agent.New(layers, t.TempDir())
 	// bare has no tools, so making a file system of it would fail
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"bare"}, Tools: []string{"bare"}}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"bare"}, Tools: []string{"bare"}, Format: protocol.FormatExt4}
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
@@ -162,12 +162,53 @@ func TestARootfsWhoseToolsFailFailsNamingTheExitCodeAndKeepsNoLayer(t *testing.T
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeMkfs(t, worker, "exit 3")}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeMkfs(t, worker, "exit 3"), Format: protocol.FormatExt4}
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
 	assert.ErrorContains(t, err, "exit code 3")
+	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
+}
+
+// writesErofs is a mkfs.erofs that writes erofs into its destination, the
+// first path it is given.
+const writesErofs = `for arg; do case $arg in -*) ;; *) dest=${dest:-$arg} ;; esac; done
+echo erofs > "$dest"`
+
+func TestAnErofsRootfsIsWhatMkfsErofsWritesKeptAsTheLayerOfItsKey(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	tools := fakeMkfs(t, worker, "exit 9")
+	command := "cat > /usr/local/bin/mkfs.erofs <<'EOF'\n#!/bin/sh\n" + writesErofs + "\nEOF\nchmod 755 /usr/local/bin/mkfs.erofs\n"
+	erofs := protocol.Run{Key: "erofs", Layers: tools, Command: command}
+	code, err := worker.Run(context.Background(), erofs, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: append(tools, "erofs"), Format: protocol.FormatErofs}
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "erofs\n", string(written))
+}
+
+func TestARootfsOfAFormatTheAgentCannotMakeFailsNamingItAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeMkfs(t, worker, writesRootfs), Format: "btrfs"}
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "btrfs")
 	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
 }
