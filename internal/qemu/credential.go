@@ -15,7 +15,7 @@ type Credential struct {
 // credentials are always in base64, so no byte of a value can end the
 // SMBIOS string or start the next option.
 func credentials(machine Machine) []string {
-	if machine.Microvm {
+	if !boardOf(machine).firmware {
 		return nil
 	}
 

@@ -14,7 +14,7 @@ type Boot interface {
 
 func boot(machine Machine) ([]string, error) {
 	kernel, isKernel := machine.Boot.(Kernel)
-	if machine.Microvm && !isKernel {
+	if !boardOf(machine).firmware && !isKernel {
 		return nil, errors.New("a microvm needs a kernel to boot, it has no firmware to boot a disk")
 	}
 
@@ -22,8 +22,9 @@ func boot(machine Machine) ([]string, error) {
 		return nil, nil
 	}
 
-	// the credentials of a microvm are on the command line of its kernel
-	if machine.Microvm {
+	// the credentials of a board without a firmware are on the command line
+	// of its kernel
+	if !boardOf(machine).firmware {
 		words, err := commandLineCredentials(machine)
 		if err != nil {
 			return nil, err

@@ -7,11 +7,16 @@ type board struct {
 
 	// The end of the name of a virtio device of this board.
 	bus string
+
+	// The board has a firmware, which brings the SMBIOS table that
+	// systemd reads its credentials from, and a drive for a CD. One without
+	// boots a kernel, and its credentials go on the kernel command line.
+	firmware bool
 }
 
 var (
 	// q35 has virtio devices on a PCI bus.
-	q35 = board{name: "q35", bus: "-pci"}
+	q35 = board{name: "q35", bus: "-pci", firmware: true}
 
 	// microvm has no PCI bus, so its devices and its power off go through
 	// ACPI. Whatever the host's QEMU defaults to, ACPI is on.

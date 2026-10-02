@@ -44,7 +44,7 @@ func drives(machine Machine) ([]string, error) {
 	var args []string
 	for i, disk := range machine.Disks {
 		id := fmt.Sprintf("disk%d", i)
-		if disk.CD && machine.Microvm {
+		if disk.CD && !boardOf(machine).firmware {
 			return nil, errors.New("a microvm has no optical drive to put a CD in")
 		}
 
