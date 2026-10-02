@@ -16,21 +16,7 @@ import (
 // kernel and the initrd are taken from the image, and an unpacked kernel
 // takes the tools too.
 func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
-	var refused error
-	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
-	format := formatOf(instruction.Options)
-	switch {
-	case !plan.Known(instruction.Kind):
-		refused = ErrUnknownKind
-	case hasUnknown:
-		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
-	case instruction.Options[plan.OptionELF] != "":
-		refused = fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
-	case instruction.Kind == plan.KindRootfs && !slices.Contains(formats, format):
-		refused = fmt.Errorf("--format=%s: %w", format, ErrUnknownFormat)
-	}
-
-	if refused != nil {
+	if refused := refusal(instruction); refused != nil {
 		line, written := imagefile.Written(instruction)
 
 		return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
@@ -41,10 +27,27 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	}
 
 	if instruction.Kind == plan.KindRootfs {
-		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: format}, nil
+		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options)}, nil
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
+}
+
+// refusal is why miso cannot make an output, or nil when it can.
+func refusal(instruction imagefile.Output) error {
+	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
+	switch {
+	case !plan.Known(instruction.Kind):
+		return ErrUnknownKind
+	case hasUnknown:
+		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
+	case instruction.Options[plan.OptionELF] != "":
+		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
+	case instruction.Kind == plan.KindRootfs && !slices.Contains(formats, formatOf(instruction.Options)):
+		return fmt.Errorf("--format=%s: %w", formatOf(instruction.Options), ErrUnknownFormat)
+	}
+
+	return nil
 }
 
 // formatOption names the file system of a rootfs.
