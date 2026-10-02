@@ -24,6 +24,9 @@ var ErrUnknownKind = errors.New("unknown kind of output")
 // ErrUnknownOption is an option an output of its kind does not take.
 var ErrUnknownOption = errors.New("unknown option")
 
+// ErrUnknownFormat is a file system a rootfs cannot be.
+var ErrUnknownFormat = errors.New("unknown file system")
+
 // Request is what the agent is asked for a step of the build file.
 type Request struct {
 	Line    int

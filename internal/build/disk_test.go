@@ -60,7 +60,7 @@ func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 	}, disksOf(requests)[0])
 }
 
-func TestARootfsOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
+func TestARootfsOutputIsAnExt4FileSystemOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT rootfs os.ext4\n")
 	tools, image := source.Stages[0], source.Stages[1]
@@ -75,7 +75,35 @@ func TestARootfsOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMis
 		Key:    image.Steps[1].Key,
 		Layers: []string{image.BaseKey, image.Steps[0].Key},
 		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+		Format: "ext4",
 	}, requests[len(requests)-2].Message)
+}
+
+func TestARootfsOutputWithAFormatAsksForThatFormat(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT rootfs --format=erofs os.erofs\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, "erofs", rootfs.Format)
+}
+
+func TestARootfsOfAFormatMisoCannotMakeFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT rootfs --format=btrfs os.img\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrUnknownFormat)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "btrfs")
 }
 
 func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {

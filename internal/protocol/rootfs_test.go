@@ -14,7 +14,7 @@ func TestARootfsSurvivesTheWire(t *testing.T) {
 	// arrange
 	var wire bytes.Buffer
 	conn := protocol.New("miso 1.2.0", &wire, &wire)
-	request := protocol.Rootfs{Key: "abc", Layers: []string{"debian", "htop"}, Tools: []string{"debian", "mkfs"}}
+	request := protocol.Rootfs{Key: "abc", Layers: []string{"debian", "htop"}, Tools: []string{"debian", "mkfs"}, Format: "erofs"}
 
 	// act
 	sent := conn.Send(request)

@@ -15,12 +15,15 @@ import (
 // file system under it, with the tools taken from where their stage ends.
 func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
 	var refused error
-	unknown, hasUnknown := unknownOption(instruction.Options)
+	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
+	format := formatOf(instruction.Options)
 	switch {
 	case !plan.Known(instruction.Kind):
 		refused = ErrUnknownKind
 	case hasUnknown:
 		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
+	case instruction.Kind == plan.KindRootfs && !slices.Contains(formats, format):
+		refused = fmt.Errorf("--format=%s: %w", format, ErrUnknownFormat)
 	}
 
 	if refused != nil {
@@ -30,17 +33,44 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	}
 
 	if instruction.Kind == plan.KindRootfs {
-		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers}, nil
+		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: format}, nil
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
 }
 
-// unknownOption is the first option in sorted order, so the same build file
-// always names the same one. A disk takes none.
-func unknownOption(options map[string]string) (string, bool) {
+// formatOption names the file system of a rootfs.
+const formatOption = "format"
+
+// formats are the file systems a rootfs can be.
+var formats = []string{protocol.FormatExt4, protocol.FormatErofs}
+
+// formatOf is the file system an output asks for, ext4 when it names none.
+func formatOf(options map[string]string) string {
+	format, given := options[formatOption]
+	if !given {
+		return protocol.FormatExt4
+	}
+
+	return format
+}
+
+// optionsOf are the options an output of a kind takes.
+func optionsOf(kind string) []string {
+	if kind == plan.KindRootfs {
+		return []string{formatOption}
+	}
+
+	return nil
+}
+
+// unknownOption is the first option in sorted order that the output does not
+// take, so the same build file always names the same one.
+func unknownOption(options map[string]string, taken []string) (string, bool) {
 	for _, name := range slices.Sorted(maps.Keys(options)) {
-		return name, true
+		if !slices.Contains(taken, name) {
+			return name, true
+		}
 	}
 
 	return "", false
