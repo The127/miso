@@ -161,3 +161,15 @@ func TestAPayloadThatStartsFarPastTheEndOfTheFileIsRefused(t *testing.T) {
 	assert.ErrorIs(t, err, kernel.ErrNoPayload)
 	assert.ErrorContains(t, err, "outside the file")
 }
+
+func TestAKernelOfTheFirstProtocolWithAPayloadHasOne(t *testing.T) {
+	// arrange
+	file := bzImage(t, 2, 0x208, 16, "stream", 1234)
+
+	// act
+	found, err := kernel.PayloadOf(bytes.NewReader(file), int64(len(file)))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, int64(len("stream")), found.Length)
+}

@@ -227,3 +227,15 @@ func TestADiskGetsTheCmdlineLinesAboveItJoinedByASpace(t *testing.T) {
 	require.Len(t, disksOf(requests), 1)
 	assert.Equal(t, "rw console=ttyS0", disksOf(requests)[0].Cmdline)
 }
+
+func TestARootfsWithAnEmptyFormatFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT rootfs --format= os.img\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrUnknownFormat)
+	assert.ErrorContains(t, err, "line 2")
+}
