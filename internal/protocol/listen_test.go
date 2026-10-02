@@ -98,6 +98,8 @@ func (blocking) Disk(context.Context, protocol.Disk, io.Writer) error { return n
 
 func (blocking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error { return nil }
 
+func (blocking) BootPart(context.Context, protocol.BootPart, io.Writer) error { return nil }
+
 func (blocking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error { return nil }
 
 func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {

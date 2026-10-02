@@ -54,6 +54,10 @@ func (r runner) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
 	return r.err
 }
 
+func (r runner) BootPart(context.Context, protocol.BootPart, io.Writer) error {
+	return r.err
+}
+
 func (r runner) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, _ io.Writer) error {
 	return r.err
 }
@@ -136,6 +140,23 @@ func TestARootfsThatWorksIsDone(t *testing.T) {
 	var requests, replies bytes.Buffer
 	host := protocol.New("miso 1.2.0", &replies, &requests)
 	require.NoError(t, host.Send(protocol.Rootfs{Key: "abc", Layers: []string{"image"}, Tools: []string{"tools"}}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{})
+
+	// assert
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestABootPartThatWorksIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.BootPart{Key: "abc", Layers: []string{"image"}, Part: protocol.PartKernel}))
 	agent := protocol.New("miso 1.2.0", &requests, &replies)
 
 	// act
@@ -304,6 +325,10 @@ func (w *watched) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
 	return nil
 }
 
+func (w *watched) BootPart(context.Context, protocol.BootPart, io.Writer) error {
+	return nil
+}
+
 func (w *watched) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
@@ -358,6 +383,12 @@ func (w *waiting) Disk(ctx context.Context, _ protocol.Disk, _ io.Writer) error 
 }
 
 func (w *waiting) Rootfs(ctx context.Context, _ protocol.Rootfs, _ io.Writer) error {
+	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
+
+	return err
+}
+
+func (w *waiting) BootPart(ctx context.Context, _ protocol.BootPart, _ io.Writer) error {
 	_, err := w.Run(ctx, protocol.Run{}, io.Discard)
 
 	return err
@@ -481,6 +512,10 @@ func (r *reading) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
 	return nil
 }
 
+func (r *reading) BootPart(context.Context, protocol.BootPart, io.Writer) error {
+	return nil
+}
+
 func (r *reading) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
@@ -550,6 +585,10 @@ func (b breaking) Disk(context.Context, protocol.Disk, io.Writer) error {
 }
 
 func (b breaking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
+	return nil
+}
+
+func (b breaking) BootPart(context.Context, protocol.BootPart, io.Writer) error {
 	return nil
 }
 
@@ -626,6 +665,10 @@ func (c checking) Disk(context.Context, protocol.Disk, io.Writer) error {
 }
 
 func (c checking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
+	return nil
+}
+
+func (c checking) BootPart(context.Context, protocol.BootPart, io.Writer) error {
 	return nil
 }
 

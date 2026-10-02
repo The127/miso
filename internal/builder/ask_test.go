@@ -463,6 +463,12 @@ func (r *recording) Rootfs(_ context.Context, request protocol.Rootfs, _ io.Writ
 	return nil
 }
 
+func (r *recording) BootPart(_ context.Context, request protocol.BootPart, _ io.Writer) error {
+	r.note(request)
+
+	return nil
+}
+
 func (r *recording) Fetch(_ context.Context, request protocol.Fetch, _ protocol.Pieces, _ io.Writer) error {
 	r.note(request)
 
@@ -512,6 +518,12 @@ func (s saying) Rootfs(_ context.Context, _ protocol.Rootfs, out io.Writer) erro
 	return err
 }
 
+func (s saying) BootPart(_ context.Context, _ protocol.BootPart, out io.Writer) error {
+	_, err := io.WriteString(out, s.words)
+
+	return err
+}
+
 func (s saying) Fetch(_ context.Context, _ protocol.Fetch, _ protocol.Pieces, out io.Writer) error {
 	_, err := io.WriteString(out, s.words)
 
@@ -545,6 +557,10 @@ func (e exiting) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
 	return nil
 }
 
+func (e exiting) BootPart(context.Context, protocol.BootPart, io.Writer) error {
+	return nil
+}
+
 func (e exiting) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return nil
 }
@@ -571,6 +587,10 @@ func (f failing) Disk(context.Context, protocol.Disk, io.Writer) error {
 }
 
 func (f failing) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
+	return f.err
+}
+
+func (f failing) BootPart(context.Context, protocol.BootPart, io.Writer) error {
 	return f.err
 }
 
@@ -605,6 +625,10 @@ func (w waiting) Disk(context.Context, protocol.Disk, io.Writer) error {
 }
 
 func (w waiting) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
+	return nil
+}
+
+func (w waiting) BootPart(context.Context, protocol.BootPart, io.Writer) error {
 	return nil
 }
 

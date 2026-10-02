@@ -39,6 +39,11 @@ func (u Unstarted) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
 	return u.why()
 }
 
+// BootPart fails naming why the agent did not start.
+func (u Unstarted) BootPart(context.Context, protocol.BootPart, io.Writer) error {
+	return u.why()
+}
+
 // Fetch fails naming why the agent did not start.
 func (u Unstarted) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return u.why()

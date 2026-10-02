@@ -15,6 +15,7 @@ type Runner interface {
 	Copy(ctx context.Context, request Copy, entries Entries, out io.Writer) error
 	Disk(ctx context.Context, request Disk, out io.Writer) error
 	Rootfs(ctx context.Context, request Rootfs, out io.Writer) error
+	BootPart(ctx context.Context, request BootPart, out io.Writer) error
 	Fetch(ctx context.Context, request Fetch, pieces Pieces, out io.Writer) error
 	Prune(ctx context.Context, request Prune, out io.Writer) error
 }
@@ -43,6 +44,8 @@ func (c *Conn) Serve(runner Runner) error {
 		return c.servePrune(runner, request)
 	case Rootfs:
 		return c.serveRootfs(runner, request)
+	case BootPart:
+		return c.serveBootPart(runner, request)
 	case Run:
 		return c.serveRun(runner, request)
 	default:
@@ -71,6 +74,12 @@ func (c *Conn) serveCopy(runner Runner, request Copy) error {
 func (c *Conn) serveDisk(runner Runner, request Disk) error {
 	return c.watching(func(ctx context.Context) error {
 		return runner.Disk(ctx, request, outputs{c})
+	})
+}
+
+func (c *Conn) serveBootPart(runner Runner, request BootPart) error {
+	return c.watching(func(ctx context.Context) error {
+		return runner.BootPart(ctx, request, outputs{c})
 	})
 }
 
