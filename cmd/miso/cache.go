@@ -73,3 +73,25 @@ func lockedCache(dir cachedisk.Dir, said io.Writer) (io.Closer, error) {
 
 	return held, nil
 }
+
+// lockedDisk holds the cache disk of a directory and answers its file info as
+// it is under the lock. It fails when there is no disk, and never makes one.
+func lockedDisk(dir cachedisk.Dir, said io.Writer) (io.Closer, fs.FileInfo, error) {
+	// the lock makes its file, so a missing disk is found before it
+	if _, err := os.Stat(dir.Disk()); errors.Is(err, fs.ErrNotExist) {
+		return nil, nil, fmt.Errorf("there is no cache disk at %s, the next build makes one", dir.Disk())
+	}
+
+	held, err := holdCache(dir, said)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// a build or another resize may have changed the disk while this one waited
+	info, err := os.Stat(dir.Disk())
+	if err != nil {
+		return nil, nil, errors.Join(err, held.Close())
+	}
+
+	return held, info, nil
+}

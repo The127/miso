@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 
 	"github.com/urfave/cli/v3"
 
@@ -22,14 +19,9 @@ var resizeCommand = &cli.Command{
 }
 
 func runResize(_ context.Context, command *cli.Command) error {
-	size := int64(cacheDiskSize)
-	if command.IsSet("size") {
-		asked, err := sizeOf("--size", command.String("size"))
-		if err != nil {
-			return err
-		}
-
-		size = asked
+	size, asked, err := wantedSize(command)
+	if err != nil {
+		return err
 	}
 
 	cache, err := cacheDir()
@@ -38,38 +30,38 @@ func runResize(_ context.Context, command *cli.Command) error {
 	}
 
 	dir := builderDir(cache)
-	disk := dir.Disk()
 
-	// the lock makes its file, so a missing disk is found before it
-	if _, err := os.Stat(disk); errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("there is no cache disk at %s, the next build makes one of %s", disk, ibytes(cacheDiskSize))
-	}
-
-	held, err := holdCache(dir, command.Root().ErrWriter)
+	held, info, err := lockedDisk(dir, command.Root().ErrWriter)
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = held.Close() }()
 
-	// a build or another resize may have changed the disk while this one waited
-	info, err := os.Stat(disk)
-	if err != nil {
-		return err
-	}
-
 	// no size was set: a disk that is large enough is what the user wants
-	if !command.IsSet("size") && info.Size() >= size {
+	if !asked && info.Size() >= size {
 		_, err = fmt.Fprintf(command.Root().Writer, "the cache disk is %s already\n", ibytes(info.Size()))
 
 		return err
 	}
 
-	if err := cachedisk.Grow(disk, size); err != nil {
+	if err := cachedisk.Grow(dir.Disk(), size); err != nil {
 		return err
 	}
 
 	_, err = fmt.Fprintf(command.Root().Writer, "the cache disk is now %s, it was %s\n", ibytes(size), ibytes(info.Size()))
 
 	return err
+}
+
+// wantedSize says with asked that the user chose the size, because then a
+// disk that is larger is not left alone.
+func wantedSize(command *cli.Command) (size int64, asked bool, err error) {
+	if !command.IsSet("size") {
+		return cacheDiskSize, false, nil
+	}
+
+	size, err = sizeOf("--size", command.String("size"))
+
+	return size, true, err
 }
