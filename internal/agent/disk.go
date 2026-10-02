@@ -39,7 +39,7 @@ systemd-repart \
 	--empty=create \
 	--size=auto \
 	"$@" \
-	/run/miso/out/disk.raw`
+	` + outputPath
 
 // ukify builds the UKI of the image's kernel into the ESP from copies of
 // the image's parts, with its kernel command line when it has one.

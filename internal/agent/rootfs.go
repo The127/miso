@@ -16,8 +16,8 @@ const mkfs = `set -e
 entries=$(du -s --inodes /run/miso/image | cut -f1)
 size=$(du -sk --apparent-size /run/miso/image | cut -f1)
 size=$((size + entries * 4))
-truncate -s "$((size + size / 4 + 65536))K" /run/miso/out/disk.raw
-mkfs.ext4 -q -F -N "$((entries + entries / 4 + 1024))" -d /run/miso/image /run/miso/out/disk.raw`
+truncate -s "$((size + size / 4 + 65536))K" ` + outputPath + `
+mkfs.ext4 -q -F -N "$((entries + entries / 4 + 1024))" -d /run/miso/image ` + outputPath
 
 // Rootfs makes an ext4 file system of the image's layers with the tools of
 // another stage. A key whose layer is there already has its file system.

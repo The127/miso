@@ -26,7 +26,7 @@ func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol
 
 	// the tools that wrote the disk run the build's code, so its name may be
 	// a link to anything in the builder, or a FIFO no one ever writes to
-	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), "disk.raw"), os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
+	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), outputFile), os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return err
 	}
