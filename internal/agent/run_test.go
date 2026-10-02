@@ -28,10 +28,24 @@ func mountedBase(t *testing.T, layers string) *agent.Agent {
 	t.Helper()
 
 	require.NotEmpty(t, os.Getenv("MISO_VMTEST_BASE_DIGEST"), "MISO_VMTEST_BASE names no base image")
+	// the base disk is read-only, but a layer that is used gets its time set
+	side := t.TempDir()
+	require.NoError(t, basemount.Mount("miso-test-base", side))
+	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(side, syscall.MNT_DETACH)) })
+
 	base := filepath.Join(layers, "base")
+	writable := t.TempDir()
+	upper, work := filepath.Join(writable, "upper"), filepath.Join(writable, "work")
+	require.NoError(t, os.Mkdir(upper, 0o700))
+	// the root of the overlay is the root of its upper layer
+	root, err := os.Stat(side)
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(upper, root.Mode().Perm()))
+	require.NoError(t, os.Mkdir(work, 0o700))
 	require.NoError(t, os.Mkdir(base, 0o700))
-	require.NoError(t, basemount.Mount("miso-test-base", base))
-	// before the layers are removed, which would fail on a read-only mount
+	options := "lowerdir=" + side + ",upperdir=" + upper + ",workdir=" + work
+	require.NoError(t, syscall.Mount("overlay", base, "overlay", 0, options))
+	// before the layers are removed, which cannot remove a mount point in use
 	t.Cleanup(func() { assert.NoError(t, syscall.Unmount(base, syscall.MNT_DETACH)) })
 
 	return agent.New(layers, t.TempDir())
