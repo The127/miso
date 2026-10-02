@@ -36,7 +36,7 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	written, err := os.ReadFile(recorded)
 	require.NoError(t, err)
 	accelerated, _ := qemu.Accel("/dev/kvm")
-	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3)), strings.Split(string(written), "\n"))
+	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3, false)), strings.Split(string(written), "\n"))
 }
 
 func TestACancelledMachineIsStopped(t *testing.T) {

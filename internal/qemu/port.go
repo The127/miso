@@ -12,9 +12,14 @@ const AgentPort = "miso"
 
 // port gives the machine a virtio serial port for its agent, on the socket
 // QEMU finds at fd.
-func port(fd int) []string {
+func port(fd int, microvm bool) []string {
+	controller := "virtio-serial-pci"
+	if microvm {
+		controller = "virtio-serial-device"
+	}
+
 	return []string{
-		"-device", "virtio-serial-pci",
+		"-device", controller,
 		"-chardev", fmt.Sprintf("socket,id=agent,fd=%d", fd),
 		"-device", "virtserialport,chardev=agent,name=" + AgentPort,
 	}

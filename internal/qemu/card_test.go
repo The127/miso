@@ -69,3 +69,15 @@ func TestAMachineWithNoCardHasNoNetwork(t *testing.T) {
 	assert.Equal(t, "none", valueOf(t, args, "-nic"))
 	assert.NotContains(t, args, "-netdev")
 }
+
+func TestTheCardOfAMicrovmIsAVirtioDeviceWithoutPCI(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"}, Card: &qemu.Card{MAC: "52:54:00:6d:69:73"}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "virtio-net-device,netdev=card,mac=52:54:00:6d:69:73", valueOf(t, args, "-device"))
+}

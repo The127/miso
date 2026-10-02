@@ -6,6 +6,7 @@ var (
 	Arguments = arguments
 	Accel     = accel
 	Vsock     = vsock
+	Port      = port
 	Claim     = claim
 	TakeCID   = takeCID
 )

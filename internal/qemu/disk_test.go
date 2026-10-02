@@ -106,3 +106,34 @@ func TestACDIsInAnOpticalDriveAndNeverWritten(t *testing.T) {
 	assert.Equal(t, "file=/o/os.iso,format=raw,if=none,id=disk0,media=cdrom,readonly=on", valueOf(t, args, "-drive"))
 	assert.Equal(t, "ide-cd,drive=disk0", valueOf(t, args, "-device"))
 }
+
+func TestADiskOfAMicrovmIsAVirtioDeviceWithoutPCI(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{
+		Microvm: true,
+		Boot:    qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"},
+		Disks:   []qemu.Disk{{Path: "/rootfs.ext4", Format: "raw", Serial: "image"}},
+	}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, args, "virtio-blk-device,drive=disk0,serial=image")
+}
+
+func TestACDOnAMicrovmIsRefusedBecauseTheBoardHasNoOpticalDrive(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{
+		Microvm: true,
+		Boot:    qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"},
+		Disks:   []qemu.Disk{{Path: "/os.iso", Format: "raw", CD: true}},
+	}
+
+	// act
+	_, err := qemu.Arguments(machine)
+
+	// assert
+	assert.ErrorContains(t, err, "optical")
+}

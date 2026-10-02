@@ -1,6 +1,7 @@
 package qemu
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -43,6 +44,10 @@ func drives(machine Machine) ([]string, error) {
 	var args []string
 	for i, disk := range machine.Disks {
 		id := fmt.Sprintf("disk%d", i)
+		if disk.CD && machine.Microvm {
+			return nil, errors.New("a microvm has no optical drive to put a CD in")
+		}
+
 		if disk.CD {
 			args = append(args,
 				"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,media=cdrom,readonly=on", escaped(disk.Path), disk.Format, id),
@@ -57,10 +62,20 @@ func drives(machine Machine) ([]string, error) {
 
 		args = append(args,
 			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", escaped(disk.Path), disk.Format, id, access(disk)),
-			"-device", fmt.Sprintf("virtio-blk-pci,drive=%s,serial=%s", id, escaped(disk.Serial)))
+			"-device", fmt.Sprintf("%s,drive=%s,serial=%s", blockDevice(machine), id, escaped(disk.Serial)))
 	}
 
 	return args, nil
+}
+
+// blockDevice is the virtio disk of the board: on a PCI bus, or on the bus a
+// microvm has instead.
+func blockDevice(machine Machine) string {
+	if machine.Microvm {
+		return "virtio-blk-device"
+	}
+
+	return "virtio-blk-pci"
 }
 
 // access names the cache mode of a writable disk, because the cache disk

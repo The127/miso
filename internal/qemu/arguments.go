@@ -9,5 +9,10 @@ func arguments(machine Machine) ([]string, error) {
 		return nil, err
 	}
 
-	return slices.Concat(defaults(), noReboot(), console(), boot(machine), size(machine), disks, network(machine), credentials(machine)), nil
+	booting, err := boot(machine)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.Concat(defaults(machine), noReboot(), console(), booting, size(machine), disks, network(machine), credentials(machine)), nil
 }

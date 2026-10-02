@@ -19,10 +19,10 @@ type reach struct {
 
 // reachFor claims a CID on the host's vsock device, or else gives the
 // machine a virtio port.
-func reachFor(open func() (*os.File, error)) (reach, error) {
+func reachFor(open func() (*os.File, error), microvm bool) (reach, error) {
 	device, cid, withoutVsock := holdCID(open)
 	if withoutVsock == nil {
-		return reach{args: vsock(cid, deviceFD), machine: device, cid: cid}, nil
+		return reach{args: vsock(cid, deviceFD, microvm), machine: device, cid: cid}, nil
 	}
 
 	host, machine, err := socketPair()
@@ -30,7 +30,7 @@ func reachFor(open func() (*os.File, error)) (reach, error) {
 		return reach{}, fmt.Errorf("%w, and no virtio port either: %w", withoutVsock, err)
 	}
 
-	return reach{args: port(deviceFD), machine: machine, host: host, withoutVsock: withoutVsock}, nil
+	return reach{args: port(deviceFD, microvm), machine: machine, host: host, withoutVsock: withoutVsock}, nil
 }
 
 // close lets go of the host's end, when QEMU never ran.
