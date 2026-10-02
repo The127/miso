@@ -13,6 +13,7 @@ import (
 
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/builder"
+	"github.com/The127/miso/internal/cachedisk"
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/lru"
 	"github.com/The127/miso/internal/protocol"
@@ -42,7 +43,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 
 	blobs, _ := baseImages(cache)
 
-	dir := filepath.Join(cache, "builder")
+	dir := builderDir(cache)
 	held, err := lockedCache(dir, command.Root().ErrWriter)
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 
 // pruneLayers has the builder VM remove the layers the limit lets go, from
 // the cache disk in dir, which the caller holds.
-func pruneLayers(ctx context.Context, command *cli.Command, dir string, blobs *download.Store, limit protocol.Prune) error {
+func pruneLayers(ctx context.Context, command *cli.Command, dir cachedisk.Dir, blobs *download.Store, limit protocol.Prune) error {
 	boot, err := bootFiles(ctx, blobs)
 	if err != nil {
 		return err
@@ -74,7 +75,7 @@ func pruneLayers(ctx context.Context, command *cli.Command, dir string, blobs *d
 
 	defer func() { _ = os.RemoveAll(filepath.Dir(boot.Kernel)) }()
 
-	machine, err := builder.Build{Boot: boot, Cache: filepath.Join(dir, "layers.img")}.Machine()
+	machine, err := builder.Build{Boot: boot, Cache: dir.Disk()}.Machine()
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func pruneLayers(ctx context.Context, command *cli.Command, dir string, blobs *d
 
 	requests := []build.Request{{Message: limit}}
 
-	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
+	return inBuilder(ctx, machine, dir.BuilderLog(), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
 		return builder.Ask(ctx, vm, dial, agentName(), requests, nil, nil, command.Root().Writer)
 	})
 }

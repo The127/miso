@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 
@@ -38,8 +37,8 @@ func runResize(_ context.Context, command *cli.Command) error {
 		return err
 	}
 
-	dir := filepath.Join(cache, "builder")
-	disk := filepath.Join(dir, "layers.img")
+	dir := builderDir(cache)
+	disk := dir.Disk()
 
 	// the lock makes its file, so a missing disk is found before it
 	if _, err := os.Stat(disk); errors.Is(err, fs.ErrNotExist) {

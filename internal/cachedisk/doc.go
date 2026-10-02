@@ -1,4 +1,4 @@
 // Package cachedisk makes the disk the builder keeps its layers on, a file
 // on the host that outlives every builder VM, grows it when it is too small
-// and locks it for one build at a time.
+// and locks it for one build at a time. Dir names the files kept around it.
 package cachedisk

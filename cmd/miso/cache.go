@@ -38,27 +38,32 @@ func baseImages(cache string) (*download.Store, *baseimage.Cache) {
 // tests and a few builds of different images.
 const cacheDiskSize = 50 << 30
 
+// builderDir is where the builder keeps its cache, in the cache of miso.
+func builderDir(cache string) cachedisk.Dir {
+	return cachedisk.Dir(filepath.Join(cache, "builder"))
+}
+
 // holdCache holds the cache disk in a directory for this build, which makes
 // the directory if it is not there yet.
-func holdCache(dir string, said io.Writer) (io.Closer, error) {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+func holdCache(dir cachedisk.Dir, said io.Writer) (io.Closer, error) {
+	if err := os.MkdirAll(string(dir), 0o750); err != nil {
 		return nil, err
 	}
 
-	return cachedisk.Lock(filepath.Join(dir, "layers.lock"), func() {
+	return cachedisk.Lock(dir.LockFile(), func() {
 		_, _ = fmt.Fprintln(said, "miso: waiting for another build to let go of the cache")
 	})
 }
 
 // lockedCache holds the cache disk in a directory for this build, and makes
 // the disk if it is not there yet.
-func lockedCache(dir string, said io.Writer) (io.Closer, error) {
+func lockedCache(dir cachedisk.Dir, said io.Writer) (io.Closer, error) {
 	held, err := holdCache(dir, said)
 	if err != nil {
 		return nil, err
 	}
 
-	disk := filepath.Join(dir, "layers.img")
+	disk := dir.Disk()
 	if _, err := os.Stat(disk); errors.Is(err, fs.ErrNotExist) {
 		err = cachedisk.Make(disk, cacheDiskSize)
 		if err != nil {

@@ -58,7 +58,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	dir := filepath.Join(cache, "builder")
+	dir := builderDir(cache)
 	held, err := lockedCache(dir, command.Root().ErrWriter)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	defer func() { _ = held.Close() }()
 
 	// a checked disk's console, kept for when a check fails
-	console, err := os.Create(filepath.Join(dir, "check.log"))
+	console, err := os.Create(dir.CheckLog())
 	if err != nil {
 		return err
 	}
@@ -75,14 +75,14 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 	defer func() { _ = console.Close() }()
 
 	// where disks go that are only checked, not written out
-	scratch, err := os.MkdirTemp(dir, "outputs-")
+	scratch, err := os.MkdirTemp(string(dir), "outputs-")
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = os.RemoveAll(scratch) }()
 
-	outputs, err := outputsOf(command, checker(ctx, blobs, dir, console), scratch)
+	outputs, err := outputsOf(command, checker(ctx, blobs, string(dir), console), scratch)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 	machine, err := builder.Build{
 		Boot:     boot,
-		Cache:    filepath.Join(dir, "layers.img"),
+		Cache:    dir.Disk(),
 		Requests: requests,
 		Blob:     blobs.Path,
 		Format:   bases.Format,
@@ -106,7 +106,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	return inBuilder(ctx, machine, filepath.Join(dir, "builder.log"), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
+	return inBuilder(ctx, machine, dir.BuilderLog(), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
 		return imagefile.InFile(file, builder.Ask(ctx, vm, dial, agentName(), requests, contextfiles.Of(files), outputs, command.Root().Writer))
 	})
 }
