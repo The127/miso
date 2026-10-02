@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -40,7 +39,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 	return a.madeByTools(request.Key, request.Layers, request.Tools, "file system", func(dir toolsDir) (toolsRun, error) {
 		return func(root string) (int, error) {
-			unbindOutput, err := bind(dir.output, filepath.Join(root, "run", "miso", "out"))
+			unbindOutput, err := bindOutput(root, dir.output)
 			if err != nil {
 				return 0, err
 			}

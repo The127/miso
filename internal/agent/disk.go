@@ -138,7 +138,7 @@ type toolsInput struct {
 
 // runTools has the tools in root build the UKI and make the disk.
 func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (int, error) {
-	unbindOutput, err := bind(in.output, filepath.Join(root, "run", "miso", "out"))
+	unbindOutput, err := bindOutput(root, in.output)
 	if err != nil {
 		return 0, err
 	}
@@ -224,6 +224,12 @@ func bind(dir, at string) (func(), error) {
 	}
 
 	return func() { _ = unix.Unmount(at, unix.MNT_DETACH) }, nil
+}
+
+// bindOutput shows the directory a layer is made in as /run/miso/out in the
+// root of the tools, where they write the file of the layer.
+func bindOutput(root, dir string) (func(), error) {
+	return bind(dir, filepath.Join(root, "run", "miso", "out"))
 }
 
 // cloneInto shows a mount at another place. The clone keeps the attributes

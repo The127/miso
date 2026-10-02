@@ -56,7 +56,7 @@ func (a *Agent) unpack(ctx context.Context, request protocol.BootPart, out io.Wr
 		}
 
 		return func(root string) (int, error) {
-			unbindOutput, err := bind(dir.output, filepath.Join(root, "run", "miso", "out"))
+			unbindOutput, err := bindOutput(root, dir.output)
 			if err != nil {
 				return 0, err
 			}
