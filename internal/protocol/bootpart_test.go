@@ -14,7 +14,7 @@ func TestABootPartSurvivesTheWire(t *testing.T) {
 	// arrange
 	var wire bytes.Buffer
 	conn := protocol.New("miso 1.2.0", &wire, &wire)
-	request := protocol.BootPart{Key: "abc", Layers: []string{"debian", "htop"}, Part: "initrd"}
+	request := protocol.BootPart{Key: "abc", Layers: []string{"debian", "htop"}, Tools: []string{"debian", "unpack"}, Part: "kernel", ELF: true}
 
 	// act
 	sent := conn.Send(request)

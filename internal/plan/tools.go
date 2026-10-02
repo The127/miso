@@ -15,7 +15,7 @@ const BuiltinTools = "miso tools"
 func withTools(stages []imagefile.Stage) []imagefile.Stage {
 	for _, stage := range stages {
 		for _, instruction := range stage.Instructions {
-			if output, isOutput := instruction.(imagefile.Output); isOutput && NeedsTools(output.Kind) {
+			if output, isOutput := instruction.(imagefile.Output); isOutput && NeedsTools(output) {
 				return append([]imagefile.Stage{builtinStage(output.Line)}, stages...)
 			}
 		}
@@ -29,8 +29,13 @@ func withTools(stages []imagefile.Stage) []imagefile.Stage {
 const snapshot = "20260928T000000Z"
 
 // toolPackages are what makes a disk: repart and ukify, the loader and the
-// stub they need, and what formats the file systems.
-var toolPackages = []string{"systemd-repart", "systemd-ukify", "systemd-boot-efi", "dosfstools", "mtools", "e2fsprogs", "erofs-utils"}
+// stub they need, and what formats the file systems. A kernel is unpacked by
+// whichever compressor the distribution made it with, so all of them are here.
+// gzip comes with Debian.
+var toolPackages = []string{
+	"systemd-repart", "systemd-ukify", "systemd-boot-efi", "dosfstools", "mtools", "e2fsprogs", "erofs-utils",
+	"xz-utils", "zstd", "bzip2", "lz4", "lzop",
+}
 
 // archive is the apt source of the tools, a line of its file each.
 func archive() []string {

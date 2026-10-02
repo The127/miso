@@ -24,6 +24,9 @@ var ErrUnknownKind = errors.New("unknown kind of output")
 // ErrUnknownOption is an option an output of its kind does not take.
 var ErrUnknownOption = errors.New("unknown option")
 
+// ErrOptionTakesNoValue is an option that only says yes, given a value.
+var ErrOptionTakesNoValue = errors.New("option takes no value")
+
 // ErrUnknownFormat is a file system a rootfs cannot be.
 var ErrUnknownFormat = errors.New("unknown file system")
 

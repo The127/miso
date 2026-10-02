@@ -14,8 +14,15 @@ type BootPart struct {
 	// the keys of the image's layers, lowest first
 	Layers []string
 
+	// the keys of the layers of the stage that brings the tools, lowest
+	// first, for a kernel that is unpacked
+	Tools []string
+
 	// which part of the kernel to keep
 	Part string
+
+	// the kernel is unpacked into the ELF file it boots from
+	ELF bool
 }
 
 func (b BootPart) into(e *envelope) { e.BootPart = &b }

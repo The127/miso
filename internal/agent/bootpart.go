@@ -14,9 +14,17 @@ import (
 
 // BootPart keeps the kernel or the initrd of the image's layers as the layer
 // of a key. A key whose layer is there already has its part.
-func (a *Agent) BootPart(_ context.Context, request protocol.BootPart, _ io.Writer) error {
+func (a *Agent) BootPart(ctx context.Context, request protocol.BootPart, out io.Writer) error {
 	if request.Part != protocol.PartKernel && request.Part != protocol.PartInitrd {
 		return fmt.Errorf("no part %q can be kept", request.Part)
+	}
+
+	if request.ELF {
+		if request.Part != protocol.PartKernel {
+			return fmt.Errorf("the %s cannot be unpacked into an ELF file", request.Part)
+		}
+
+		return a.unpack(ctx, request, out)
 	}
 
 	there, at, err := a.found(request.Key, request.Layers)

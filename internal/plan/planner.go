@@ -149,7 +149,7 @@ func (p *planner) reads(instruction imagefile.Instruction, files []File) []strin
 	}
 
 	if step, isOutput := instruction.(imagefile.Output); isOutput {
-		if NeedsTools(step.Kind) {
+		if NeedsTools(step) {
 			return []string{p.ends[BuiltinTools]}
 		}
 	}

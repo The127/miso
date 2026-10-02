@@ -106,6 +106,22 @@ func TestTheToolsStageInstallsWhatAnIsoNeeds(t *testing.T) {
 	assert.Contains(t, install.Command, "erofs-utils")
 }
 
+func TestTheToolsStageInstallsEveryUnpackerOfAKernel(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT kernel --elf vmlinux\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	install, isRun := planned.Stages[0].Steps[0].Instruction.(imagefile.Run)
+	require.True(t, isRun)
+	for _, unpacker := range []string{"xz-utils", "zstd", "bzip2", "lz4", "lzop"} {
+		assert.Contains(t, install.Command, unpacker)
+	}
+}
+
 func TestTheToolsComeFromAFixedDayOfTheDebianArchive(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
@@ -136,3 +152,27 @@ func TestTheToolsStageIsOnTheLineOfTheOutputThatNeedsIt(t *testing.T) {
 }
 
 var toolsImages = images{"debian:sid": "sha256:sid"}
+
+func TestAnUnpackedKernelGetsAToolsStage(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT kernel --elf vmlinux\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	assert.Len(t, planned.Stages, 2)
+}
+
+func TestAKernelThatIsCopiedAsItIsGetsNoToolsStage(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT kernel vmlinuz\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	assert.Len(t, planned.Stages, 1)
+}

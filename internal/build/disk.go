@@ -13,7 +13,8 @@ import (
 
 // outputRequest is what an output asks for on the root file system under it.
 // A disk, an ISO or a rootfs takes the tools from where their stage ends, the
-// kernel and the initrd are taken from the image.
+// kernel and the initrd are taken from the image, and an unpacked kernel
+// takes the tools too.
 func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
 	var refused error
 	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
@@ -23,6 +24,8 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		refused = ErrUnknownKind
 	case hasUnknown:
 		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
+	case instruction.Options[plan.OptionELF] != "":
+		refused = fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
 	case instruction.Kind == plan.KindRootfs && !slices.Contains(formats, format):
 		refused = fmt.Errorf("--format=%s: %w", format, ErrUnknownFormat)
 	}
@@ -34,7 +37,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	}
 
 	if part, isPart := bootParts[instruction.Kind]; isPart {
-		return protocol.BootPart{Key: step.Key, Layers: under.layers, Part: part}, nil
+		return protocol.BootPart{Key: step.Key, Layers: under.layers, Tools: tools.layers, Part: part, ELF: plan.Unpacks(instruction)}, nil
 	}
 
 	if instruction.Kind == plan.KindRootfs {
@@ -62,8 +65,11 @@ func formatOf(options map[string]string) string {
 
 // optionsOf are the options an output of a kind takes.
 func optionsOf(kind string) []string {
-	if kind == plan.KindRootfs {
+	switch kind {
+	case plan.KindRootfs:
 		return []string{formatOption}
+	case plan.KindKernel:
+		return []string{plan.OptionELF}
 	}
 
 	return nil

@@ -1,6 +1,10 @@
 package plan
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/The127/miso/internal/imagefile"
+)
 
 // The kinds of output miso makes.
 const (
@@ -16,10 +20,26 @@ func Known(kind string) bool {
 	return slices.Contains([]string{KindDisk, KindISO, KindRootfs, KindKernel, KindInitrd}, kind)
 }
 
-// NeedsTools is a kind of output made with the tools stage. The kernel and
-// the initrd are files of the image, copied out as they are.
-func NeedsTools(kind string) bool {
-	return slices.Contains([]string{KindDisk, KindISO, KindRootfs}, kind)
+// OptionELF asks for the kernel as the ELF file it unpacks to.
+const OptionELF = "elf"
+
+// Unpacks is an output that asks for the ELF file of a kernel. A bare
+// --elf and --elf= say the same.
+func Unpacks(output imagefile.Output) bool {
+	_, asked := output.Options[OptionELF]
+
+	return output.Kind == KindKernel && asked
+}
+
+// NeedsTools says whether an output is made with the tools stage. The kernel
+// and the initrd are files of the image, copied out as they are, unless the
+// kernel is unpacked.
+func NeedsTools(output imagefile.Output) bool {
+	if output.Kind == KindKernel {
+		return Unpacks(output)
+	}
+
+	return slices.Contains([]string{KindDisk, KindISO, KindRootfs}, output.Kind)
 }
 
 // NeverBooted is a kind of output that no check can run in. Unknown kinds

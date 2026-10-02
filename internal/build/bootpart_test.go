@@ -42,3 +42,36 @@ func TestAnInitrdOutputIsTheInitrdOfTheLayersOfItsStage(t *testing.T) {
 	require.True(t, isPart)
 	assert.Equal(t, "initrd", part.Part)
 }
+
+func TestAKernelOutputWithElfIsUnpackedWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT kernel --elf vmlinux\n")
+	require.Len(t, source.Stages, 2)
+	tools, image := source.Stages[0], source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, protocol.BootPart{
+		Key:    image.Steps[0].Key,
+		Layers: []string{image.BaseKey},
+		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+		Part:   "kernel",
+		ELF:    true,
+	}, requests[len(requests)-2].Message)
+}
+
+func TestAnElfOptionWithAValueFailsAtItsLineNamingIt(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT kernel --elf=false vmlinux\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrOptionTakesNoValue)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "--elf")
+}

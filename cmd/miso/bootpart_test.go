@@ -38,3 +38,29 @@ func TestKernelAndInitrdOutputsAreTheFilesOfTheImageOnTheBuilderKernel(t *testin
 	require.NoError(t, err)
 	assert.Positive(t, initrd.Size())
 }
+
+// the ELF magic and the machine of an x86-64 executable
+const (
+	elfMagicBytes = "\x7fELF"
+	elfMachineAt  = 18
+	elfX86_64     = 62
+)
+
+func TestAnUnpackedKernelOutputIsTheELFFileOfTheImagesKernelOnTheBuilderKernel(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	out := t.TempDir()
+	imagefile := "FROM debian:sid\nOUTPUT kernel --elf vmlinux\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(imagefile), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", "-o", out, dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.NoError(t, err, string(said))
+	kernel, err := os.ReadFile(filepath.Join(out, "vmlinux"))
+	require.NoError(t, err)
+	require.Greater(t, len(kernel), elfMachineAt+2)
+	assert.Equal(t, elfMagicBytes, string(kernel[:len(elfMagicBytes)]))
+	assert.Equal(t, byte(elfX86_64), kernel[elfMachineAt])
+}
