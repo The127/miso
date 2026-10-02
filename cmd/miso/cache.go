@@ -38,16 +38,22 @@ func baseImages(cache string) (*download.Store, *baseimage.Cache) {
 // tests and a few builds of different images.
 const cacheDiskSize = 50 << 30
 
-// lockedCache holds the cache disk in a directory for this build, and makes
-// the disk if it is not there yet.
-func lockedCache(dir string, said io.Writer) (io.Closer, error) {
+// holdCache holds the cache disk in a directory for this build, which makes
+// the directory if it is not there yet.
+func holdCache(dir string, said io.Writer) (io.Closer, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
 
-	held, err := cachedisk.Lock(filepath.Join(dir, "layers.lock"), func() {
+	return cachedisk.Lock(filepath.Join(dir, "layers.lock"), func() {
 		_, _ = fmt.Fprintln(said, "miso: waiting for another build to let go of the cache")
 	})
+}
+
+// lockedCache holds the cache disk in a directory for this build, and makes
+// the disk if it is not there yet.
+func lockedCache(dir string, said io.Writer) (io.Closer, error) {
+	held, err := holdCache(dir, said)
 	if err != nil {
 		return nil, err
 	}
