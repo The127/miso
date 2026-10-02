@@ -1,0 +1,39 @@
+# A Debian sid root file system for a microVM, with the kernel and initrd to
+# boot it with. It is booted and checked before it is written.
+#
+#   miso build -o out examples/microvm
+#
+# leaves out/os.ext4, out/vmlinuz and out/initrd.img. Boot them with
+# Firecracker, cloud-hypervisor or QEMU, for example
+#
+#   qemu-system-x86_64 -enable-kvm -m 1G -nographic \
+#     -kernel out/vmlinuz -initrd out/initrd.img \
+#     -append "root=/dev/vda rootfstype=ext4 rw console=ttyS0" \
+#     -drive file=out/os.ext4,format=raw,if=virtio
+#
+# Firecracker wants the kernel as an ELF file: write OUTPUT kernel --elf
+# vmlinux instead. --format=erofs after rootfs makes an erofs image.
+
+FROM debian:sid
+
+# The initrd of the cloud image is bound to the disk of the cloud image, so it
+# is made again for any machine, with the driver of the virtual disk.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade && \
+    DEBIAN_FRONTEND=noninteractive apt-get purge -y 'linux-image-*cloud*' && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-image-amd64 dracut
+RUN v=$(ls /usr/lib/modules | sort -V | tail -1) && \
+    dracut --force --no-hostonly --add-drivers "virtio_blk ext4" --kver "$v" "/boot/initrd.img-$v"
+
+# The cloud image's fstab names the cloud image's partitions.
+RUN : > /etc/fstab
+
+# The whole kernel command line. The check boots with it as well.
+CMDLINE root=/dev/vda rootfstype=ext4 rw console=ttyS0
+
+OUTPUT kernel vmlinuz
+OUTPUT initrd initrd.img
+OUTPUT rootfs os.ext4
+
+# Boots the kernel and the initrd with the rootfs as their disk and runs in
+# it. A failing check fails the build and leaves no rootfs.
+CHECK test -b /dev/vda
