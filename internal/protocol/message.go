@@ -13,23 +13,24 @@ type Message interface {
 // envelope is a message on the wire, sent by the agent it names. Exactly
 // one other field is set, and that field names what the line holds.
 type envelope struct {
-	Agent  string
-	Run    *Run    `json:",omitempty"`
-	Import *Import `json:",omitempty"`
-	Copy   *Copy   `json:",omitempty"`
-	Disk   *Disk   `json:",omitempty"`
-	Rootfs *Rootfs `json:",omitempty"`
-	Fetch  *Fetch  `json:",omitempty"`
-	Prune  *Prune  `json:",omitempty"`
-	Entry  *Entry  `json:",omitempty"`
-	Piece  *Piece  `json:",omitempty"`
-	Length *Length `json:",omitempty"`
-	Send   *Send   `json:",omitempty"`
-	Sent   *Sent   `json:",omitempty"`
-	Output *Output `json:",omitempty"`
-	Done   *Done   `json:",omitempty"`
-	Exited *Exited `json:",omitempty"`
-	Failed *Failed `json:",omitempty"`
+	Agent    string
+	Run      *Run      `json:",omitempty"`
+	Import   *Import   `json:",omitempty"`
+	Copy     *Copy     `json:",omitempty"`
+	Disk     *Disk     `json:",omitempty"`
+	Rootfs   *Rootfs   `json:",omitempty"`
+	BootPart *BootPart `json:",omitempty"`
+	Fetch    *Fetch    `json:",omitempty"`
+	Prune    *Prune    `json:",omitempty"`
+	Entry    *Entry    `json:",omitempty"`
+	Piece    *Piece    `json:",omitempty"`
+	Length   *Length   `json:",omitempty"`
+	Send     *Send     `json:",omitempty"`
+	Sent     *Sent     `json:",omitempty"`
+	Output   *Output   `json:",omitempty"`
+	Done     *Done     `json:",omitempty"`
+	Exited   *Exited   `json:",omitempty"`
+	Failed   *Failed   `json:",omitempty"`
 }
 
 // open is the message the envelope holds, or nil when it holds none this
@@ -46,6 +47,8 @@ func (e envelope) open() Message {
 		return *e.Disk
 	case e.Rootfs != nil:
 		return *e.Rootfs
+	case e.BootPart != nil:
+		return *e.BootPart
 	case e.Fetch != nil:
 		return *e.Fetch
 	case e.Prune != nil:

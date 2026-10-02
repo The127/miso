@@ -15,7 +15,7 @@ const BuiltinTools = "miso tools"
 func withTools(stages []imagefile.Stage) []imagefile.Stage {
 	for _, stage := range stages {
 		for _, instruction := range stage.Instructions {
-			if output, isOutput := instruction.(imagefile.Output); isOutput && Known(output.Kind) {
+			if output, isOutput := instruction.(imagefile.Output); isOutput && NeedsTools(output.Kind) {
 				return append([]imagefile.Stage{builtinStage(output.Line)}, stages...)
 			}
 		}

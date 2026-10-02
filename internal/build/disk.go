@@ -11,8 +11,9 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-// outputRequest is what an output of a disk, an ISO or a rootfs asks for on the root
-// file system under it, with the tools taken from where their stage ends.
+// outputRequest is what an output asks for on the root file system under it.
+// A disk, an ISO or a rootfs takes the tools from where their stage ends, the
+// kernel and the initrd are taken from the image.
 func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
 	var refused error
 	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
@@ -30,6 +31,10 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		line, written := imagefile.Written(instruction)
 
 		return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
+	}
+
+	if part, isPart := bootParts[instruction.Kind]; isPart {
+		return protocol.BootPart{Key: step.Key, Layers: under.layers, Part: part}, nil
 	}
 
 	if instruction.Kind == plan.KindRootfs {

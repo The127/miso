@@ -1,0 +1,44 @@
+package build_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/The127/miso/internal/build"
+	"github.com/The127/miso/internal/protocol"
+)
+
+func TestAKernelOutputIsTheKernelOfTheLayersOfItsStageWithoutTools(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT kernel vmlinuz\n")
+	require.Len(t, source.Stages, 1)
+	image := source.Stages[0]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 4)
+	assert.Equal(t, protocol.BootPart{
+		Key:    image.Steps[1].Key,
+		Layers: []string{image.BaseKey, image.Steps[0].Key},
+		Part:   "kernel",
+	}, requests[len(requests)-2].Message)
+}
+
+func TestAnInitrdOutputIsTheInitrdOfTheLayersOfItsStage(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT initrd initrd.img\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	part, isPart := requests[len(requests)-2].Message.(protocol.BootPart)
+	require.True(t, isPart)
+	assert.Equal(t, "initrd", part.Part)
+}
