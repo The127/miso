@@ -34,6 +34,11 @@ func (u Unstarted) Disk(context.Context, protocol.Disk, io.Writer) error {
 	return u.why()
 }
 
+// Rootfs fails naming why the agent did not start.
+func (u Unstarted) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
+	return u.why()
+}
+
 // Fetch fails naming why the agent did not start.
 func (u Unstarted) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return u.why()

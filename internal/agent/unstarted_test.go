@@ -56,6 +56,17 @@ func TestADiskOnAnAgentThatDidNotStartFailsNamingWhy(t *testing.T) {
 	assert.EqualError(t, err, "agent did not start: mount cache disk miso-cache: no such device")
 }
 
+func TestARootfsOnAnAgentThatDidNotStartFailsNamingWhy(t *testing.T) {
+	// arrange
+	worker := agent.Unstarted{Err: errors.New("mount cache disk miso-cache: no such device")}
+
+	// act
+	err := worker.Rootfs(context.Background(), protocol.Rootfs{}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, "agent did not start: mount cache disk miso-cache: no such device")
+}
+
 func TestAFetchOnAnAgentThatDidNotStartFailsNamingWhy(t *testing.T) {
 	// arrange
 	worker := agent.Unstarted{Err: errors.New("mount cache disk miso-cache: no such device")}

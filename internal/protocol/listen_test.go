@@ -96,6 +96,8 @@ func (blocking) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer
 
 func (blocking) Disk(context.Context, protocol.Disk, io.Writer) error { return nil }
 
+func (blocking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error { return nil }
+
 func (blocking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error { return nil }
 
 func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {

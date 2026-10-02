@@ -14,6 +14,7 @@ type Runner interface {
 	Import(ctx context.Context, request Import, out io.Writer) error
 	Copy(ctx context.Context, request Copy, entries Entries, out io.Writer) error
 	Disk(ctx context.Context, request Disk, out io.Writer) error
+	Rootfs(ctx context.Context, request Rootfs, out io.Writer) error
 	Fetch(ctx context.Context, request Fetch, pieces Pieces, out io.Writer) error
 	Prune(ctx context.Context, request Prune, out io.Writer) error
 }
@@ -40,6 +41,8 @@ func (c *Conn) Serve(runner Runner) error {
 		return c.serveImport(runner, request)
 	case Prune:
 		return c.servePrune(runner, request)
+	case Rootfs:
+		return c.serveRootfs(runner, request)
 	case Run:
 		return c.serveRun(runner, request)
 	default:
@@ -91,6 +94,13 @@ func (c *Conn) servePrune(runner Runner, request Prune) error {
 	defer cancel()
 
 	return c.answer(runner.Prune(ctx, request, outputs{c}))
+}
+
+func (c *Conn) serveRootfs(runner Runner, request Rootfs) error {
+	ctx, cancel := c.watched()
+	defer cancel()
+
+	return c.answer(runner.Rootfs(ctx, request, outputs{c}))
 }
 
 func (c *Conn) serveRun(runner Runner, request Run) error {
