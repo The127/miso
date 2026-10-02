@@ -50,7 +50,7 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 		d.withoutKVM(why)
 	}
 
-	reach, err := reachFor(d.openVsock, machine.Microvm)
+	reach, err := reachFor(d.openVsock, boardOf(machine))
 	if err != nil {
 		return nil, err
 	}
