@@ -27,14 +27,9 @@ func network(machine Machine) []string {
 
 	ipv4, ipv6 := machine.Card.IPv4, machine.Card.IPv6
 
-	device := "virtio-net-pci"
-	if machine.Microvm {
-		device = "virtio-net-device"
-	}
-
 	return []string{
 		"-netdev", fmt.Sprintf("user,id=card,net=%s,host=%s,dns=%s,ipv6-net=%s,ipv6-host=%s,ipv6-dns=%s",
 			ipv4.Prefix, ipv4.Gateway, ipv4.Nameserver, ipv6.Prefix, ipv6.Gateway, ipv6.Nameserver),
-		"-device", device + ",netdev=card,mac=" + machine.Card.MAC,
+		"-device", boardOf(machine).device("virtio-net") + ",netdev=card,mac=" + machine.Card.MAC,
 	}
 }

@@ -62,20 +62,10 @@ func drives(machine Machine) ([]string, error) {
 
 		args = append(args,
 			"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,%s", escaped(disk.Path), disk.Format, id, access(disk)),
-			"-device", fmt.Sprintf("%s,drive=%s,serial=%s", blockDevice(machine), id, escaped(disk.Serial)))
+			"-device", fmt.Sprintf("%s,drive=%s,serial=%s", boardOf(machine).device("virtio-blk"), id, escaped(disk.Serial)))
 	}
 
 	return args, nil
-}
-
-// blockDevice is the virtio disk of the board: on a PCI bus, or on the bus a
-// microvm has instead.
-func blockDevice(machine Machine) string {
-	if machine.Microvm {
-		return "virtio-blk-device"
-	}
-
-	return "virtio-blk-pci"
 }
 
 // access names the cache mode of a writable disk, because the cache disk
