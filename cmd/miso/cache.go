@@ -34,8 +34,9 @@ func baseImages(cache string) (*download.Store, *baseimage.Cache) {
 }
 
 // cacheDiskSize is how large the cache disk may grow. The file is sparse,
-// it takes only what the layers on it take.
-const cacheDiskSize = 20 << 30
+// it takes only what the layers on it take. 20 GiB filled up under the KVM
+// tests and a few builds of different images.
+const cacheDiskSize = 50 << 30
 
 // lockedCache holds the cache disk in a directory for this build, and makes
 // the disk if it is not there yet.
