@@ -8,19 +8,20 @@ import (
 	"path/filepath"
 )
 
-// searchAlso is where mkfs lives when the PATH leaves it out, as a user's
-// PATH on Debian leaves out the sbin directories
+// searchAlso is where the tools of e2fsprogs live when the PATH leaves them
+// out, as a user's PATH on Debian leaves out the sbin directories
 var searchAlso = []string{"/usr/sbin", "/sbin"}
 
-// findMkfs finds mkfs.ext4 on the PATH, or where the PATH leaves it out.
-func findMkfs() (string, error) {
-	mkfs, err := exec.LookPath("mkfs.ext4")
+// findTool finds a tool of e2fsprogs on the PATH, or where the PATH leaves it
+// out.
+func findTool(name string) (string, error) {
+	tool, err := exec.LookPath(name)
 	if !errors.Is(err, exec.ErrNotFound) {
-		return mkfs, err
+		return tool, err
 	}
 
 	for _, dir := range searchAlso {
-		if found, errThere := exec.LookPath(filepath.Join(dir, "mkfs.ext4")); errThere == nil {
+		if found, errThere := exec.LookPath(filepath.Join(dir, name)); errThere == nil {
 			return found, nil
 		}
 	}
@@ -33,7 +34,13 @@ func format(mkfs, path string, size int64) error {
 	// a bare number would count blocks
 	kibibytes := fmt.Sprintf("%dk", size>>10)
 
-	said, err := exec.Command(mkfs, "-q", path, kibibytes).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
+	return runTool(mkfs, "-q", path, kibibytes)
+}
+
+// runTool runs a tool of e2fsprogs on a cache disk, and adds what it said to
+// its error.
+func runTool(tool string, args ...string) error {
+	said, err := exec.Command(tool, args...).CombinedOutput() //nolint:gosec // the path is where miso keeps its own cache
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(said))
 	}

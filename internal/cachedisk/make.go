@@ -25,7 +25,7 @@ func Make(path string, size int64) error {
 // makeDisk is Make without naming the disk in its errors.
 func makeDisk(path string, size int64) error {
 	// before anything is touched, a missing mkfs leaves all as it was
-	mkfs, err := findMkfs()
+	mkfs, err := findTool("mkfs.ext4")
 	if err != nil {
 		return err
 	}
