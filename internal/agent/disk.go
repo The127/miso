@@ -2,11 +2,9 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -61,85 +59,34 @@ ukify build \
 // Disk makes a bootable disk image of the image's layers with the tools of
 // another stage. A key whose layer is there already has its disk.
 func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) error {
-	there, at, err := a.found(request.Key, slices.Concat(request.Layers, request.Tools))
-	if err != nil || there {
-		return err
-	}
+	return a.madeByTools(request.Key, request.Layers, request.Tools, "disk", func(dir toolsDir) (toolsRun, error) {
+		// links in the image mean places in the image, never in the builder VM
+		imageFS := place.Open(dir.image.dir).FS()
 
-	scratch, err := a.layers.Scratch()
-	if err != nil {
-		return err
-	}
+		boot, err := prepareBoot(imageFS, dir.image.dir, dir.scratch, request)
+		if err != nil {
+			return nil, err
+		}
 
-	defer func() { _ = os.RemoveAll(scratch) }()
+		definitions, err := makeDefinitions(dir.scratch, request.Partitions)
+		if err != nil {
+			return nil, err
+		}
 
-	image, err := a.mountImage(scratch, request.Layers)
-	if err != nil {
-		return err
-	}
+		in := toolsInput{
+			output:      dir.output,
+			definitions: definitions,
+			partitions:  len(request.Partitions) > 0,
+			boot:        boot,
+			booting:     dir.booting,
+			// the ESP is whole once the UKI is in it, and no lower layer may
+			// change under a mounted overlay
+			below:    append([]string{boot.esp}, dir.image.below...),
+			elTorito: request.ElTorito,
+		}
 
-	// removing scratch must never reach into the image, so it goes first
-	defer image.unmount()
-
-	// links in the image mean places in the image, never in the builder VM
-	imageFS := place.Open(image.dir).FS()
-
-	boot, err := prepareBoot(imageFS, image.dir, scratch, request)
-	if err != nil {
-		return err
-	}
-
-	booting := filepath.Join(scratch, "booting")
-	if err := os.Mkdir(booting, 0o700); err != nil {
-		return err
-	}
-
-	work, err := a.layers.Begin(request.Key)
-	if err != nil {
-		return err
-	}
-
-	definitions, err := makeDefinitions(scratch, request.Partitions)
-	if err != nil {
-		return err
-	}
-
-	// the tools run as a RUN does, but nothing they write is kept
-	upper := filepath.Join(scratch, "tools")
-	if err := os.Mkdir(upper, 0o700); err != nil {
-		return err
-	}
-
-	in := toolsInput{
-		output:      work.Dir(),
-		definitions: definitions,
-		partitions:  len(request.Partitions) > 0,
-		boot:        boot,
-		booting:     booting,
-		// the ESP is whole once the UKI is in it, and no lower layer may
-		// change under a mounted overlay
-		below:    append([]string{boot.esp}, image.below...),
-		elTorito: request.ElTorito,
-	}
-
-	code := 0
-	err = a.overlaid(request.Tools, sandbox.Floor, nil, upper, func(root string) (bool, error) {
-		var err error
-		code, err = runTools(ctx, root, in, out)
-
-		return false, err
+		return func(root string) (int, error) { return runTools(ctx, root, in, out) }, nil
 	})
-	if err == nil && code != 0 {
-		err = fmt.Errorf("the tools failed making the disk: exit code %d", code)
-	}
-
-	if err != nil {
-		_ = work.Discard()
-
-		return err
-	}
-
-	return work.FinishAt(at)
 }
 
 // mountedImage is the image's layers mounted read-only at dir, and the
@@ -212,7 +159,12 @@ func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (i
 		return code, err
 	}
 
-	return makeDisk(ctx, root, in.booting, in.below, in.elTorito, out)
+	run := protocol.Run{Command: repart}
+	if in.elTorito {
+		run.Env = []string{"MISO_EL_TORITO=1"}
+	}
+
+	return overImage(ctx, root, in.booting, in.below, run, out)
 }
 
 // buildUKI has the tools in root build the UKI of the kernel of a version
@@ -237,10 +189,9 @@ func buildUKI(ctx context.Context, root, parts, esp, version string, out io.Writ
 	return sandbox.Run(ctx, root, protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + version}}, out)
 }
 
-// makeDisk has the tools in root make the disk of the layers below, top
-// first, which it mounts at booting, one that boots from optical drives too
-// when elTorito.
-func makeDisk(ctx context.Context, root, booting string, below []string, elTorito bool, out io.Writer) (int, error) {
+// overImage has the tools in root run a command that sees the layers below,
+// top first, which it mounts at booting, as /run/miso/image.
+func overImage(ctx context.Context, root, booting string, below []string, run protocol.Run, out io.Writer) (int, error) {
 	seen := filepath.Join(root, "run", "miso", "image")
 	if err := os.Mkdir(seen, 0o700); err != nil {
 		return 0, err
@@ -257,11 +208,6 @@ func makeDisk(ctx context.Context, root, booting string, below []string, elTorit
 	}
 
 	defer func() { _ = unix.Unmount(seen, unix.MNT_DETACH) }()
-
-	run := protocol.Run{Command: repart}
-	if elTorito {
-		run.Env = []string{"MISO_EL_TORITO=1"}
-	}
 
 	return sandbox.Run(ctx, root, run, out)
 }
