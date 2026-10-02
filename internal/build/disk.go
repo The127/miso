@@ -11,13 +11,13 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
-// diskRequest is what an output of a disk, an ISO or a rootfs asks for on the root
+// outputRequest is what an output of a disk, an ISO or a rootfs asks for on the root
 // file system under it, with the tools taken from where their stage ends.
-func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
+func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
 	var refused error
 	unknown, hasUnknown := unknownOption(instruction.Options)
 	switch {
-	case instruction.Kind != "disk" && instruction.Kind != "iso" && instruction.Kind != "rootfs":
+	case !plan.Known(instruction.Kind):
 		refused = ErrUnknownKind
 	case hasUnknown:
 		refused = fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
@@ -29,11 +29,11 @@ func diskRequest(step plan.Step, instruction imagefile.Output, under rootfs, too
 		return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
 	}
 
-	if instruction.Kind == "rootfs" {
+	if instruction.Kind == plan.KindRootfs {
 		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers}, nil
 	}
 
-	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == "iso", Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
+	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
 }
 
 // unknownOption is the first option in sorted order, so the same build file

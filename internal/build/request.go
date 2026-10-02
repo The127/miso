@@ -81,7 +81,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 			if output, isOutput := step.Instruction.(imagefile.Output); isOutput {
 				line, written := imagefile.Written(output)
-				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name, CD: output.Kind == "iso"}
+				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name, CD: output.Kind == plan.KindISO}
 				requests = append(requests, fetch)
 				fetched = len(requests) - 1
 			}
@@ -118,7 +118,7 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return diskRequest(step, instruction, under, ends[plan.BuiltinTools], inputs)
+		return outputRequest(step, instruction, under, ends[plan.BuiltinTools], inputs)
 	}
 
 	return nil, nil

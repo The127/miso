@@ -15,17 +15,13 @@ const BuiltinTools = "miso tools"
 func withTools(stages []imagefile.Stage) []imagefile.Stage {
 	for _, stage := range stages {
 		for _, instruction := range stage.Instructions {
-			if output, isOutput := instruction.(imagefile.Output); isOutput && makesDisk(output) {
+			if output, isOutput := instruction.(imagefile.Output); isOutput && Known(output.Kind) {
 				return append([]imagefile.Stage{builtinStage(output.Line)}, stages...)
 			}
 		}
 	}
 
 	return stages
-}
-
-func makesDisk(output imagefile.Output) bool {
-	return output.Kind == "disk" || output.Kind == "iso" || output.Kind == "rootfs"
 }
 
 // snapshot is the day of the Debian archive the tools come from. The tools
