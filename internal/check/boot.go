@@ -18,8 +18,14 @@ type Boot struct {
 	Driver    qemu.Driver
 	Namespace Namespace
 
+	// the firmware that boots the image from its disk, which a Kernel
+	// replaces
 	Firmware firmware.Firmware
 	Image    qemu.Disk
+
+	// a kernel and initrd that boot the image as the root of its disk,
+	// without a firmware
+	Kernel *qemu.Kernel
 
 	// holds what the firmware and the boot write, a boot's own
 	Dir     string
@@ -36,7 +42,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 		return nil, ErrNoNamespace
 	}
 
-	flash, err := b.flash()
+	method, err := b.method()
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +58,7 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
-	vm, onPort, err := b.start(ctx, flash, notices.Port())
+	vm, onPort, err := b.start(ctx, method, notices.Port())
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +83,14 @@ func (b Boot) Run(ctx context.Context, checks []string) ([]Result, error) {
 }
 
 // start is the VM the image boots in, told where to send its notices.
-func (b Boot) start(ctx context.Context, flash qemu.Firmware, notifyPort uint32) (vm *qemu.VM, onPort, err error) {
+func (b Boot) start(ctx context.Context, method qemu.Boot, notifyPort uint32) (vm *qemu.VM, onPort, err error) {
 	driver := b.Driver
 	driver.OpenVsock = b.Namespace.Device
 	// a VM on a port fails the boot, it is not only a notice to pass on
 	driver.WithoutVsock = func(why error) { onPort = why }
 
 	vm, err = driver.Start(ctx, qemu.Machine{
-		Boot:        flash,
+		Boot:        method,
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},
@@ -156,6 +162,16 @@ func (b Boot) runChecks(vm *qemu.VM, checks []string) ([]Result, error) {
 	}
 
 	return results, nil
+}
+
+// method is how the machine starts: the kernel when there is one, the
+// firmware otherwise.
+func (b Boot) method() (qemu.Boot, error) {
+	if b.Kernel != nil {
+		return *b.Kernel, nil
+	}
+
+	return b.flash()
 }
 
 // flash writes the firmware where QEMU reads it, the vars a copy of their

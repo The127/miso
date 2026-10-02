@@ -45,5 +45,5 @@ func NeedsTools(output imagefile.Output) bool {
 // NeverBooted is a kind of output that no check can run in. Unknown kinds
 // are not listed, they are refused when the requests are made.
 func NeverBooted(kind string) bool {
-	return slices.Contains([]string{KindRootfs, KindKernel, KindInitrd}, kind)
+	return slices.Contains([]string{KindKernel, KindInitrd}, kind)
 }

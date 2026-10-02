@@ -45,6 +45,22 @@ type Request struct {
 
 	// the fetched disk is an ISO, booted from a CD when checked
 	CD bool
+
+	// what a fetched rootfs is booted with when checked
+	Boot *BootFiles
+
+	// the checks of a later output boot with the fetched file, so it is
+	// fetched when no output directory is given too
+	Needed bool
+}
+
+// BootFiles are what a rootfs has to be booted with: the names of the files
+// that the kernel and the initrd outputs above it are fetched into, and the
+// kernel command line.
+type BootFiles struct {
+	Kernel  string
+	Initrd  string
+	Cmdline string
 }
 
 // Requests are what the agent is asked, in the order it is asked. A run
@@ -70,6 +86,13 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 		// the plan puts an OUTPUT before every CHECK of its stage
 		fetched := -1
 		var inputs diskInputs
+
+		// the outputs a rootfs is booted with, and the requests that fetch
+		// them. The plan puts both above a rootfs that has a CHECK. The command
+		// line is the one at the rootfs, lines after it do not count
+		var kernel, initrd, cmdline string
+		kernelFetch, initrdFetch := -1, -1
+		fetchedKind := ""
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
@@ -90,10 +113,25 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name, CD: output.Kind == plan.KindISO}
 				requests = append(requests, fetch)
 				fetched = len(requests) - 1
+				fetchedKind = output.Kind
+				cmdline = strings.Join(inputs.cmdline, " ")
+
+				switch output.Kind {
+				case plan.KindKernel:
+					kernel, kernelFetch = output.Name, fetched
+				case plan.KindInitrd:
+					initrd, initrdFetch = output.Name, fetched
+				}
 			}
 
 			if check, isCheck := step.Instruction.(imagefile.Check); isCheck {
 				requests[fetched].Checks = append(requests[fetched].Checks, check)
+
+				if fetchedKind == plan.KindRootfs {
+					requests[fetched].Boot = &BootFiles{Kernel: kernel, Initrd: initrd, Cmdline: cmdline}
+					requests[kernelFetch].Needed = true
+					requests[initrdFetch].Needed = true
+				}
 			}
 
 			roots[step.Key] = under.after(step)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/The127/miso/internal/build"
@@ -26,11 +27,6 @@ const bootPatience = 5 * time.Minute
 // console.
 func checker(ctx context.Context, blobs *download.Store, dir string, console io.Writer) builder.Check {
 	return func(disk string, request build.Request) error {
-		found, err := firmware.Ready(ctx, blobs)
-		if err != nil {
-			return err
-		}
-
 		namespace, err := vsockns.Open()
 		if errors.Is(err, vsockns.ErrNotPrivate) {
 			return fmt.Errorf("CHECK needs a vsock of its own: %w", err)
@@ -54,16 +50,32 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			commands = append(commands, c.Command)
 		}
 
-		results, err := check.Boot{
+		boot := check.Boot{
 			Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
 			Namespace: namespace,
-			Firmware:  found,
 			// what the boot writes must not reach the disk that is delivered
 			Image:    qemu.Disk{Path: disk, Format: "raw", Serial: "image", Access: qemu.Snapshot, CD: request.CD},
 			Dir:      scratch,
 			Console:  console,
 			Patience: bootPatience,
-		}.Run(ctx, commands)
+		}
+
+		if request.Boot != nil {
+			// the outputs of the kernel and the initrd are beside the rootfs
+			outputs := filepath.Dir(disk)
+			boot.Kernel = &qemu.Kernel{
+				Image:       filepath.Join(outputs, request.Boot.Kernel),
+				Initramfs:   filepath.Join(outputs, request.Boot.Initrd),
+				CommandLine: request.Boot.Cmdline,
+			}
+		} else {
+			boot.Firmware, err = firmware.Ready(ctx, blobs)
+			if err != nil {
+				return err
+			}
+		}
+
+		results, err := boot.Run(ctx, commands)
 		if err != nil {
 			return err
 		}

@@ -109,6 +109,20 @@ func TestOnlyCheckedGiveADiskWithChecksItsFile(t *testing.T) {
 	assert.Equal(t, []string{".os.raw.unchecked"}, names(t, dir))
 }
 
+func TestOnlyCheckedGiveAFileTheChecksOfALaterOutputNeedItsFile(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	outputs := builder.OnlyChecked(builder.OutputsIn(dir, nil))
+
+	// act
+	output, err := outputs(build.Request{Output: "vmlinuz", Needed: true})
+
+	// assert
+	require.NoError(t, err)
+	assert.NotNil(t, output)
+	assert.Equal(t, []string{"vmlinuz"}, names(t, dir))
+}
+
 func TestADiskWhoseFetchFailsIsNotBootedAndLeavesNoFile(t *testing.T) {
 	// arrange
 	dir := t.TempDir()

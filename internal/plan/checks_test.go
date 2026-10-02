@@ -44,9 +44,45 @@ func TestACheckAfterAnOutputThatIsNeverBootedIsRejected(t *testing.T) {
 	assert.ErrorContains(t, err, "kernel")
 }
 
-func TestACheckAfterARootfsIsRejected(t *testing.T) {
+func TestACheckAfterARootfsWithAKernelAndAnInitrdAboveItIsAccepted(t *testing.T) {
 	// arrange
-	stages := parse(t, "FROM debian:sid\nOUTPUT rootfs os.ext4\nCHECK true\n")
+	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.NoError(t, err)
+}
+
+func TestACheckAfterARootfsWithoutAKernelAboveItIsRejectedNamingTheKernel(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNoBootFiles)
+	assert.ErrorContains(t, err, "line 4")
+	assert.ErrorContains(t, err, "OUTPUT kernel")
+}
+
+func TestACheckAfterARootfsWithoutAnInitrdAboveItIsRejectedNamingTheInitrd(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nOUTPUT rootfs os.ext4\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNoBootFiles)
+	assert.ErrorContains(t, err, "OUTPUT initrd")
+}
+
+func TestAKernelBelowARootfsDoesNotBootIt(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nOUTPUT kernel vmlinuz\nCHECK true\n")
 
 	// act
 	err := plan.Validate(stages)
