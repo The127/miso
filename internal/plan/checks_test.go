@@ -46,7 +46,7 @@ func TestACheckAfterAnOutputThatIsNeverBootedIsRejected(t *testing.T) {
 
 func TestACheckAfterARootfsWithAKernelAndAnInitrdAboveItIsAccepted(t *testing.T) {
 	// arrange
-	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
+	stages := parse(t, "FROM debian:sid\nCMDLINE root=/dev/vda rw\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
 
 	// act
 	err := plan.Validate(stages)
@@ -89,4 +89,39 @@ func TestAKernelBelowARootfsDoesNotBootIt(t *testing.T) {
 
 	// assert
 	assert.ErrorIs(t, err, plan.ErrNotBooted)
+}
+
+func TestACheckAfterARootfsWithoutARootInTheCmdlineIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nCMDLINE rw console=ttyS0\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNoRoot)
+	assert.ErrorContains(t, err, "line 6")
+	assert.ErrorContains(t, err, "root=")
+}
+
+func TestARootfsTypeOnTheCmdlineIsNoRootForTheCheck(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nCMDLINE rootfstype=ext4 rw\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNoRoot)
+}
+
+func TestARootOnACmdlineBelowTheRootfsIsNoRootForTheCheck(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nOUTPUT initrd initrd.img\nOUTPUT rootfs os.ext4\nCMDLINE root=/dev/vda\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNoRoot)
 }
