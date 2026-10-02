@@ -45,3 +45,27 @@ func TestWithoutAKernelTheFirmwareIsWrittenAndBoots(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "code", string(code))
 }
+
+func TestAKernelBootsOnTheMicrovmBoard(t *testing.T) {
+	// arrange
+	kernel := qemu.Kernel{Image: "/out/vmlinuz", Initramfs: "/out/initrd.img", CommandLine: "root=/dev/vda rw"}
+	boot := check.Boot{Kernel: &kernel}
+
+	// act
+	machine := boot.Machine(kernel, 12345)
+
+	// assert
+	assert.True(t, machine.Microvm)
+	assert.Equal(t, kernel, machine.Boot)
+}
+
+func TestAFirmwareBootsOnTheDefaultBoard(t *testing.T) {
+	// arrange
+	boot := check.Boot{}
+
+	// act
+	machine := boot.Machine(qemu.Firmware{Code: "code.fd", Vars: "vars.fd"}, 12345)
+
+	// assert
+	assert.False(t, machine.Microvm)
+}

@@ -24,7 +24,7 @@ type Boot struct {
 	Image    qemu.Disk
 
 	// a kernel and initrd that boot the image as the root of its disk,
-	// without a firmware
+	// without a firmware, on the microvm board
 	Kernel *qemu.Kernel
 
 	// holds what the firmware and the boot write, a boot's own
@@ -89,17 +89,24 @@ func (b Boot) start(ctx context.Context, method qemu.Boot, notifyPort uint32) (v
 	// a VM on a port fails the boot, it is not only a notice to pass on
 	driver.WithoutVsock = func(why error) { onPort = why }
 
-	vm, err = driver.Start(ctx, qemu.Machine{
+	vm, err = driver.Start(ctx, b.machine(method, notifyPort))
+
+	return vm, onPort, err
+}
+
+// machine is the VM the image boots in. An image booted from a kernel and
+// its initrd is booted as Firecracker boots a microVM, on the microvm board.
+func (b Boot) machine(method qemu.Boot, notifyPort uint32) qemu.Machine {
+	return qemu.Machine{
 		Boot:        method,
+		Microvm:     b.Kernel != nil,
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},
 		Console:     b.Console,
 		Credentials: credentials(notifyPort),
 		Temp:        b.Dir,
-	})
-
-	return vm, onPort, err
+	}
 }
 
 // awaitBoot waits until the image has booted, the VM stopped, the caller
