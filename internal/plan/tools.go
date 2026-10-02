@@ -25,7 +25,7 @@ func withTools(stages []imagefile.Stage) []imagefile.Stage {
 }
 
 func makesDisk(output imagefile.Output) bool {
-	return output.Kind == "disk" || output.Kind == "iso"
+	return output.Kind == "disk" || output.Kind == "iso" || output.Kind == "rootfs"
 }
 
 // snapshot is the day of the Debian archive the tools come from. The tools

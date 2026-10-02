@@ -60,6 +60,24 @@ func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 	}, disksOf(requests)[0])
 }
 
+func TestARootfsOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT rootfs os.ext4\n")
+	tools, image := source.Stages[0], source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, requests, 5)
+	assert.Equal(t, protocol.Rootfs{
+		Key:    image.Steps[1].Key,
+		Layers: []string{image.BaseKey, image.Steps[0].Key},
+		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+	}, requests[len(requests)-2].Message)
+}
+
 func TestADiskIsFetchedIntoTheFileItsOutputNames(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\n")
