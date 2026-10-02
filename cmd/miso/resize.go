@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dustin/go-humanize"
 	"github.com/urfave/cli/v3"
 
 	"github.com/The127/miso/internal/cachedisk"
@@ -74,9 +73,4 @@ func runResize(_ context.Context, command *cli.Command) error {
 	_, err = fmt.Fprintf(command.Root().Writer, "the cache disk is now %s, it was %s\n", ibytes(size), ibytes(info.Size()))
 
 	return err
-}
-
-// ibytes is a size of a disk, which is never negative, as humanize writes it.
-func ibytes(size int64) string {
-	return humanize.IBytes(uint64(size)) //nolint:gosec // the size of a file or of a disk
 }

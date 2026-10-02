@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/urfave/cli/v3"
 
 	"github.com/The127/miso/internal/build"
@@ -111,7 +109,7 @@ func limits(command *cli.Command) (protocol.Prune, error) {
 	}
 
 	if command.IsSet("keep-storage") {
-		keep, err := storageLimit(command.String("keep-storage"))
+		keep, err := sizeOf("--keep-storage", command.String("keep-storage"))
 		if err != nil {
 			return protocol.Prune{}, err
 		}
@@ -128,27 +126,4 @@ func ageLimit(age time.Duration) (time.Duration, error) {
 	}
 
 	return age, nil
-}
-
-func storageLimit(text string) (int64, error) {
-	return sizeOf("--keep-storage", text)
-}
-
-// sizeOf is a size in bytes that the text of a flag says, like 10GiB.
-func sizeOf(flag, text string) (int64, error) {
-	size, err := humanize.ParseBytes(text)
-	if err != nil {
-		return 0, fmt.Errorf("%s %q is not a size like 10GiB: %w", flag, text, err)
-	}
-
-	// a wrapped size would be negative
-	if size > math.MaxInt64 {
-		return 0, fmt.Errorf("%s %q is too large", flag, text)
-	}
-
-	if size == 0 {
-		return 0, fmt.Errorf("%s %q must be above zero", flag, text)
-	}
-
-	return int64(size), nil
 }
