@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -24,9 +25,14 @@ func (a *Agent) Fetch(_ context.Context, request protocol.Fetch, pieces protocol
 		return fmt.Errorf("no disk is kept for %s", request.Key)
 	}
 
+	name := cmp.Or(request.File, outputFile)
+	if name == "." || name == ".." || name != filepath.Base(name) {
+		return fmt.Errorf("%q is no name of a file of %s", name, request.Key)
+	}
+
 	// the tools that wrote the disk run the build's code, so its name may be
 	// a link to anything in the builder, or a FIFO no one ever writes to
-	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), outputFile), os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
+	disk, err := os.OpenFile(filepath.Join(a.layers.Path(request.Key), name), os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return err
 	}

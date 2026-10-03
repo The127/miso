@@ -171,3 +171,54 @@ func TestAFetchOfAKeyWithoutALayerFailsNamingIt(t *testing.T) {
 	// assert
 	assert.EqualError(t, err, "no disk is kept for disk")
 }
+
+func TestAFetchOfANamedFileSendsThatFileOfTheKey(t *testing.T) {
+	// arrange
+	layers := keptDisk(t, []byte("the disk"))
+	require.NoError(t, os.WriteFile(filepath.Join(layers, "disk", "disk.root.raw"), []byte("the root"), 0o600))
+	worker := agent.New(layers, t.TempDir())
+	sent := &received{}
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk", File: "disk.root.raw"}, sent, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "the root", string(sent.disk))
+}
+
+func TestAFetchOfAFileNamedWithAPathFailsAndSendsNothing(t *testing.T) {
+	// arrange
+	layers := keptDisk(t, []byte("the disk"))
+	worker := agent.New(layers, t.TempDir())
+	sent := &received{}
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk", File: "../disk/disk.raw"}, sent, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, `"../disk/disk.raw" is no name of a file of disk`)
+	assert.Empty(t, sent.disk)
+}
+
+func TestAFetchOfTheParentDirectoryAsAFileFailsSayingItIsNoName(t *testing.T) {
+	// arrange
+	worker := agent.New(keptDisk(t, []byte("the disk")), t.TempDir())
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk", File: ".."}, &received{}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, `".." is no name of a file of disk`)
+}
+
+func TestAFetchOfTheDirectoryOfTheKeyAsAFileFailsSayingItIsNoName(t *testing.T) {
+	// arrange
+	worker := agent.New(keptDisk(t, []byte("the disk")), t.TempDir())
+
+	// act
+	err := worker.Fetch(context.Background(), protocol.Fetch{Key: "disk", File: "."}, &received{}, io.Discard)
+
+	// assert
+	assert.EqualError(t, err, `"." is no name of a file of disk`)
+}
