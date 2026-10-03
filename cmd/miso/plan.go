@@ -44,7 +44,7 @@ func listPlan(_ context.Context, command *cli.Command) error {
 		return err
 	}
 
-	return listing.Write(command.Root().Writer, planned)
+	return listing.Write(command.Root().Writer, planned, nil)
 }
 
 // planOf is the plan of the build file the command names, on the files of
