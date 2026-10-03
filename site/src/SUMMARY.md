@@ -5,3 +5,4 @@
 [The Imagefile](imagefile.md)
 [Command line](cli.md)
 [Outputs](outputs.md)
+[Checks](checks.md)
