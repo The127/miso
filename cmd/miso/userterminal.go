@@ -80,14 +80,7 @@ func followSize(fd int) (<-chan protocol.Resize, func()) {
 // told is the requests with the shell at their end told what the terminal
 // of the user is like.
 func told(requests []build.Request, like userTerminal) []build.Request {
-	told := make([]build.Request, len(requests))
-	copy(told, requests)
-
-	last := &told[len(told)-1]
-	if shell, isShell := last.Message.(protocol.Shell); isShell {
+	return onShell(requests, func(shell *protocol.Shell) {
 		shell.Term, shell.Rows, shell.Cols = like.kind, like.rows, like.cols
-		last.Message = shell
-	}
-
-	return told
+	})
 }

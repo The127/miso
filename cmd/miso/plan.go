@@ -78,7 +78,10 @@ func fileFlag() *cli.StringFlag {
 // directory given, or the current one. The file is Imagefile in it, unless
 // -f names another.
 func located(command *cli.Command) (dir string, file string) {
-	dir = command.Args().First()
+	if positional := positionalArgs(command); len(positional) > 0 {
+		dir = positional[0]
+	}
+
 	if dir == "" {
 		dir = "."
 	}

@@ -217,3 +217,49 @@ func TestAShellWithoutALineStandsAtTheEndOfTheBuild(t *testing.T) {
 	require.NoError(t, err, string(said))
 	assert.Contains(t, string(said), word+"\r\n")
 }
+
+func TestAShellWithWordsAfterTheDashesRunsThemAsACommand(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	word := rand.Text()
+	file := "FROM debian:13\nRUN echo " + word + " > /first\nRUN true\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(file), 0o600))
+	// a shell that gets this input would leave and print nothing
+	shell := exec.CommandContext(t.Context(), miso(t), "shell", "--before", "3", dir, "--", "cat", "/first") //nolint:gosec // the test names the binary
+	shell.Stdin = strings.NewReader("exit\n")
+
+	// act
+	said, err := shell.CombinedOutput()
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), word+"\r\n")
+}
+
+func TestAShellWithOnlyWordsAfterTheDashesStandsInTheCurrentDirectory(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	word := rand.Text()
+	file := "FROM debian:13\nRUN echo " + word + " > /first\nRUN true\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(file), 0o600))
+	shell := exec.CommandContext(t.Context(), miso(t), "shell", "--before", "3", "--", "cat", "/first") //nolint:gosec // the test names the binary
+	shell.Dir = dir
+	shell.Stdin = strings.NewReader("exit\n")
+
+	// act
+	said, err := shell.CombinedOutput()
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), word+"\r\n")
+}
+
+func TestADashesThatIsTheValueOfAFlagIsNoSeparator(t *testing.T) {
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "shell", "-f", "--", "--", "cat").CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.NotContains(t, string(said), "panic")
+	assert.Contains(t, string(said), "no such file")
+}

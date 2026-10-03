@@ -18,7 +18,8 @@ import (
 var shellCommand = &cli.Command{
 	Name:      "shell",
 	Usage:     "open a shell on the layers as they are before a step of the build file, or after the last",
-	ArgsUsage: "[context]",
+	ArgsUsage: "[context] [-- command...]",
+	Metadata:  map[string]any{takesWords: true},
 	Flags: []cli.Flag{
 		fileFlag(),
 		&cli.IntFlag{Name: "before", Usage: "the line of the build file whose step the shell stands before, the end of the build if not given"},
@@ -44,7 +45,9 @@ func runShell(ctx context.Context, command *cli.Command) error {
 
 			defer stop()
 
-			code, err := builder.Shell(ctx, vm, dial, agentName(), told(have.requests, like), contextfiles.Of(have.files), terminal, command.Root().Writer)
+			words := wordsAfterDashes(command)
+			requests := onShell(have.requests, func(shell *protocol.Shell) { shell.Command = words })
+			code, err := builder.Shell(ctx, vm, dial, agentName(), told(requests, like), contextfiles.Of(have.files), terminal, command.Root().Writer)
 			if err != nil {
 				return imagefile.InFile(have.file, err)
 			}
