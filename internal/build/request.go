@@ -61,8 +61,17 @@ type Request struct {
 // Requests are what the agent is asked, in the order it is asked. A run
 // with network gets the network the host set up for the builder.
 func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
+	requests, _, err := requestsUntil(planned, network, 0)
+
+	return requests, err
+}
+
+// requestsUntil are the requests of Requests, ending with a shell on the
+// layers below the step on the line before, if there is one. It says whether
+// it stopped there. Line 0 stops nowhere.
+func requestsUntil(planned plan.Plan, network protocol.Network, before int) ([]Request, bool, error) {
 	if len(planned.Downloads) > 0 {
-		return nil, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
+		return nil, false, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
 	}
 
 	var requests []Request
@@ -87,11 +96,15 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
+			if at, _ := imagefile.Written(step.Instruction); before != 0 && at == before {
+				return append(requests, shellOf(step, under, network)), true, nil
+			}
+
 			inputs.add(step.Instruction)
 
 			message, err := messageOf(step, under, ends, network, inputs)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 
 			if message != nil {
@@ -120,7 +133,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 		ends[stage.Name] = roots[stage.End]
 	}
 
-	return requests, nil
+	return requests, false, nil
 }
 
 // importOf brings the image a stage is on into the cache.
