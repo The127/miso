@@ -16,7 +16,12 @@ import (
 // kernel and the initrd are taken from the image, and an unpacked kernel
 // takes the tools too.
 func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
-	if refused := refusal(instruction); refused != nil {
+	refused := refusal(instruction)
+	if refused == nil && instruction.Kind == plan.KindUpdate {
+		refused = updateRefusal(instruction, inputs.partitions)
+	}
+
+	if refused != nil {
 		line, written := imagefile.Written(instruction)
 
 		return nil, &imagefile.Error{Line: line, Err: fmt.Errorf("%s: %w", written, refused)}
@@ -30,7 +35,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Name: instruction.Name, Wrap: wrapOf(instruction.Kind)}, nil
 	}
 
-	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
+	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Split: instruction.Kind == plan.KindUpdate, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
 }
 
 // refusal is why miso cannot make an output, or nil when it can.
@@ -91,6 +96,8 @@ func optionsOf(kind string) []string {
 	switch kind {
 	case plan.KindRootfs, plan.KindPortable, plan.KindSysext, plan.KindConfext:
 		return []string{formatOption}
+	case plan.KindUpdate:
+		return []string{versionOption}
 	case plan.KindKernel:
 		return []string{plan.OptionELF}
 	}

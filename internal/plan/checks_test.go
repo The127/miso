@@ -64,6 +64,17 @@ func TestACheckAfterAConfextIsRejected(t *testing.T) {
 	assert.ErrorIs(t, err, plan.ErrNotBooted)
 }
 
+func TestACheckAfterAnUpdateIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT update --version=1 app\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNotBooted)
+}
+
 func TestACheckAfterAnOutputThatIsNeverBootedIsRejected(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nCHECK true\n")

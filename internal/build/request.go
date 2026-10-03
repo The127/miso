@@ -96,9 +96,7 @@ func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
 			}
 
 			if output, isOutput := step.Instruction.(imagefile.Output); isOutput {
-				line, written := imagefile.Written(output)
-				fetch := Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key}, Output: output.Name, CD: output.Kind == plan.KindISO}
-				requests = append(requests, fetch)
+				requests = append(requests, fetchesOf(step, output, inputs.partitions)...)
 				fetched = len(requests) - 1
 				fetchedKind = output.Kind
 				boots.add(output, fetched, inputs.cmdline)

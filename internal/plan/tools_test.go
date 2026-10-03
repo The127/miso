@@ -63,6 +63,19 @@ func TestAConfextWithoutToolsGetsTheToolsStage(t *testing.T) {
 	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
 }
 
+func TestAnUpdateWithoutToolsGetsTheToolsStage(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT update --version=1 app\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
+}
+
 func TestADiskInALaterStageGetsTheToolsStageBeforeAllStages(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch AS base\nRUN true\nFROM base\nOUTPUT disk os.img\n")
