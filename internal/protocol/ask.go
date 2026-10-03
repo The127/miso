@@ -20,6 +20,11 @@ func (c *Conn) ask(request Message, files Files, disk DiskFile, out io.Writer) e
 		return err
 	}
 
+	return c.answered(request, files, disk, out)
+}
+
+// answered reads what the agent sends until it tells how the request ended.
+func (c *Conn) answered(request Message, files Files, disk DiskFile, out io.Writer) error {
 	for {
 		message, err := c.Receive()
 		if errors.Is(err, io.EOF) {
@@ -66,7 +71,7 @@ func (c *Conn) ask(request Message, files Files, disk DiskFile, out io.Writer) e
 		case Done:
 			return nil
 		case Exited:
-			return fmt.Errorf("%w: exit code %d", ErrCommandFailed, m.Code)
+			return exitError{code: m.Code}
 		case Failed:
 			return fmt.Errorf("%w: %s", ErrAgentFailed, m.Reason)
 		default:
@@ -79,3 +84,14 @@ func (c *Conn) ask(request Message, files Files, disk DiskFile, out io.Writer) e
 func noAnswer(message, request Message) error {
 	return fmt.Errorf("%T is %w to %T", message, ErrNoAnswer, request)
 }
+
+// exitError is a command that exited with a code.
+type exitError struct {
+	code int
+}
+
+func (e exitError) Error() string {
+	return fmt.Sprintf("%s: exit code %d", ErrCommandFailed, e.code)
+}
+
+func (e exitError) Unwrap() error { return ErrCommandFailed }
