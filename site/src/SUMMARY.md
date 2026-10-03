@@ -7,3 +7,4 @@
 [Outputs](outputs.md)
 [Checks](checks.md)
 [Base images](base-images.md)
+[Caching](caching.md)
