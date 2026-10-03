@@ -33,7 +33,7 @@ func TestWhatTheUserTypesInAShellReachesTheAgent(t *testing.T) {
 	}()
 
 	// act
-	_, err := host.AskShell(protocol.Shell{}, strings.NewReader("ls\n"), io.Discard)
+	_, err := host.AskShell(protocol.Shell{}, protocol.Terminal{In: strings.NewReader("ls\n")}, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestAShellThatExitsWithACodeAnswersTheCode(t *testing.T) {
 	host := protocol.New("miso 1.2.0", &replies, io.Discard)
 
 	// act
-	code, err := host.AskShell(protocol.Shell{}, strings.NewReader(""), io.Discard)
+	code, err := host.AskShell(protocol.Shell{}, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -66,9 +66,42 @@ func TestWhatAShellPrintsReachesTheWriter(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err := host.AskShell(protocol.Shell{}, strings.NewReader(""), &out)
+	_, err := host.AskShell(protocol.Shell{}, protocol.Terminal{In: strings.NewReader("")}, &out)
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "# ", out.String())
+}
+
+func TestTheSizeTheTerminalOfTheUserChangesToReachesTheAgent(t *testing.T) {
+	// arrange
+	replies, agentOut := io.Pipe()
+	requests, hostOut := io.Pipe()
+	host := protocol.New("miso 1.2.0", replies, hostOut)
+	agent := protocol.New("miso 1.2.0", requests, agentOut)
+	resized := make(chan protocol.Resize, 1)
+	resized <- protocol.Resize{Rows: 30, Cols: 100}
+	got := make(chan protocol.Message, 2)
+	go func() {
+		for range 2 {
+			message, err := agent.Receive()
+			if err != nil {
+				return
+			}
+
+			got <- message
+		}
+
+		_ = agent.Send(protocol.Done{})
+	}()
+	// a shell that never ends the input, as a terminal does not
+	in, _ := io.Pipe()
+
+	// act
+	_, err := host.AskShell(protocol.Shell{}, protocol.Terminal{In: in, Resized: resized}, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Shell{}, <-got)
+	assert.Equal(t, protocol.Resize{Rows: 30, Cols: 100}, <-got)
 }

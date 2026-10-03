@@ -14,10 +14,11 @@ import (
 var ErrNoShell = errors.New("the requests do not end with a shell")
 
 // Shell asks the agent every request but the last as Ask does, and the last,
-// a shell, with in as what the user types and out as what the terminal
-// shows. It answers the code the shell exited with. Reading in goes on until
-// it ends, so a caller that keeps running closes it.
-func Shell(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, in io.Reader, out io.Writer) (int, error) {
+// a shell, on the terminal of the user, whose In is what the user types and
+// whose out shows what the shell prints. It answers the code the shell exited
+// with. Reading In goes on until it ends, so a caller that keeps running
+// closes it.
+func Shell(ctx context.Context, vm VM, dial Dial, agent string, requests []build.Request, files Files, term protocol.Terminal, out io.Writer) (int, error) {
 	if len(requests) == 0 {
 		return 0, ErrNoShell
 	}
@@ -38,7 +39,7 @@ func Shell(ctx context.Context, vm VM, dial Dial, agent string, requests []build
 	}
 
 	closeOnCancel := context.AfterFunc(ctx, func() { _ = conn.Close() })
-	code, err := protocol.New(agent, conn, conn).AskShell(shell, in, out)
+	code, err := protocol.New(agent, conn, conn).AskShell(shell, term, out)
 	closeOnCancel()
 	_ = conn.Close()
 

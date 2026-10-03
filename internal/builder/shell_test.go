@@ -27,7 +27,7 @@ func TestAShellIsAskedAfterTheStepsBeforeIt(t *testing.T) {
 	)
 
 	// act
-	code, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, strings.NewReader(""), io.Discard)
+	code, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestWhatTheUserTypesInAShellComesBackAsItsOutput(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, strings.NewReader("ls\n"), &out)
+	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, protocol.Terminal{In: strings.NewReader("ls\n")}, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestRequestsWithoutAShellAtTheEndAreRefused(t *testing.T) {
 	requests := requested(protocol.Import{Key: "base", Digest: "sha256:aaaa"})
 
 	// act
-	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, strings.NewReader(""), io.Discard)
+	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
 
 	// assert
 	assert.ErrorIs(t, err, builder.ErrNoShell)
@@ -91,7 +91,7 @@ func TestACancelledShellEndsTheShell(t *testing.T) {
 	}()
 
 	// act
-	_, err := builder.Shell(ctx, running{}, dialling(agent), agentName, requests, nil, strings.NewReader(""), io.Discard)
+	_, err := builder.Shell(ctx, running{}, dialling(agent), agentName, requests, nil, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
 
 	// assert
 	require.ErrorIs(t, err, context.Canceled)
@@ -108,7 +108,7 @@ func TestAShellThatFailsNamesItsLineOfTheBuildFile(t *testing.T) {
 	requests := []build.Request{{Line: 3, Written: "shell before RUN make", Message: protocol.Shell{Layers: []string{"base"}}}}
 
 	// act
-	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, strings.NewReader(""), io.Discard)
+	_, err := builder.Shell(t.Context(), running{}, dialling(agent), agentName, requests, nil, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
 
 	// assert
 	assert.ErrorContains(t, err, "line 3: shell before RUN make")
