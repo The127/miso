@@ -72,6 +72,7 @@ func TestEachConnectionGetsItsAnswer(t *testing.T) {
 }
 
 type blocking struct {
+	protocol.Runner
 	release chan struct{}
 	second  chan struct{}
 }
@@ -87,20 +88,6 @@ func (b blocking) Run(_ context.Context, run protocol.Run, _ io.Writer) (int, er
 
 	return 0, nil
 }
-
-func (blocking) Import(context.Context, protocol.Import, io.Writer) error { return nil }
-
-func (blocking) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
-	return nil
-}
-
-func (blocking) Disk(context.Context, protocol.Disk, io.Writer) error { return nil }
-
-func (blocking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error { return nil }
-
-func (blocking) BootPart(context.Context, protocol.BootPart, io.Writer) error { return nil }
-
-func (blocking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error { return nil }
 
 func TestASecondConnectionIsAnsweredWhileTheFirstStillRuns(t *testing.T) {
 	// arrange
@@ -135,10 +122,4 @@ func TestAConnectionIsClosedOnceAnswered(t *testing.T) {
 	// assert
 	require.ErrorIs(t, err, errClosed)
 	assert.True(t, answered.closed)
-}
-
-func (blocking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (blocking) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
 }

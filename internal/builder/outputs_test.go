@@ -181,8 +181,6 @@ func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
 	assert.Empty(t, agent.asked)
 }
 
-func (s *sending) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
 func TestAnOutputInADirectoryMakesTheDirectory(t *testing.T) {
 	// arrange
 	dir := t.TempDir()

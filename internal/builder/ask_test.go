@@ -63,7 +63,7 @@ func TestACopyGetsItsFilesFromTheBuildContext(t *testing.T) {
 
 func TestWhatTheAgentWritesReachesTheOutput(t *testing.T) {
 	// arrange
-	dial := dialling(saying{"unpacking\n"})
+	dial := dialling(saying{words: "unpacking\n"})
 	requests := requested(
 		protocol.Import{Key: "base", Digest: "sha256:aaaa"},
 		protocol.Run{Key: "step", Layers: []string{"base"}, Command: "true"},
@@ -246,7 +246,7 @@ func TestAFailedStepIsNamedAfterItsLineOfTheBuildFile(t *testing.T) {
 
 func TestAnAgentThatFailsFailsTheBuildWithoutWaitingForTheVM(t *testing.T) {
 	// arrange
-	dial := dialling(failing{errors.New("no space left on device")})
+	dial := dialling(failing{err: errors.New("no space left on device")})
 	requests := oneImport()
 	start := time.Now()
 
@@ -435,6 +435,7 @@ func messagesOf(requests []build.Request) []protocol.Message {
 
 // recording is an agent whose work succeeds and who notes what it was asked.
 type recording struct {
+	protocol.Runner
 	mu    sync.Mutex
 	asked []protocol.Message
 }
@@ -491,6 +492,7 @@ func (r *recording) note(request protocol.Message) {
 // saying is an agent whose work succeeds and writes the same words each
 // time.
 type saying struct {
+	protocol.Runner
 	words string
 }
 
@@ -538,6 +540,7 @@ func (s saying) Copy(_ context.Context, _ protocol.Copy, _ protocol.Entries, out
 
 // exiting is an agent whose commands exit with a code.
 type exiting struct {
+	protocol.Runner
 	code int
 }
 
@@ -545,32 +548,9 @@ func (e exiting) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	return e.code, nil
 }
 
-func (e exiting) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (e exiting) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (e exiting) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (e exiting) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (e exiting) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
-}
-
-func (e exiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
-	return nil
-}
-
 // failing is an agent that fails at its own work.
 type failing struct {
+	protocol.Runner
 	err error
 }
 
@@ -604,6 +584,7 @@ func (f failing) Copy(context.Context, protocol.Copy, protocol.Entries, io.Write
 
 // waiting is an agent whose run lasts until it is cancelled.
 type waiting struct {
+	protocol.Runner
 	started   chan struct{}
 	cancelled chan struct{}
 }
@@ -614,30 +595,6 @@ func (w waiting) Run(ctx context.Context, _ protocol.Run, _ io.Writer) (int, err
 	close(w.cancelled)
 
 	return 0, ctx.Err()
-}
-
-func (w waiting) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (w waiting) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (w waiting) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (w waiting) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (w waiting) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
-}
-
-func (w waiting) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
-	return nil
 }
 
 // receiving is an agent that reads the files of a copy and keeps their
@@ -668,23 +625,9 @@ func (r *receiving) Copy(_ context.Context, _ protocol.Copy, entries protocol.En
 	}
 }
 
-func (r *recording) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (s saying) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (e exiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (f failing) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (w waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
 func (r *recording) Shell(_ context.Context, request protocol.Shell, _ protocol.Terminal, _ io.Writer) (int, error) {
 	r.note(request)
 
-	return 0, nil
-}
-
-func (s saying) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, nil
 }
 
@@ -694,10 +637,6 @@ func (w waiting) Shell(ctx context.Context, _ protocol.Shell, _ protocol.Termina
 	close(w.cancelled)
 
 	return 0, ctx.Err()
-}
-
-func (exiting) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
 }
 
 func (f failing) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {

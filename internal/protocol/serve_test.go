@@ -304,6 +304,7 @@ func TestAMessageThatIsNoRequestIsRefused(t *testing.T) {
 }
 
 type watched struct {
+	protocol.Runner
 	ran bool
 }
 
@@ -311,30 +312,6 @@ func (w *watched) Run(context.Context, protocol.Run, io.Writer) (int, error) {
 	w.ran = true
 
 	return 0, nil
-}
-
-func (w *watched) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (w *watched) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (w *watched) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (w *watched) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (w *watched) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
-}
-
-func (w *watched) Copy(context.Context, protocol.Copy, protocol.Entries, io.Writer) error {
-	return nil
 }
 
 func TestARequestFromAnotherAgentIsRefusedBeforeItRuns(t *testing.T) {
@@ -356,6 +333,7 @@ func TestARequestFromAnotherAgentIsRefusedBeforeItRuns(t *testing.T) {
 }
 
 type waiting struct {
+	protocol.Runner
 	cancelled bool
 }
 
@@ -492,32 +470,9 @@ func TestACopyWhoseLayerIsCachedIsDoneWithoutAskingForEntries(t *testing.T) {
 // reading is an agent that reads every entry of a copy and keeps them with
 // their content.
 type reading struct {
+	protocol.Runner
 	entries  []protocol.Entry
 	contents []string
-}
-
-func (r *reading) Run(context.Context, protocol.Run, io.Writer) (int, error) {
-	return 0, nil
-}
-
-func (r *reading) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (r *reading) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (r *reading) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (r *reading) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (r *reading) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
 }
 
 func (r *reading) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
@@ -569,31 +524,8 @@ func TestACopyAsksForItsEntriesAndReadsThemUntilSent(t *testing.T) {
 
 // breaking is an agent that fails after the first entry of a copy.
 type breaking struct {
+	protocol.Runner
 	err error
-}
-
-func (b breaking) Run(context.Context, protocol.Run, io.Writer) (int, error) {
-	return 0, nil
-}
-
-func (b breaking) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (b breaking) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (b breaking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (b breaking) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (b breaking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
 }
 
 func (b breaking) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
@@ -649,31 +581,8 @@ func (e *ended) Read(p []byte) (int, error) {
 // checking is an agent that reads every entry of a copy and then finds
 // them wrong.
 type checking struct {
+	protocol.Runner
 	err error
-}
-
-func (c checking) Run(context.Context, protocol.Run, io.Writer) (int, error) {
-	return 0, nil
-}
-
-func (c checking) Import(context.Context, protocol.Import, io.Writer) error {
-	return nil
-}
-
-func (c checking) Disk(context.Context, protocol.Disk, io.Writer) error {
-	return nil
-}
-
-func (c checking) Rootfs(context.Context, protocol.Rootfs, io.Writer) error {
-	return nil
-}
-
-func (c checking) BootPart(context.Context, protocol.BootPart, io.Writer) error {
-	return nil
-}
-
-func (c checking) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
-	return nil
 }
 
 func (c checking) Copy(_ context.Context, _ protocol.Copy, entries protocol.Entries, _ io.Writer) error {
@@ -744,24 +653,10 @@ func TestAHostGoneBeforeAllEntriesAreSentFailsTheCopy(t *testing.T) {
 	assert.Equal(t, protocol.Failed{Reason: "host gone before all entries were sent: unexpected EOF"}, failed)
 }
 
-func (w *watched) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (w *waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (r *reading) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (b breaking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
-func (c checking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
-
 func (r runner) Shell(_ context.Context, _ protocol.Shell, term protocol.Terminal, out io.Writer) (int, error) {
 	_, err := io.Copy(out, term.In)
 
 	return r.code, err
-}
-
-func (w *watched) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
 }
 
 func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ protocol.Terminal, _ io.Writer) (int, error) {
@@ -773,16 +668,4 @@ func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ protocol.Termin
 	case <-time.After(5 * time.Second):
 		return 0, errors.New("never cancelled")
 	}
-}
-
-func (r *reading) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
-}
-
-func (b breaking) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
-}
-
-func (c checking) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
-	return 0, nil
 }
