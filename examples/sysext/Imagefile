@@ -1,0 +1,27 @@
+# A system extension: files for /usr and /opt, in a disk image of one root
+# partition. It does not boot. The stage holds only what the extension adds,
+# so it starts from scratch and copies one program in.
+#
+#   miso build -o out examples/sysext
+#
+# leaves out/hello.raw. On a machine with systemd:
+#
+#   cp out/hello.raw /var/lib/extensions/
+#   systemd-sysext merge
+#   hello
+#
+# The release file is named after the output file without .raw. ID=_any lets
+# the extension merge on any OS, a real one names the OS it was made for.
+#
+# --format=erofs after sysext makes an erofs image.
+
+FROM debian:sid AS program
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends busybox-static
+
+FROM scratch
+
+COPY --from=program /bin/busybox /usr/bin/hello
+COPY extension-release.hello /usr/lib/extension-release.d/extension-release.hello
+
+OUTPUT sysext hello.raw
