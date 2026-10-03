@@ -32,10 +32,11 @@ the default `GITHUB_TOKEN` cannot do. So the workflow uses a GitHub App:
 2. Add its ID as the repository variable `RELEASE_APP_ID`.
 3. Add its private key as the repository secret `RELEASE_APP_PRIVATE_KEY`.
 
-## The first release
+## Forcing a version
 
-`release-please-config.json` sets `release-as` to `1.0.0-rc.1`. Once that
-release is out, remove the line so that later versions follow the commits.
+To release a version the commits would not give, add `"release-as"` with
+that version to `release-please-config.json`. Remove it again once that
+release is out, or the same version is proposed every time.
 
 ## Checking the configuration
 
