@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-rc.2](https://github.com/The127/miso/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-10-03)
+
+
+### Features
+
+* sign release checksums with cosign ([d3b9187](https://github.com/The127/miso/commit/d3b9187818c4d75ff00c378b977fc59689ff8e2f))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0-rc.2 ([2c0a0fd](https://github.com/The127/miso/commit/2c0a0fdf7e9d74228b5bd47ea62498447439e8e5))
+
 ## 1.0.0-rc.1 (2026-10-03)
 
 
