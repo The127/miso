@@ -12,6 +12,9 @@ import (
 	"github.com/The127/miso/internal/protocol"
 )
 
+// ukiFile is the name the agent keeps the UKI of a split disk under.
+const ukiFile = "uki.efi"
+
 // splitNameSetting names the file a partition is written to on its own.
 const splitNameSetting = "SplitName"
 
@@ -31,8 +34,8 @@ func fetchesOf(step plan.Step, output imagefile.Output, partitions []protocol.Pa
 }
 
 // updateFetches are the fetches of the files an update output ships: one for
-// each partition that names its split file, written into the directory the
-// output names as the name and the version say.
+// each partition that names its split file and one for the UKI, written
+// into the directory the output names as the name and the version say.
 func updateFetches(step plan.Step, output imagefile.Output, partitions []protocol.Partition) []Request {
 	line, written := imagefile.Written(output)
 
@@ -47,7 +50,9 @@ func updateFetches(step plan.Step, output imagefile.Output, partitions []protoco
 		fetches = append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: "disk." + name + ".raw"}, Output: file})
 	}
 
-	return fetches
+	uki := path.Join(output.Name, "uki_"+output.Options[versionOption]+".efi")
+
+	return append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: ukiFile}, Output: uki})
 }
 
 // splitNameOf is the name a partition is split under.

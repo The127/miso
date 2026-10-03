@@ -36,9 +36,24 @@ func TestAnUpdateOutputFetchesTheFileOfEachPartitionWithASplitNameIntoItsDirecto
 
 	// assert
 	require.NoError(t, err)
-	fetch := requests[len(requests)-1]
+	fetch := requests[len(requests)-2]
 	assert.Equal(t, protocol.Fetch{Key: image.Steps[len(image.Steps)-1].Key, File: "disk.root.raw"}, fetch.Message)
 	assert.Equal(t, "updates/root_1.2.raw", fetch.Output)
+}
+
+func TestAnUpdateOutputFetchesTheUKIAfterThePartitionsWithTheVersionInItsName(t *testing.T) {
+	// arrange
+	source := planned(t, updateSource)
+	image := source.Stages[1]
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	fetch := requests[len(requests)-1]
+	assert.Equal(t, protocol.Fetch{Key: image.Steps[len(image.Steps)-1].Key, File: "uki.efi"}, fetch.Message)
+	assert.Equal(t, "updates/uki_1.2.efi", fetch.Output)
 }
 
 func TestAnUpdateOutputWithASplitNameOfOnlyADashFailsNamingIt(t *testing.T) {
