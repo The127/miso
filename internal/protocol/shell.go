@@ -11,6 +11,11 @@ type Shell struct {
 
 	// nil for a shell without network
 	Network *Network
+
+	// the terminal type and size of the user's terminal, left out when the
+	// user has none
+	Term       string `json:",omitempty"`
+	Rows, Cols uint16 `json:",omitempty"`
 }
 
 func (s Shell) into(e *envelope) { e.Shell = &s }

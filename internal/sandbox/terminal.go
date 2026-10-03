@@ -4,6 +4,9 @@ import (
 	"context"
 	"io"
 	"os/exec"
+	"slices"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -19,6 +22,13 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in i
 
 	defer func() { _ = master.Close() }()
 
+	if shell.Rows != 0 || shell.Cols != 0 {
+		size := &unix.Winsize{Row: shell.Rows, Col: shell.Cols}
+		if err := unix.IoctlSetWinsize(int(master.Fd()), unix.TIOCSWINSZ, size); err != nil {
+			return 0, err
+		}
+	}
+
 	go func() { _, _ = io.Copy(master, in) }()
 
 	printed := make(chan struct{})
@@ -29,7 +39,7 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in i
 		_, _ = io.Copy(out, master)
 	}()
 
-	code, err := start(ctx, root, []string{"-i"}, shell.Env, shell.Network, func(cmd *exec.Cmd) {
+	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, func(cmd *exec.Cmd) {
 		cmd.Stdin = slave
 		cmd.Stdout = slave
 		cmd.Stderr = slave
@@ -40,4 +50,14 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in i
 	<-printed
 
 	return code, err
+}
+
+// envOf is the environment of the step and the terminal type of the user,
+// which wins, because the user is the one at the terminal.
+func envOf(shell protocol.Shell) []string {
+	if shell.Term == "" {
+		return shell.Env
+	}
+
+	return append(slices.Clone(shell.Env), "TERM="+shell.Term)
 }

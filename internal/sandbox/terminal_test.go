@@ -30,3 +30,34 @@ func TestAShellRunsOnATerminal(t *testing.T) {
 	assert.Equal(t, 0, code)
 	assert.Contains(t, out.String(), "terminal\r\n")
 }
+
+func TestAShellHasTheSizeAndTypeOfTheTerminalOfTheUser(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Term: "xterm-256color", Rows: 24, Cols: 80}
+	in := strings.NewReader("stty size\necho $TERM\nexit\n")
+	var out bytes.Buffer
+
+	// act
+	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, in, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "24 80\r\n")
+	assert.Contains(t, out.String(), "xterm-256color\r\n")
+}
+
+func TestTheTypeOfTheTerminalOfTheUserBeatsOneOfTheBuildFile(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Env: []string{"TERM=dumb"}, Term: "xterm-256color"}
+	in := strings.NewReader("echo $TERM\nexit\n")
+	var out bytes.Buffer
+
+	// act
+	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, in, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "xterm-256color\r\n")
+}
