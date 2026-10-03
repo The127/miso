@@ -141,3 +141,4 @@ CLAUDE.local.md
 
 # goreleaser output
 /dist/
+/site/book/

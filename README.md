@@ -45,6 +45,8 @@ Required tooling:
   `.golangci.yml`.
 - [bats](https://bats-core.readthedocs.io/): tests of the built `miso`
   from the outside, run by `just test-cli`.
+- [mdBook](https://rust-lang.github.io/mdBook/): builds the documentation
+  site in `site/`, run by `just docs`.
 - [just](https://just.systems/): task runner. `just` lists the available
   recipes, `just ci` runs everything that must pass.
 - [lefthook](https://lefthook.dev/): git hooks (lint, prose, doc comment

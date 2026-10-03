@@ -23,6 +23,10 @@ jobs:
         with:
           go-version-file: go.mod
       - uses: extractions/setup-just@v4
+      # just docs builds the documentation site
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook
       # install only, `just lint` runs it so that ci and the hooks agree
       - uses: golangci/golangci-lint-action@v9
         with:

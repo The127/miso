@@ -60,6 +60,10 @@ doccheck:
 prose:
     bash hack/check-prose.sh
 
+# build the documentation site
+docs:
+    mdbook build site
+
 # validate the goreleaser config
 release-check:
     go run github.com/goreleaser/goreleaser/v2@latest check
@@ -80,4 +84,4 @@ hooks:
     lefthook install
 
 # everything that must pass before a push
-ci: lint prose doccheck arch build cover test-cli vuln
+ci: lint prose doccheck arch docs build cover test-cli vuln

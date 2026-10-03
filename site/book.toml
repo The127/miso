@@ -1,0 +1,8 @@
+[book]
+title = "miso"
+description = "Dockerfile-style builds for systemd-based operating systems"
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/The127/miso"
