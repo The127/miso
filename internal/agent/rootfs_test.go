@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -229,4 +230,41 @@ cat "$definitions"/*.conf > "$last"`
 	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, "[Partition]\nType=root\nFormat=erofs\nCopyFiles=/\nMinimize=guess\n", string(written))
+}
+
+func TestAPortableRootfsWithoutAnOsReleaseFailsSayingSoAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Portable: true}
+	var out strings.Builder
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, &out)
+
+	// assert
+	assert.Error(t, err)
+	assert.Contains(t, out.String(), "os-release")
+	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
+}
+
+func TestAPortableRootfsWhoseOsReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release && ln -s /not/in/the/tools /etc/os-release"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Portable: true}
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
 }

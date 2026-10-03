@@ -24,6 +24,20 @@ mkfs.ext4 -q -F -N "$((entries + entries / 4 + 1024))" -d /run/miso/image ` + ou
 // itself.
 const mkfsErofs = `mkfs.erofs ` + outputPath + ` /run/miso/image`
 
+// requiresOsRelease refuses an image portablectl would refuse to attach. A
+// link in the image may point at a place of the tools, so a link counts as
+// there, even a dangling one.
+const requiresOsRelease = `for file in usr/lib/os-release etc/os-release; do
+	if [ -e "/run/miso/image/$file" ] || [ -L "/run/miso/image/$file" ]; then
+		found=1
+	fi
+done
+if [ -z "$found" ]; then
+	echo "miso: a portable image needs /usr/lib/os-release or /etc/os-release" >&2
+	exit 1
+fi
+`
+
 // makers are the scripts that make the file systems a rootfs can be.
 var makers = map[string]string{
 	protocol.FormatExt4:  mkfsExt4,
@@ -51,7 +65,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 				return nil, err
 			}
 
-			command = repart
+			command = requiresOsRelease + repart
 		}
 
 		return func(root string) (int, error) {
