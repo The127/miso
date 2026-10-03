@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-rc.3](https://github.com/The127/miso/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-10-03)
+
+
+### Bug Fixes
+
+* pin cosign-installer to an existing version ([c47a4c2](https://github.com/The127/miso/commit/c47a4c2ec1a7097c99c82a081a2e1f6849d2bf78))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0-rc.3 ([89fc663](https://github.com/The127/miso/commit/89fc663c713d0372e3100f52f2af8899c369f6c0))
+
 ## [1.0.0-rc.2](https://github.com/The127/miso/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-10-03)
 
 
