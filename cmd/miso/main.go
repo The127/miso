@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -21,10 +22,19 @@ func main() {
 	miso := &cli.Command{
 		Name:     "miso",
 		Usage:    "build systemd-based operating systems from a build file",
-		Commands: []*cli.Command{planCommand, buildCommand, pruneCommand, resizeCommand, versionCommand, agentCommand},
+		Commands: []*cli.Command{planCommand, buildCommand, shellCommand, pruneCommand, resizeCommand, versionCommand, agentCommand},
 	}
 
 	if err := miso.Run(context.Background(), os.Args); err != nil {
+		// a shell that ended with a code, which is no error to tell about
+		if exit, isExit := errors.AsType[cli.ExitCoder](err); isExit {
+			if err.Error() != "" {
+				_, _ = fmt.Fprintln(os.Stderr, "miso:", err)
+			}
+
+			os.Exit(exit.ExitCode())
+		}
+
 		_, _ = fmt.Fprintln(os.Stderr, "miso:", err)
 		os.Exit(1)
 	}
