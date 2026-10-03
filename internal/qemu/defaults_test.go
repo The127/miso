@@ -1,6 +1,7 @@
 package qemu_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,6 +46,18 @@ func TestAMachineIsTheSameBoardOnEveryHost(t *testing.T) {
 	assert.Equal(t, "q35", valueOf(t, args, "-machine"))
 }
 
+func TestAMicrovmHasNoLegacyInterruptController(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, strings.Split(valueOf(t, args, "-machine"), ","), "pic=off")
+}
+
 func TestAMicrovmIsTheMicrovmBoardWithACPIOn(t *testing.T) {
 	// arrange
 	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"}}
@@ -54,5 +67,5 @@ func TestAMicrovmIsTheMicrovmBoardWithACPIOn(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	assert.Equal(t, "microvm,acpi=on", valueOf(t, args, "-machine"))
+	assert.Contains(t, strings.Split(valueOf(t, args, "-machine"), ","), "acpi=on")
 }

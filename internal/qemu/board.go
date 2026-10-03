@@ -19,8 +19,11 @@ var (
 	q35 = board{name: "q35", bus: "-pci", firmware: true}
 
 	// microvm has no PCI bus, so its devices and its power off go through
-	// ACPI. Whatever the host's QEMU defaults to, ACPI is on.
-	microvm = board{name: "microvm,acpi=on", bus: "-device"}
+	// ACPI. Whatever the host's QEMU defaults to, ACPI is on. Linux boots it
+	// with null_legacy_pic, so the i8259 stays at QEMU's reset state, vector 0
+	// and unmasked. A timer interrupt pending at the first sti then dies as a
+	// divide error. The PIC is always off, because the race hits only some boots.
+	microvm = board{name: "microvm,acpi=on,pic=off", bus: "-device"}
 )
 
 // boardOf is the board the machine runs on.
