@@ -40,11 +40,11 @@ type echoing struct {
 	*recording
 }
 
-func (e echoing) Shell(_ context.Context, request protocol.Shell, in io.Reader, out io.Writer) (int, error) {
+func (e echoing) Shell(_ context.Context, request protocol.Shell, term protocol.Terminal, out io.Writer) (int, error) {
 	e.note(request)
 
 	typed := make([]byte, len("ls\n"))
-	if _, err := io.ReadFull(in, typed); err != nil {
+	if _, err := io.ReadFull(term.In, typed); err != nil {
 		return 0, err
 	}
 

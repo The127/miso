@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 	"slices"
 
@@ -12,9 +13,10 @@ import (
 )
 
 // Shell runs an interactive shell in a root on a terminal of its own, which
-// reads in and writes out, and answers its exit code. Reading in goes on
-// until it ends, so the caller closes it.
-func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in io.Reader, out io.Writer) (int, error) {
+// reads in and writes out, follows the sizes the user's terminal changes to,
+// and answers its exit code. Reading in goes on until it ends, so the
+// caller closes it.
+func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, term protocol.Terminal, out io.Writer) (int, error) {
 	master, slave, err := openPty(scratch)
 	if err != nil {
 		return 0, err
@@ -23,13 +25,12 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in i
 	defer func() { _ = master.Close() }()
 
 	if shell.Rows != 0 || shell.Cols != 0 {
-		size := &unix.Winsize{Row: shell.Rows, Col: shell.Cols}
-		if err := unix.IoctlSetWinsize(int(master.Fd()), unix.TIOCSWINSZ, size); err != nil {
+		if err := resize(master, shell.Rows, shell.Cols); err != nil {
 			return 0, err
 		}
 	}
 
-	go func() { _, _ = io.Copy(master, in) }()
+	go func() { _, _ = io.Copy(master, term.In) }()
 
 	printed := make(chan struct{})
 	go func() {
@@ -37,6 +38,18 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, in i
 
 		// ends with EIO once no shell holds the terminal any more
 		_, _ = io.Copy(out, master)
+	}()
+
+	go func() {
+		for {
+			select {
+			case size := <-term.Resized:
+				// a terminal that is gone has no size to keep
+				_ = resize(master, size.Rows, size.Cols)
+			case <-printed:
+				return
+			}
+		}
 	}()
 
 	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, func(cmd *exec.Cmd) {
@@ -60,4 +73,9 @@ func envOf(shell protocol.Shell) []string {
 	}
 
 	return append(slices.Clone(shell.Env), "TERM="+shell.Term)
+}
+
+// resize sets the size of the terminal the master belongs to.
+func resize(master *os.File, rows, cols uint16) error {
+	return unix.IoctlSetWinsize(int(master.Fd()), unix.TIOCSWINSZ, &unix.Winsize{Row: rows, Col: cols})
 }

@@ -23,7 +23,7 @@ func TestAShellKeepsNothingItWrites(t *testing.T) {
 	in := strings.NewReader("echo hi > /x\nexit\n")
 
 	// act
-	code, err := worker.Shell(context.Background(), shell, in, &bytes.Buffer{})
+	code, err := worker.Shell(context.Background(), shell, protocol.Terminal{In: in}, &bytes.Buffer{})
 
 	// assert
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestAShellSeesTheEnvironmentOfItsStep(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err := worker.Shell(context.Background(), shell, in, &out)
+	_, err := worker.Shell(context.Background(), shell, protocol.Terminal{In: in}, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestAShellAnswersItsExitCode(t *testing.T) {
 	in := strings.NewReader("exit 3\n")
 
 	// act
-	code, err := worker.Shell(context.Background(), shell, in, &bytes.Buffer{})
+	code, err := worker.Shell(context.Background(), shell, protocol.Terminal{In: in}, &bytes.Buffer{})
 
 	// assert
 	require.NoError(t, err)

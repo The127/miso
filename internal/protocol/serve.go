@@ -18,7 +18,7 @@ type Runner interface {
 	BootPart(ctx context.Context, request BootPart, out io.Writer) error
 	Fetch(ctx context.Context, request Fetch, pieces Pieces, out io.Writer) error
 	Prune(ctx context.Context, request Prune, out io.Writer) error
-	Shell(ctx context.Context, request Shell, in io.Reader, out io.Writer) (code int, err error)
+	Shell(ctx context.Context, request Shell, term Terminal, out io.Writer) (code int, err error)
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -129,6 +129,7 @@ func (c *Conn) serveShell(runner Runner, request Shell) error {
 	defer cancel()
 
 	in, typed := io.Pipe()
+	resized := make(chan Resize, 1)
 	// a runner that ends first must not leave the read below stuck on a write
 	defer func() { _ = in.Close() }()
 
@@ -142,18 +143,26 @@ func (c *Conn) serveShell(runner Runner, request Shell) error {
 				return
 			}
 
-			input, ok := message.(Input)
-			if !ok {
-				return
-			}
+			switch m := message.(type) {
+			case Input:
+				if _, err := typed.Write(m.Bytes); err != nil {
+					return
+				}
+			case Resize:
+				// only the latest size matters, and this is the only sender
+				select {
+				case <-resized:
+				default:
+				}
 
-			if _, err := typed.Write(input.Bytes); err != nil {
+				resized <- m
+			default:
 				return
 			}
 		}
 	}()
 
-	code, err := runner.Shell(ctx, request, in, outputs{c})
+	code, err := runner.Shell(ctx, request, Terminal{In: in, Resized: resized}, outputs{c})
 	if err == nil && code != 0 {
 		return c.Send(Exited{Code: code})
 	}

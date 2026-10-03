@@ -754,17 +754,17 @@ func (b breaking) Prune(context.Context, protocol.Prune, io.Writer) error { retu
 
 func (c checking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
 
-func (r runner) Shell(_ context.Context, _ protocol.Shell, in io.Reader, out io.Writer) (int, error) {
-	_, err := io.Copy(out, in)
+func (r runner) Shell(_ context.Context, _ protocol.Shell, term protocol.Terminal, out io.Writer) (int, error) {
+	_, err := io.Copy(out, term.In)
 
 	return r.code, err
 }
 
-func (w *watched) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (w *watched) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ io.Reader, _ io.Writer) (int, error) {
+func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ protocol.Terminal, _ io.Writer) (int, error) {
 	select {
 	case <-ctx.Done():
 		w.cancelled = true
@@ -775,14 +775,14 @@ func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ io.Reader, _ io
 	}
 }
 
-func (r *reading) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (r *reading) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (b breaking) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (b breaking) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (c checking) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (c checking) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, nil
 }

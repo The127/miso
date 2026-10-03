@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestAShellRunsOnATerminal(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	code, err := sandbox.Shell(context.Background(), root, t.TempDir(), protocol.Shell{}, in, &out)
+	code, err := sandbox.Shell(context.Background(), root, t.TempDir(), protocol.Shell{}, protocol.Terminal{In: in}, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -39,7 +40,7 @@ func TestAShellHasTheSizeAndTypeOfTheTerminalOfTheUser(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, in, &out)
+	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, protocol.Terminal{In: in}, &out)
 
 	// assert
 	require.NoError(t, err)
@@ -55,9 +56,29 @@ func TestTheTypeOfTheTerminalOfTheUserBeatsOneOfTheBuildFile(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, in, &out)
+	_, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, protocol.Terminal{In: in}, &out)
 
 	// assert
 	require.NoError(t, err)
 	assert.Contains(t, out.String(), "xterm-256color\r\n")
+}
+
+func TestAShellSeesTheSizeTheTerminalOfTheUserChangesTo(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	resized := make(chan protocol.Resize, 1)
+	resized <- protocol.Resize{Rows: 40, Cols: 100}
+	// the size arrives while the shell runs, so it waits for it
+	in := strings.NewReader("until [ \"$(stty size)\" = \"40 100\" ]; do sleep 0.1; done; echo don\"\"e\nexit\n")
+	var out bytes.Buffer
+	// a size that never arrives fails the test and does not hang it
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// act
+	_, err := sandbox.Shell(ctx, root, t.TempDir(), protocol.Shell{}, protocol.Terminal{In: in, Resized: resized}, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "done\r\n")
 }

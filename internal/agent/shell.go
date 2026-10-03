@@ -12,7 +12,7 @@ import (
 
 // Shell runs an interactive shell on top of layers, with everything it
 // writes thrown away once it ends.
-func (a *Agent) Shell(ctx context.Context, shell protocol.Shell, in io.Reader, out io.Writer) (int, error) {
+func (a *Agent) Shell(ctx context.Context, shell protocol.Shell, term protocol.Terminal, out io.Writer) (int, error) {
 	scratch, err := a.layers.Scratch()
 	if err != nil {
 		return 0, err
@@ -28,7 +28,7 @@ func (a *Agent) Shell(ctx context.Context, shell protocol.Shell, in io.Reader, o
 	code := 0
 	err = a.overlaid(shell.Layers, sandbox.Floor, ceilingFor(shell.Network), upper, func(root string) (bool, error) {
 		var err error
-		code, err = sandbox.Shell(ctx, root, scratch, shell, in, out)
+		code, err = sandbox.Shell(ctx, root, scratch, shell, term, out)
 
 		return false, err
 	})

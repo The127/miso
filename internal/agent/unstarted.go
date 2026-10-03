@@ -55,7 +55,7 @@ func (u Unstarted) Prune(context.Context, protocol.Prune, io.Writer) error {
 }
 
 // Shell fails naming why the agent did not start.
-func (u Unstarted) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (u Unstarted) Shell(context.Context, protocol.Shell, protocol.Terminal, io.Writer) (int, error) {
 	return 0, u.why()
 }
 

@@ -2,8 +2,10 @@ package protocol_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,4 +81,38 @@ func TestAnythingButInputCancelsTheShell(t *testing.T) {
 
 	// assert
 	assert.True(t, runner.cancelled)
+}
+
+// sizing is an agent whose shell notes the first size the terminal changes
+// to.
+type sizing struct {
+	runner
+	got *protocol.Resize
+}
+
+func (s sizing) Shell(_ context.Context, _ protocol.Shell, term protocol.Terminal, _ io.Writer) (int, error) {
+	select {
+	case size := <-term.Resized:
+		*s.got = size
+	case <-time.After(time.Second):
+	}
+
+	return 0, nil
+}
+
+func TestAShellGetsTheSizesTheTerminalOfTheHostChangesTo(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Shell{}))
+	require.NoError(t, host.Send(protocol.Resize{Rows: 30, Cols: 100}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+	var got protocol.Resize
+
+	// act
+	err := agent.Serve(sizing{got: &got})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Resize{Rows: 30, Cols: 100}, got)
 }
