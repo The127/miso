@@ -200,3 +200,20 @@ func TestTheTerminalIsItselfAgainOnceTheShellEnds(t *testing.T) {
 	assert.NotZero(t, state.Lflag&unix.ECHO)
 	assert.NotZero(t, state.Lflag&unix.ICANON)
 }
+
+func TestAShellWithoutALineStandsAtTheEndOfTheBuild(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	word := rand.Text()
+	file := "FROM debian:13\nRUN echo first > /first\nRUN echo " + word + " > /second\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte(file), 0o600))
+	shell := exec.CommandContext(t.Context(), miso(t), "shell", dir) //nolint:gosec // the test names the binary
+	shell.Stdin = strings.NewReader("cat /second\nexit\n")
+
+	// act
+	said, err := shell.CombinedOutput()
+
+	// assert
+	require.NoError(t, err, string(said))
+	assert.Contains(t, string(said), word+"\r\n")
+}

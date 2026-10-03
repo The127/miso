@@ -17,22 +17,25 @@ import (
 
 var shellCommand = &cli.Command{
 	Name:      "shell",
-	Usage:     "open a shell on the layers as they are before a step of the build file",
+	Usage:     "open a shell on the layers as they are before a step of the build file, or after the last",
 	ArgsUsage: "[context]",
 	Flags: []cli.Flag{
 		fileFlag(),
-		&cli.IntFlag{Name: "before", Usage: "the line of the build file whose step the shell stands before", Required: true},
+		&cli.IntFlag{Name: "before", Usage: "the line of the build file whose step the shell stands before, the end of the build if not given"},
 	},
 	Action: runShell,
 }
 
 func runShell(ctx context.Context, command *cli.Command) error {
-	line := command.Int("before")
-	before := func(planned plan.Plan, network protocol.Network) ([]build.Request, error) {
-		return build.Before(planned, network, line)
+	shellOn := func(planned plan.Plan, network protocol.Network) ([]build.Request, error) {
+		if !command.IsSet("before") {
+			return build.After(planned, network)
+		}
+
+		return build.Before(planned, network, command.Int("before"))
 	}
 
-	return withBuilder(ctx, command, before, func(have prepared, boot booter) error {
+	return withBuilder(ctx, command, shellOn, func(have prepared, boot booter) error {
 		return boot(func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
 			terminal, like, stop, err := onUserTerminal(command.Root().Reader)
 			if err != nil {
