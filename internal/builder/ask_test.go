@@ -678,7 +678,9 @@ func (f failing) Prune(context.Context, protocol.Prune, io.Writer) error { retur
 
 func (w waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
 
-func (r *recording) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+func (r *recording) Shell(_ context.Context, request protocol.Shell, _ io.Reader, _ io.Writer) (int, error) {
+	r.note(request)
+
 	return 0, nil
 }
 
@@ -686,14 +688,18 @@ func (s saying) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (in
 	return 0, nil
 }
 
-func (waiting) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
-	return 0, nil
+func (w waiting) Shell(ctx context.Context, _ protocol.Shell, _ io.Reader, _ io.Writer) (int, error) {
+	close(w.started)
+	<-ctx.Done()
+	close(w.cancelled)
+
+	return 0, ctx.Err()
 }
 
 func (exiting) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
 	return 0, nil
 }
 
-func (failing) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
-	return 0, nil
+func (f failing) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, f.err
 }
