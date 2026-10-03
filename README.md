@@ -16,6 +16,13 @@ standard systemd formats and leaves the rest to whoever runs the machine.
 > **Status: early development.** Nothing here is usable yet. Usage will be
 > documented here once the interface exists.
 
+## Installing
+
+Each [release](https://github.com/The127/miso/releases) has a `tar.gz`,
+a `deb` and an `rpm` for linux amd64, with `checksums.txt`. The packages
+depend on qemu. They do not hold the builder kernel or the firmware, so
+the first build downloads them and checks their digests.
+
 ## Development setup
 
 Required tooling:
