@@ -139,3 +139,6 @@ docs/
 CLAUDE.local.md
 # compiled binary
 /bin/
+
+# goreleaser output
+/dist/

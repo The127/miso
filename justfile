@@ -60,6 +60,14 @@ doccheck:
 prose:
     bash hack/check-prose.sh
 
+# validate the goreleaser config
+release-check:
+    go run github.com/goreleaser/goreleaser/v2@latest check
+
+# build the release artifacts locally without publishing
+release-snapshot:
+    go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean
+
 # check for known vulnerabilities in reachable code
 vuln:
     go run golang.org/x/vuln/cmd/govulncheck@latest ./...
