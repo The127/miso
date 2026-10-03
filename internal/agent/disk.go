@@ -119,7 +119,7 @@ func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (i
 
 	defer unbind()
 
-	code, err := buildUKI(ctx, root, in.boot.parts, in.boot.esp, in.boot.kernel.Version, out)
+	code, err := buildUKI(ctx, root, in.boot, out)
 	if err != nil || code != 0 {
 		return code, err
 	}
@@ -136,17 +136,17 @@ func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (i
 	return overImage(ctx, root, in.booting, in.below, run, out)
 }
 
-// buildUKI has the tools in root build the UKI of the kernel of a version
-// into the ESP, from copies of the image's boot parts.
-func buildUKI(ctx context.Context, root, parts, esp, version string, out io.Writer) (int, error) {
-	unbindParts, err := bind(parts, filepath.Join(root, "run", "miso", "parts"))
+// buildUKI has the tools in root build the UKI of the kernel of the boot
+// into its ESP, from copies of the image's boot parts.
+func buildUKI(ctx context.Context, root string, boot boot, out io.Writer) (int, error) {
+	unbindParts, err := bind(boot.parts, filepath.Join(root, "run", "miso", "parts"))
 	if err != nil {
 		return 0, err
 	}
 
 	defer unbindParts()
 
-	unbindESP, err := bind(filepath.Join(esp, "efi"), filepath.Join(root, "run", "miso", "esp"))
+	unbindESP, err := bind(filepath.Join(boot.esp, "efi"), filepath.Join(root, "run", "miso", "esp"))
 	if err != nil {
 		return 0, err
 	}
@@ -155,5 +155,5 @@ func buildUKI(ctx context.Context, root, parts, esp, version string, out io.Writ
 
 	// a version from the image reaches the shell only as a value, never as
 	// its words
-	return sandbox.Run(ctx, root, protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + version}}, out)
+	return sandbox.Run(ctx, root, protocol.Run{Command: ukify, Env: []string{"MISO_VERSION=" + boot.kernel.Version}}, out)
 }
