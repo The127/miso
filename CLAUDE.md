@@ -24,6 +24,10 @@ standard systemd formats and leaves the rest to whoever runs the machine.
   better.
 - A behaviour is one commit: its test together with the code it drove out.
   Tests never get a commit of their own, and nothing is committed at red.
+- A commit that finishes a filed issue ends with a `Closes #N` footer, so
+  GitHub closes the issue when it reaches `main`. Never close it by hand.
+- Work reaches `main` through a pull request, never by pushing to `main`.
+  Open it from a branch, wait for `ci`, then merge it.
 - Decide for every machine miso may run on, never for this one. What
   works on this kernel or distro proves nothing about a user's. A guard
   that older or other systems need is written always, not only when
