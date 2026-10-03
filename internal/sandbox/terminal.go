@@ -44,7 +44,7 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, term
 		return true
 	})
 
-	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, streams{terminal: slave})
+	code, err := start(ctx, root, argsOf(shell), envOf(shell), shell.Network, streams{terminal: slave})
 	_ = slave.Close()
 	<-printed
 
@@ -70,4 +70,18 @@ func resize(master *os.File, rows, cols uint16) error {
 	}
 
 	return unix.IoctlSetWinsize(int(master.Fd()), unix.TIOCSWINSZ, &unix.Winsize{Row: rows, Col: cols})
+}
+
+// argsOf are the arguments of the sh that is a shell, or that runs the words
+// of a command as they are, looking its program up on the PATH of the root.
+// The command is a child of the sh and not the sh itself, because the sh is
+// the init of the PID namespace, which the kernel keeps from being stopped
+// by the signals of a terminal. The exit keeps the sh from replacing itself
+// with the command.
+func argsOf(shell protocol.Shell) []string {
+	if len(shell.Command) == 0 {
+		return []string{"-i"}
+	}
+
+	return append([]string{"-c", `"$@"; exit $?`, "miso-shell"}, shell.Command...)
 }

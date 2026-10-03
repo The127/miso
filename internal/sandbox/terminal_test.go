@@ -5,6 +5,7 @@ package sandbox_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -100,4 +101,64 @@ func TestASizeOfNothingLeavesTheSizeOfTheShellAlone(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Contains(t, out.String(), "24 80\r\n")
+}
+
+func TestAShellWithACommandRunsItWithItsWordsAsTheyAre(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Command: []string{"echo", "a  b", "$HOME"}}
+	var out bytes.Buffer
+
+	// act
+	code, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, protocol.Terminal{In: strings.NewReader("")}, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "a  b $HOME\r\n", out.String())
+}
+
+func TestAShellWithACommandAnswersTheExitCodeOfTheCommand(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Command: []string{"sh", "-c", "exit 3"}}
+
+	// act
+	code, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 3, code)
+}
+
+func TestControlCStopsACommandOfAShell(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Command: []string{"sleep", "100"}}
+	in, typed := io.Pipe()
+	defer func() { _ = typed.Close() }()
+	// the command has started by the time the key is pressed
+	time.AfterFunc(time.Second, func() { _, _ = typed.Write([]byte{0x03}) })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// act
+	code, err := sandbox.Shell(ctx, root, t.TempDir(), shell, protocol.Terminal{In: in}, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 130, code)
+}
+
+func TestACommandThatIsNotFoundAnswers127AsAShellDoes(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	shell := protocol.Shell{Command: []string{"-no-such-program"}}
+
+	// act
+	code, err := sandbox.Shell(context.Background(), root, t.TempDir(), shell, protocol.Terminal{In: strings.NewReader("")}, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, 127, code)
 }
