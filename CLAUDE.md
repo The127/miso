@@ -28,6 +28,10 @@ standard systemd formats and leaves the rest to whoever runs the machine.
   GitHub closes the issue when it reaches `main`. Never close it by hand.
 - Work reaches `main` through a pull request, never by pushing to `main`.
   Open it from a branch, wait for `ci`, then merge it.
+- Check the docs for every issue you work on. Change `site/` and the README
+  where the work makes them wrong or leaves something out, in the same pull
+  request. Say in the pull request that you checked, even when nothing
+  needed a change.
 - Decide for every machine miso may run on, never for this one. What
   works on this kernel or distro proves nothing about a user's. A guard
   that older or other systems need is written always, not only when
