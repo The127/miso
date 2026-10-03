@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/The127/miso/internal/protocol"
@@ -85,13 +86,19 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 			defer unbind()
 
-			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: maker}, out)
+			points, err := mountPoints(dir.scratch)
+			if err != nil {
+				return 0, err
+			}
+
+			return overImage(ctx, root, dir.booting, append(slices.Clone(dir.image.below), points), protocol.Run{Command: maker}, out)
 		}, nil
 	})
 }
 
 // wrapped makes a file system of the image's layers, wrapped in a disk of
-// its own by repart, after the checks of the kind of image.
+// its own by repart, after the checks of the kind of image. It adds no mount
+// points, only a rootfs a kernel boots has them.
 func (a *Agent) wrapped(ctx context.Context, request protocol.Rootfs, out io.Writer) error {
 	requirements, known := wraps[request.Wrap]
 	if !known {
