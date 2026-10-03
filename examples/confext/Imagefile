@@ -1,0 +1,22 @@
+# A configuration extension: files for /etc, in a disk image of one root
+# partition. It does not boot. The stage holds only the files it adds.
+#
+#   miso build -o out examples/confext
+#
+# leaves out/hello.raw. On a machine with systemd:
+#
+#   cp out/hello.raw /var/lib/confexts/
+#   systemd-confext merge
+#   cat /etc/hello.conf
+#
+# The release file is named after the output file without .raw. ID=_any lets
+# the extension merge on any OS, a real one names the OS it was made for.
+#
+# --format=erofs after confext makes an erofs image.
+
+FROM scratch
+
+COPY hello.conf /etc/hello.conf
+COPY extension-release.hello /etc/extension-release.d/extension-release.hello
+
+OUTPUT confext hello.raw
