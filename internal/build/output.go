@@ -26,8 +26,8 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		return protocol.BootPart{Key: step.Key, Layers: under.layers, Tools: tools.layers, Part: part, ELF: plan.Unpacks(instruction)}, nil
 	}
 
-	if instruction.Kind == plan.KindRootfs {
-		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options)}, nil
+	if takesFormat(instruction.Kind) {
+		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Portable: instruction.Kind == plan.KindPortable}, nil
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
@@ -43,11 +43,16 @@ func refusal(instruction imagefile.Output) error {
 		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case instruction.Options[plan.OptionELF] != "":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
-	case instruction.Kind == plan.KindRootfs && !slices.Contains(formats, formatOf(instruction.Options)):
+	case takesFormat(instruction.Kind) && !slices.Contains(formats, formatOf(instruction.Options)):
 		return fmt.Errorf("--format=%s: %w", formatOf(instruction.Options), ErrUnknownFormat)
 	}
 
 	return nil
+}
+
+// takesFormat says whether an output of a kind is a file system of a format.
+func takesFormat(kind string) bool {
+	return kind == plan.KindRootfs || kind == plan.KindPortable
 }
 
 // formatOption names the file system of a rootfs.
@@ -69,7 +74,7 @@ func formatOf(options map[string]string) string {
 // optionsOf are the options an output of a kind takes.
 func optionsOf(kind string) []string {
 	switch kind {
-	case plan.KindRootfs:
+	case plan.KindRootfs, plan.KindPortable:
 		return []string{formatOption}
 	case plan.KindKernel:
 		return []string{plan.OptionELF}

@@ -20,6 +20,10 @@ type Rootfs struct {
 
 	// the file system to make
 	Format string
+
+	// whether the file system is wrapped in a disk of its own, which makes
+	// a portable service
+	Portable bool
 }
 
 func (r Rootfs) into(e *envelope) { e.Rootfs = &r }

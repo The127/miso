@@ -93,6 +93,35 @@ func TestARootfsOutputWithAFormatAsksForThatFormat(t *testing.T) {
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 
+func TestAPortableOutputIsARootfsThatIsWrappedInADisk(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT portable web.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.True(t, rootfs.Portable)
+	assert.Equal(t, "ext4", rootfs.Format)
+}
+
+func TestAPortableOutputWithAFormatAsksForThatFormat(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT portable --format=erofs web.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, "erofs", rootfs.Format)
+}
+
 func TestARootfsOfAFormatMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT rootfs --format=btrfs os.img\n")
@@ -162,7 +191,7 @@ func TestAStepBetweenAnOutputAndItsCheckLeavesTheCheckWithTheFetch(t *testing.T)
 
 func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// arrange
-	source := planned(t, "FROM debian:13\nOUTPUT portable os.raw\n")
+	source := planned(t, "FROM debian:13\nOUTPUT widget os.raw\n")
 
 	// act
 	_, err := build.Requests(source, network)
@@ -170,7 +199,7 @@ func TestAnOutputOfAKindMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// assert
 	require.ErrorIs(t, err, build.ErrUnknownKind)
 	assert.ErrorContains(t, err, "line 2")
-	assert.ErrorContains(t, err, "portable")
+	assert.ErrorContains(t, err, "widget")
 }
 
 func TestADiskWithAnOptionMisoDoesNotKnowFailsAtItsLine(t *testing.T) {

@@ -33,7 +33,7 @@ func TestCopyFromAnEarlierStageIsAccepted(t *testing.T) {
 
 func TestACopyOfAnOutputTheStageDoesNotHaveIsRejected(t *testing.T) {
 	// arrange
-	stages := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nFROM scratch\nCOPY --from=vmhost tools.raw /var/components/\n")
+	stages := parse(t, "FROM scratch AS vmhost\nOUTPUT kernel vmhost.raw\nFROM scratch\nCOPY --from=vmhost tools.raw /var/components/\n")
 
 	// act
 	err := plan.Validate(stages)

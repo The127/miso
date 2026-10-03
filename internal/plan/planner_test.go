@@ -134,8 +134,8 @@ func TestAChangedOutputChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
 
 func TestAChangedEarlierOutputChangesTheKeyOfTheCheck(t *testing.T) {
 	// arrange
-	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nOUTPUT portable app.raw\nCHECK true\n")
-	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT portable app.raw\nCHECK true\n")
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nOUTPUT iso app.iso\nCHECK true\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT iso app.iso\nCHECK true\n")
 
 	// act
 	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
@@ -160,8 +160,8 @@ func TestAChangedCheckChangesTheKeyOfTheCheckAfterIt(t *testing.T) {
 
 func TestACopyOfAChangedOutputGetsADifferentKey(t *testing.T) {
 	// arrange
-	small := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT portable vmhost.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
-	large := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT portable vmhost.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	small := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT kernel vmhost.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nRUN make\nOUTPUT kernel vmhost.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
 
 	// act
 	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
@@ -186,8 +186,8 @@ func TestAChangedOutputKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 
 func TestACopyOfAChangedEarlierOutputGetsADifferentKey(t *testing.T) {
 	// arrange
-	small := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw --size=1G\nOUTPUT portable tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
-	large := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw --size=2G\nOUTPUT portable tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	small := parse(t, "FROM scratch AS vmhost\nOUTPUT kernel vmhost.raw --size=1G\nOUTPUT kernel tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nOUTPUT kernel vmhost.raw --size=2G\nOUTPUT kernel tools.raw\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
 
 	// act
 	smallKeys := keys(t, small, anyAgent, noFiles, noImages)
@@ -199,8 +199,8 @@ func TestACopyOfAChangedEarlierOutputGetsADifferentKey(t *testing.T) {
 
 func TestAChangedOutputKeepsTheKeyOfTheOutputAfterIt(t *testing.T) {
 	// arrange
-	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nOUTPUT portable app.raw\n")
-	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT portable app.raw\n")
+	small := parse(t, "FROM scratch\nOUTPUT disk os.img --size=4G\nOUTPUT kernel app.raw\n")
+	large := parse(t, "FROM scratch\nOUTPUT disk os.img --size=8G\nOUTPUT kernel app.raw\n")
 
 	// act
 	smallKeys := keys(t, small, anyAgent, noFiles, toolsImages)
@@ -225,8 +225,8 @@ func TestAChangedCheckKeepsTheKeyOfTheRunAfterIt(t *testing.T) {
 
 func TestACopyOfAnOutputKeepsItsKeyWhenAnotherOutputChanges(t *testing.T) {
 	// arrange
-	small := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nOUTPUT portable tools.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
-	large := parse(t, "FROM scratch AS vmhost\nOUTPUT portable vmhost.raw\nOUTPUT portable tools.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	small := parse(t, "FROM scratch AS vmhost\nOUTPUT kernel vmhost.raw\nOUTPUT kernel tools.raw --size=1G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
+	large := parse(t, "FROM scratch AS vmhost\nOUTPUT kernel vmhost.raw\nOUTPUT kernel tools.raw --size=2G\nFROM scratch\nCOPY --from=vmhost vmhost.raw /var/components/\n")
 
 	// act
 	smallKeys := keys(t, small, anyAgent, noFiles, noImages)

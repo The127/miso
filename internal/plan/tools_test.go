@@ -24,6 +24,19 @@ func TestADiskWithoutToolsGetsAToolsStageOnDebianBeforeItsOwn(t *testing.T) {
 	assert.Equal(t, "scratch", planned.Stages[1].Base)
 }
 
+func TestAPortableWithoutToolsGetsTheToolsStage(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nOUTPUT portable app.raw\n")
+
+	// act
+	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, planned.Stages, 2)
+	assert.Equal(t, "debian:sid", planned.Stages[0].Base)
+}
+
 func TestADiskInALaterStageGetsTheToolsStageBeforeAllStages(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch AS base\nRUN true\nFROM base\nOUTPUT disk os.img\n")
@@ -81,7 +94,7 @@ func TestADiskWithoutToolsGetsADifferentKeyWhenTheToolsBaseChanges(t *testing.T)
 
 func TestABuildFileWithoutADiskOrIsoGetsNoToolsStage(t *testing.T) {
 	// arrange
-	stages := parse(t, "FROM scratch\nOUTPUT portable app.raw\n")
+	stages := parse(t, "FROM scratch\nOUTPUT kernel vmlinuz\n")
 
 	// act
 	planned, err := plan.New(stages, anyAgent, noFiles, noImages)

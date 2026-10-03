@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -38,6 +39,21 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 	}
 
 	return a.madeByTools(request.Key, request.Layers, request.Tools, "file system", func(dir toolsDir) (toolsRun, error) {
+		command := maker
+
+		var definitions string
+
+		if request.Portable {
+			var err error
+
+			definitions, err = makeDefinitions(dir.scratch, []protocol.Partition{portablePartition(request.Format)})
+			if err != nil {
+				return nil, err
+			}
+
+			command = repart
+		}
+
 		return func(root string) (int, error) {
 			unbindOutput, err := bindOutput(root, dir.output)
 			if err != nil {
@@ -46,7 +62,29 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 			defer unbindOutput()
 
-			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: maker}, out)
+			if request.Portable {
+				unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
+				if err != nil {
+					return 0, err
+				}
+
+				defer unbindDefinitions()
+			}
+
+			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: command}, out)
 		}, nil
 	})
+}
+
+// portablePartition is the one partition of a portable image, which holds
+// the whole image. Without Minimize repart sizes an ext4 too small, and best
+// is refused for ext4. Type=root names the root of x86-64 only, which is
+// the one architecture miso builds for.
+func portablePartition(format string) protocol.Partition {
+	return protocol.Partition{Name: "root", Settings: []protocol.Setting{
+		{Key: "Type", Value: "root"},
+		{Key: "Format", Value: format},
+		{Key: "CopyFiles", Value: "/"},
+		{Key: "Minimize", Value: "guess"},
+	}}
 }

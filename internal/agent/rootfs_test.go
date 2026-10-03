@@ -212,3 +212,21 @@ func TestARootfsOfAFormatTheAgentCannotMakeFailsNamingItAndKeepsNoLayer(t *testi
 	assert.ErrorContains(t, err, "btrfs")
 	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
 }
+
+func TestAPortableRootfsIsOneRootPartitionRepartCopiesTheImageInto(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	repart := `for arg; do case $arg in --definitions=*) definitions=${arg#--definitions=} ;; esac; last=$arg; done
+cat "$definitions"/*.conf > "$last"`
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, repart), Format: protocol.FormatErofs, Portable: true}
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "[Partition]\nType=root\nFormat=erofs\nCopyFiles=/\nMinimize=guess\n", string(written))
+}

@@ -31,6 +31,17 @@ func TestACheckAfterAnOutputIsAccepted(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestACheckAfterAPortableIsRejected(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM debian:sid\nOUTPUT portable app.raw\nCHECK true\n")
+
+	// act
+	err := plan.Validate(stages)
+
+	// assert
+	assert.ErrorIs(t, err, plan.ErrNotBooted)
+}
+
 func TestACheckAfterAnOutputThatIsNeverBootedIsRejected(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM debian:sid\nOUTPUT kernel vmlinuz\nCHECK true\n")

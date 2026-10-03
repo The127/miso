@@ -112,7 +112,7 @@ func TestAPlannedRunAfterAnOutputWasBuiltOnTheRunBeforeIt(t *testing.T) {
 
 func TestAPlannedCheckWasBuiltOnTheOutputsBeforeIt(t *testing.T) {
 	// arrange
-	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\nOUTPUT portable app.raw\nCHECK true\n")
+	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\nOUTPUT iso app.iso\nCHECK true\n")
 
 	// act
 	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
