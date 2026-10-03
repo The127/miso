@@ -34,7 +34,14 @@ func runShell(ctx context.Context, command *cli.Command) error {
 
 	return withBuilder(ctx, command, before, func(have prepared, boot booter) error {
 		return boot(func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
-			code, err := builder.Shell(ctx, vm, dial, agentName(), have.requests, contextfiles.Of(have.files), protocol.Terminal{In: command.Root().Reader}, command.Root().Writer)
+			terminal, requests, stop, err := onUserTerminal(command.Root().Reader, have.requests)
+			if err != nil {
+				return err
+			}
+
+			defer stop()
+
+			code, err := builder.Shell(ctx, vm, dial, agentName(), requests, contextfiles.Of(have.files), terminal, command.Root().Writer)
 			if err != nil {
 				return imagefile.InFile(have.file, err)
 			}

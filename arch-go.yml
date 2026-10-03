@@ -95,17 +95,6 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
-  # the terminal of the user is put in raw mode and measured through ioctls
-  # on a file it is handed. It knows nothing of ours and never starts a
-  # process or touches the network
-  - package: '**.internal.terminal$'
-    shouldNotDependsOn:
-      internal:
-        - '**.internal.**'
-        - '**.cmd.**'
-      standard:
-        - os/exec
-        - net
   # the port carries connections over one stream it is handed, one virtio
   # serial port of the VM. It knows nothing of ours, opens nothing and never
   # touches a process, the network or the kernel, so it is tested without a
