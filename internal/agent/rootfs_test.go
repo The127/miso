@@ -273,13 +273,13 @@ func TestARootfsWrappedInAnImageTheAgentDoesNotKnowFailsNamingItAndKeepsNoLayer(
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: "confext"}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: "widget"}
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
-	assert.ErrorContains(t, err, "confext")
+	assert.ErrorContains(t, err, "widget")
 	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
 }
 
@@ -333,6 +333,59 @@ func TestASysextRootfsWhoseExtensionReleaseIsALinkToAPlaceOfTheToolsIsMade(t *te
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	rootfs := sysextOf(t, worker, "tools.raw", "mkdir -p /usr/lib/extension-release.d && ln -s /not/in/the/tools /usr/lib/extension-release.d/extension-release.tools")
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
+}
+
+// confextOf is a confext of a name, made of the base and an image that ran the
+// command.
+func confextOf(t *testing.T, worker *agent.Agent, name, command string) protocol.Rootfs {
+	t.Helper()
+
+	rootfs := sysextOf(t, worker, name, command)
+	rootfs.Wrap = protocol.WrapConfext
+
+	return rootfs
+}
+
+func TestAConfextRootfsWithItsExtensionReleaseUnderEtcIsMade(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := confextOf(t, worker, "app.raw", "mkdir -p /etc/extension-release.d && echo ID=_any > /etc/extension-release.d/extension-release.app")
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
+}
+
+func TestAConfextRootfsWithoutItsExtensionReleaseUnderEtcFailsSayingSoAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := confextOf(t, worker, "app.raw", withExtensionRelease)
+	var out strings.Builder
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, &out)
+
+	// assert
+	assert.Error(t, err)
+	assert.Contains(t, out.String(), "/etc/extension-release.d/extension-release.app")
+	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
+}
+
+func TestAConfextRootfsWhoseExtensionReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := confextOf(t, worker, "app.raw", "mkdir -p /etc/extension-release.d && ln -s /not/in/the/tools /etc/extension-release.d/extension-release.app")
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)

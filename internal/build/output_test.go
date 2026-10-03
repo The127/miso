@@ -138,6 +138,35 @@ func TestASysextOutputIsARootfsThatIsWrappedInADiskAsASysext(t *testing.T) {
 	assert.Equal(t, "tools.raw", rootfs.Name)
 }
 
+func TestAConfextOutputIsARootfsThatIsWrappedInADiskAsAConfext(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT confext app.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, protocol.WrapConfext, rootfs.Wrap)
+	assert.Equal(t, "app.raw", rootfs.Name)
+}
+
+func TestAConfextOutputWithAFormatAsksForThatFormat(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT confext --format=erofs app.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, "erofs", rootfs.Format)
+}
+
 func TestASysextOutputWithAFormatAsksForThatFormat(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT sysext --format=erofs tools.raw\n")

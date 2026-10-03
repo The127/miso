@@ -10,6 +10,7 @@ const (
 const (
 	WrapPortable = "portable"
 	WrapSysext   = "sysext"
+	WrapConfext  = "confext"
 )
 
 // Rootfs asks the agent to make a file system image of layers with the
@@ -27,7 +28,7 @@ type Rootfs struct {
 	// the file system to make
 	Format string
 
-	// the name of the output file, which a sysext is named by
+	// the name of the output file, which an extension is named by
 	Name string
 
 	// the kind of image the file system is wrapped in, a disk of its own,

@@ -13,13 +13,14 @@ const (
 	KindRootfs   = "rootfs"
 	KindPortable = "portable"
 	KindSysext   = "sysext"
+	KindConfext  = "confext"
 	KindKernel   = "kernel"
 	KindInitrd   = "initrd"
 )
 
 // Known is a kind of output miso makes.
 func Known(kind string) bool {
-	return slices.Contains([]string{KindDisk, KindISO, KindRootfs, KindPortable, KindSysext, KindKernel, KindInitrd}, kind)
+	return slices.Contains([]string{KindDisk, KindISO, KindRootfs, KindPortable, KindSysext, KindConfext, KindKernel, KindInitrd}, kind)
 }
 
 // OptionELF asks for the kernel as the ELF file it unpacks to.
@@ -41,11 +42,11 @@ func NeedsTools(output imagefile.Output) bool {
 		return Unpacks(output)
 	}
 
-	return slices.Contains([]string{KindDisk, KindISO, KindRootfs, KindPortable, KindSysext}, output.Kind)
+	return slices.Contains([]string{KindDisk, KindISO, KindRootfs, KindPortable, KindSysext, KindConfext}, output.Kind)
 }
 
 // NeverBooted is a kind of output that no check can run in. Unknown kinds
 // are not listed, they are refused when the requests are made.
 func NeverBooted(kind string) bool {
-	return slices.Contains([]string{KindKernel, KindInitrd, KindPortable, KindSysext}, kind)
+	return slices.Contains([]string{KindKernel, KindInitrd, KindPortable, KindSysext, KindConfext}, kind)
 }

@@ -58,6 +58,8 @@ func wrapOf(kind string) string {
 		return protocol.WrapPortable
 	case plan.KindSysext:
 		return protocol.WrapSysext
+	case plan.KindConfext:
+		return protocol.WrapConfext
 	}
 
 	return ""
@@ -87,7 +89,7 @@ func formatOf(options map[string]string) string {
 // optionsOf are the options an output of a kind takes.
 func optionsOf(kind string) []string {
 	switch kind {
-	case plan.KindRootfs, plan.KindPortable, plan.KindSysext:
+	case plan.KindRootfs, plan.KindPortable, plan.KindSysext, plan.KindConfext:
 		return []string{formatOption}
 	case plan.KindKernel:
 		return []string{plan.OptionELF}

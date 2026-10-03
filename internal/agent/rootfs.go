@@ -39,15 +39,17 @@ if [ -z "$found" ]; then
 fi
 `
 
-// requiresExtensionRelease refuses a sysext that systemd-sysext would not
-// merge, which is one without the release file of its name. A link counts as
-// there for the reason above.
-const requiresExtensionRelease = `file="/run/miso/image/usr/lib/extension-release.d/extension-release.$MISO_IMAGE"
+// requiresExtensionRelease refuses an extension systemd would not merge,
+// which is one without the release file of its name in the directory of its
+// kind. A link counts as there for the reason above.
+func requiresExtensionRelease(kind, dir string) string {
+	return fmt.Sprintf(`file="/run/miso/image/%[2]s/extension-release.d/extension-release.$MISO_IMAGE"
 if [ ! -e "$file" ] && [ ! -L "$file" ]; then
-	echo "miso: a sysext needs /usr/lib/extension-release.d/extension-release.$MISO_IMAGE" >&2
+	echo "miso: a %[1]s needs /%[2]s/extension-release.d/extension-release.$MISO_IMAGE" >&2
 	exit 1
 fi
-`
+`, kind, dir)
+}
 
 // makers are the scripts that make the file systems a rootfs can be.
 var makers = map[string]string{
@@ -59,7 +61,8 @@ var makers = map[string]string{
 // run before repart.
 var wraps = map[string]string{
 	protocol.WrapPortable: requiresOsRelease,
-	protocol.WrapSysext:   requiresExtensionRelease,
+	protocol.WrapSysext:   requiresExtensionRelease("sysext", "usr/lib"),
+	protocol.WrapConfext:  requiresExtensionRelease("confext", "etc"),
 }
 
 // Rootfs makes a file system of the image's layers with the tools of
