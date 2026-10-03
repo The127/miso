@@ -47,9 +47,15 @@ Reads the Imagefile and lists what a build would do, without building.
 
 The first line names the version of miso. A base image that is not in the
 cache yet is listed as `download <name>`. Then every stage is listed with its
-`FROM` line, and under it every step with its line number, its cache key and
-the step as written. A stage named `miso tools` is added by miso when an
-output needs the tools to be made.
+`FROM` line, and under it every step with its line number, its cache key,
+whether its layer is cached, and the step as written. A stage named
+`miso tools` is added by miso when an output needs the tools to be made.
+
+After the key, `RUN`, `COPY` and `OUTPUT` say `cached` when the layer is on
+the cache disk and `run` when a build would make it. With no cache disk, or a
+base image that is not downloaded yet, every one of them says `run`. To know
+what is cached, `miso plan` starts the builder VM, so it waits while another
+build uses the cache. It does not start the VM when there is nothing to ask.
 
 Two plans with the same cache key for a step build the same layer. After a
 change, the keys of the changed step and of every step after it are different.
