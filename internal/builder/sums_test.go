@@ -19,6 +19,18 @@ func sumOf(name, content string) string {
 	return fmt.Sprintf("%x  %s\n", sha256.Sum256([]byte(content)), name)
 }
 
+// delivered fetches the content into the output a request names in dir and
+// closes it.
+func delivered(t *testing.T, dir string, request build.Request, content string) {
+	t.Helper()
+
+	output, err := builder.OutputsIn(dir, nil)(request)
+	require.NoError(t, err)
+	_, err = output.WriteAt([]byte(content), 0)
+	require.NoError(t, err)
+	require.NoError(t, output.Close())
+}
+
 func TestAnOutputThatIsListedGetsItsSumInTheFileOfSumsOfItsDirectory(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
@@ -40,13 +52,8 @@ func TestAnOutputThatIsListedGetsItsSumInTheFileOfSumsOfItsDirectory(t *testing.
 func TestTheSumsOfListedOutputsOfADirectoryAreInTheOrderOfTheirNames(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
-	for _, file := range []struct{ name, content string }{{"updates/uki_1.2.efi", "uki\n"}, {"updates/root_1.2.raw", "root\n"}} {
-		output, err := builder.OutputsIn(dir, nil)(build.Request{Output: file.name, Listed: true})
-		require.NoError(t, err)
-		_, err = output.WriteAt([]byte(file.content), 0)
-		require.NoError(t, err)
-		require.NoError(t, output.Close())
-	}
+	delivered(t, dir, build.Request{Output: "updates/uki_1.2.efi", Listed: true}, "uki\n")
+	delivered(t, dir, build.Request{Output: "updates/root_1.2.raw", Listed: true}, "root\n")
 
 	// act
 	sums, err := os.ReadFile(filepath.Join(dir, "updates", "SHA256SUMS"))
@@ -73,13 +80,8 @@ func TestAnOutputThatIsNotListedGetsNoFileOfSums(t *testing.T) {
 func TestAListedOutputBuiltAgainReplacesItsOldSum(t *testing.T) {
 	// arrange
 	dir := t.TempDir()
-	for _, content := range []string{"old\n", "new\n"} {
-		output, err := builder.OutputsIn(dir, nil)(build.Request{Output: "updates/root_1.2.raw", Listed: true})
-		require.NoError(t, err)
-		_, err = output.WriteAt([]byte(content), 0)
-		require.NoError(t, err)
-		require.NoError(t, output.Close())
-	}
+	delivered(t, dir, build.Request{Output: "updates/root_1.2.raw", Listed: true}, "old\n")
+	delivered(t, dir, build.Request{Output: "updates/root_1.2.raw", Listed: true}, "new\n")
 
 	// act
 	sums, err := os.ReadFile(filepath.Join(dir, "updates", "SHA256SUMS"))

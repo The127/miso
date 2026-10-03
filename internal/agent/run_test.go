@@ -318,3 +318,13 @@ func TestAFileARunChangesTheModeOfIsWholeInItsLayer(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(was), string(is))
 }
+
+// ran runs a command on the layers, keeps what it changed as the layer of the
+// key, and requires that it succeeded.
+func ran(t *testing.T, worker *agent.Agent, key string, layers []string, command string) {
+	t.Helper()
+
+	code, err := worker.Run(context.Background(), protocol.Run{Key: key, Layers: layers, Command: command}, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+}

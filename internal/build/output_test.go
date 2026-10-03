@@ -23,6 +23,17 @@ func disksOf(requests []build.Request) []protocol.Disk {
 	return disks
 }
 
+// rootfsOf is the file system the last output asked for, which comes before
+// the fetch of its file.
+func rootfsOf(t *testing.T, requests []build.Request) protocol.Rootfs {
+	t.Helper()
+
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+
+	return rootfs
+}
+
 func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoAdds(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nRUN apt-get install htop\nOUTPUT disk os.raw\n")
@@ -89,8 +100,7 @@ func TestARootfsOutputWithAFormatAsksForThatFormat(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 
@@ -103,8 +113,7 @@ func TestAPortableOutputIsARootfsThatIsWrappedInADisk(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, protocol.WrapPortable, rootfs.Wrap)
 	assert.Equal(t, "ext4", rootfs.Format)
 }
@@ -118,8 +127,7 @@ func TestAPortableOutputWithAFormatAsksForThatFormat(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 
@@ -132,8 +140,7 @@ func TestASysextOutputIsARootfsThatIsWrappedInADiskAsASysext(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, protocol.WrapSysext, rootfs.Wrap)
 	assert.Equal(t, "tools.raw", rootfs.Name)
 }
@@ -147,8 +154,7 @@ func TestAConfextOutputIsARootfsThatIsWrappedInADiskAsAConfext(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, protocol.WrapConfext, rootfs.Wrap)
 	assert.Equal(t, "app.raw", rootfs.Name)
 }
@@ -162,8 +168,7 @@ func TestAConfextOutputWithAFormatAsksForThatFormat(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 
@@ -176,8 +181,7 @@ func TestASysextOutputWithAFormatAsksForThatFormat(t *testing.T) {
 
 	// assert
 	require.NoError(t, err)
-	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
-	require.True(t, isRootfs)
+	rootfs := rootfsOf(t, requests)
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 

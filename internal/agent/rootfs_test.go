@@ -27,16 +27,18 @@ import (
 const writesRootfs = `for last; do :; done
 echo rootfs > "$last"`
 
+// tool is the command that installs a script as /usr/local/bin/name in the
+// layer it runs in.
+func tool(name, script string) string {
+	return fmt.Sprintf("cat > /usr/local/bin/%[1]s <<'EOF'\n#!/bin/sh\n%[2]s\nEOF\nchmod 755 /usr/local/bin/%[1]s\n", name, script)
+}
+
 // fakeMkfs adds to the base a mkfs.ext4 that runs the script, and answers
 // the layers of those tools.
 func fakeMkfs(t *testing.T, worker *agent.Agent, script string) []string {
 	t.Helper()
 
-	command := fmt.Sprintf("cat > /usr/local/bin/mkfs.ext4 <<'EOF'\n#!/bin/sh\n%s\nEOF\nchmod 755 /usr/local/bin/mkfs.ext4\n", script)
-	run := protocol.Run{Key: "mkfs", Layers: []string{"base"}, Command: command}
-	code, err := worker.Run(context.Background(), run, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "mkfs", []string{"base"}, tool("mkfs.ext4", script))
 
 	return []string{"base", "mkfs"}
 }
@@ -80,11 +82,7 @@ func madeOfTinyImage(t *testing.T) (size, inodes int) {
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	tools := fakeMkfs(t, worker, reportsItsInput)
-	command := "cat > /usr/local/bin/du <<'EOF'\n#!/bin/sh\n" + tinyWithManyEntries + "\nEOF\nchmod 755 /usr/local/bin/du\n"
-	du := protocol.Run{Key: "du", Layers: tools, Command: command}
-	code, err := worker.Run(context.Background(), du, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "du", tools, tool("du", tinyWithManyEntries))
 	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: append(tools, "du"), Format: protocol.FormatExt4}
 	require.NoError(t, worker.Rootfs(context.Background(), rootfs, io.Discard))
 	said, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
@@ -120,16 +118,13 @@ func TestARootfsIsMadeFromTheImageAsMkfsCopiesIt(t *testing.T) {
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	mark := rand.Text()
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "echo " + mark + " > /etc/miso-image"}
-	code, err := worker.Run(context.Background(), image, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "image", []string{"base"}, "echo "+mark+" > /etc/miso-image")
 	mkfs := `for arg; do if [ "$prev" = -d ]; then dir=$arg; fi; prev=$arg; last=$arg; done
 cat "$dir/etc/miso-image" > "$last"`
 	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeMkfs(t, worker, mkfs), Format: protocol.FormatExt4}
 
 	// act
-	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -183,15 +178,11 @@ func TestAnErofsRootfsIsWhatMkfsErofsWritesKeptAsTheLayerOfItsKey(t *testing.T) 
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
 	tools := fakeMkfs(t, worker, "exit 9")
-	command := "cat > /usr/local/bin/mkfs.erofs <<'EOF'\n#!/bin/sh\n" + writesErofs + "\nEOF\nchmod 755 /usr/local/bin/mkfs.erofs\n"
-	erofs := protocol.Run{Key: "erofs", Layers: tools, Command: command}
-	code, err := worker.Run(context.Background(), erofs, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "erofs", tools, tool("mkfs.erofs", writesErofs))
 	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: append(tools, "erofs"), Format: protocol.FormatErofs}
 
 	// act
-	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
 	require.NoError(t, err)
@@ -236,15 +227,12 @@ func TestAPortableRootfsWithoutAnOsReleaseFailsSayingSoAndKeepsNoLayer(t *testin
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release"}
-	code, err := worker.Run(context.Background(), image, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "image", []string{"base"}, "rm -f /etc/os-release /usr/lib/os-release")
 	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapPortable}
 	var out strings.Builder
 
 	// act
-	err = worker.Rootfs(context.Background(), rootfs, &out)
+	err := worker.Rootfs(context.Background(), rootfs, &out)
 
 	// assert
 	assert.Error(t, err)
@@ -256,14 +244,11 @@ func TestAPortableRootfsWhoseOsReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing
 	// arrange
 	layers := t.TempDir()
 	worker := mountedBase(t, layers)
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release && ln -s /not/in/the/tools /etc/os-release"}
-	code, err := worker.Run(context.Background(), image, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "image", []string{"base"}, "rm -f /etc/os-release /usr/lib/os-release && ln -s /not/in/the/tools /etc/os-release")
 	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapPortable}
 
 	// act
-	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
 	assert.NoError(t, err)
@@ -291,10 +276,7 @@ const withExtensionRelease = "rm -f /etc/os-release /usr/lib/os-release && mkdir
 func sysextOf(t *testing.T, worker *agent.Agent, name, command string) protocol.Rootfs {
 	t.Helper()
 
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: command}
-	code, err := worker.Run(context.Background(), image, io.Discard)
-	require.NoError(t, err)
-	require.Equal(t, 0, code)
+	ran(t, worker, "image", []string{"base"}, command)
 
 	return protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapSysext, Name: name}
 }
