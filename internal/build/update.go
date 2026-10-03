@@ -18,9 +18,6 @@ const ukiFile = "uki.efi"
 // splitNameSetting names the file a partition is written to on its own.
 const splitNameSetting = "SplitName"
 
-// versionOption names the version an update has.
-const versionOption = "version"
-
 // fetchesOf are the fetches of the files an output keeps: the disk, or the
 // files of an update.
 func fetchesOf(step plan.Step, output imagefile.Output, partitions []protocol.Partition) []Request {
@@ -46,11 +43,11 @@ func updateFetches(step plan.Step, output imagefile.Output, partitions []protoco
 			continue
 		}
 
-		file := path.Join(output.Name, name+"_"+output.Options[versionOption]+".raw")
+		file := path.Join(output.Name, name+"_"+output.Options[plan.OptionVersion]+".raw")
 		fetches = append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: "disk." + name + ".raw"}, Output: file, Listed: true})
 	}
 
-	uki := path.Join(output.Name, "uki_"+output.Options[versionOption]+".efi")
+	uki := path.Join(output.Name, "uki_"+output.Options[plan.OptionVersion]+".efi")
 
 	return append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: ukiFile}, Output: uki, Listed: true})
 }
@@ -98,13 +95,13 @@ var (
 // updateRefusal is why an update output cannot be made of the partitions
 // above it, or nil when it can.
 func updateRefusal(output imagefile.Output, partitions []protocol.Partition) error {
-	version, given := output.Options[versionOption]
+	version, given := output.Options[plan.OptionVersion]
 	if !given {
 		return ErrNoVersion
 	}
 
 	if !versionPattern.MatchString(version) {
-		return fmt.Errorf("--%s=%s: %w", versionOption, version, ErrBadVersion)
+		return fmt.Errorf("--%s=%s: %w", plan.OptionVersion, version, ErrBadVersion)
 	}
 
 	var shipped []string

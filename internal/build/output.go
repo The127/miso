@@ -31,7 +31,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		return protocol.BootPart{Key: step.Key, Layers: under.layers, Tools: tools.layers, Part: part, ELF: plan.Unpacks(instruction)}, nil
 	}
 
-	if takesFormat(instruction.Kind) {
+	if plan.TakesFormat(instruction.Kind) {
 		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Name: instruction.Name, Wrap: wrapOf(instruction.Kind)}, nil
 	}
 
@@ -40,7 +40,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 
 // refusal is why miso cannot make an output, or nil when it can.
 func refusal(instruction imagefile.Output) error {
-	unknown, hasUnknown := unknownOption(instruction.Options, optionsOf(instruction.Kind))
+	unknown, hasUnknown := unknownOption(instruction.Options, plan.Options(instruction.Kind))
 	switch {
 	case !plan.Known(instruction.Kind):
 		return ErrUnknownKind
@@ -48,7 +48,7 @@ func refusal(instruction imagefile.Output) error {
 		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case instruction.Options[plan.OptionELF] != "":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
-	case takesFormat(instruction.Kind) && !slices.Contains(formats, formatOf(instruction.Options)):
+	case plan.TakesFormat(instruction.Kind) && !slices.Contains(formats, formatOf(instruction.Options)):
 		return fmt.Errorf("--format=%s: %w", formatOf(instruction.Options), ErrUnknownFormat)
 	}
 
@@ -56,53 +56,26 @@ func refusal(instruction imagefile.Output) error {
 }
 
 // wrapOf is the image a file system of a kind is wrapped in, empty when it is
-// not.
+// not. The agent names an image as the kind is named.
 func wrapOf(kind string) string {
-	switch kind {
-	case plan.KindPortable:
-		return protocol.WrapPortable
-	case plan.KindSysext:
-		return protocol.WrapSysext
-	case plan.KindConfext:
-		return protocol.WrapConfext
+	if plan.Wrapped(kind) {
+		return kind
 	}
 
 	return ""
 }
-
-// takesFormat says whether an output of a kind is a file system of a format.
-func takesFormat(kind string) bool {
-	return kind == plan.KindRootfs || wrapOf(kind) != ""
-}
-
-// formatOption names the file system of a rootfs.
-const formatOption = "format"
 
 // formats are the file systems a rootfs can be.
 var formats = []string{protocol.FormatExt4, protocol.FormatErofs}
 
 // formatOf is the file system an output asks for, ext4 when it names none.
 func formatOf(options map[string]string) string {
-	format, given := options[formatOption]
+	format, given := options[plan.OptionFormat]
 	if !given {
 		return protocol.FormatExt4
 	}
 
 	return format
-}
-
-// optionsOf are the options an output of a kind takes.
-func optionsOf(kind string) []string {
-	switch kind {
-	case plan.KindRootfs, plan.KindPortable, plan.KindSysext, plan.KindConfext:
-		return []string{formatOption}
-	case plan.KindUpdate:
-		return []string{versionOption}
-	case plan.KindKernel:
-		return []string{plan.OptionELF}
-	}
-
-	return nil
 }
 
 // unknownOption is the first option in sorted order that the output does not
