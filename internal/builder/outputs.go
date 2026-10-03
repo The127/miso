@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path"
 
 	"github.com/The127/miso/internal/build"
 	"github.com/The127/miso/internal/protocol"
@@ -56,6 +57,10 @@ func OutputsIn(dir string, check Check) Outputs {
 		name := request.Output
 		if len(request.Checks) > 0 {
 			name = unchecked(name)
+		}
+
+		if err := root.MkdirAll(path.Dir(name), 0o750); err != nil {
+			return nil, err
 		}
 
 		// the holes of a disk are never written, so an older file under the

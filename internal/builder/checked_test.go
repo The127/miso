@@ -143,3 +143,20 @@ func TestADiskWhoseFetchFailsIsNotBootedAndLeavesNoFile(t *testing.T) {
 	assert.False(t, booted)
 	assert.Empty(t, names(t, dir))
 }
+
+func TestADiskWithChecksInADirectoryIsCheckedNextToItsFinalNameAndMovedThere(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	check := func(string, build.Request) error { return nil }
+	checks := []imagefile.Check{{Line: 4, Command: "true"}}
+
+	// act
+	output, err := builder.OutputsIn(dir, check)(build.Request{Output: "updates/os.raw", Checks: checks})
+	require.NoError(t, err)
+	err = output.Close()
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"updates"}, names(t, dir))
+	assert.Equal(t, []string{"os.raw"}, names(t, filepath.Join(dir, "updates")))
+}

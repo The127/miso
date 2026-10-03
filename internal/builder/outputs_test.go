@@ -182,3 +182,16 @@ func TestWithoutOutputsNoDiskIsFetched(t *testing.T) {
 }
 
 func (s *sending) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func TestAnOutputInADirectoryMakesTheDirectory(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+
+	// act
+	output, err := builder.OutputsIn(dir, nil)(build.Request{Output: "updates/root_1.2.raw"})
+
+	// assert
+	require.NoError(t, err)
+	require.NoError(t, output.Close())
+	assert.FileExists(t, filepath.Join(dir, "updates", "root_1.2.raw"))
+}

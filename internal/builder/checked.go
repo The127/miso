@@ -3,6 +3,7 @@ package builder
 import (
 	"errors"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/The127/miso/internal/build"
@@ -25,7 +26,7 @@ type checked struct {
 
 // unchecked is the name a disk has until its checks passed.
 func unchecked(name string) string {
-	return "." + name + ".unchecked"
+	return path.Join(path.Dir(name), "."+path.Base(name)+".unchecked")
 }
 
 func (c checked) Close() error {
