@@ -47,12 +47,12 @@ func updateFetches(step plan.Step, output imagefile.Output, partitions []protoco
 		}
 
 		file := path.Join(output.Name, name+"_"+output.Options[versionOption]+".raw")
-		fetches = append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: "disk." + name + ".raw"}, Output: file})
+		fetches = append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: "disk." + name + ".raw"}, Output: file, Listed: true})
 	}
 
 	uki := path.Join(output.Name, "uki_"+output.Options[versionOption]+".efi")
 
-	return append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: ukiFile}, Output: uki})
+	return append(fetches, Request{Line: line, Written: written, Message: protocol.Fetch{Key: step.Key, File: ukiFile}, Output: uki, Listed: true})
 }
 
 // splitNameOf is the name a partition is split under.

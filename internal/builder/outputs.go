@@ -74,6 +74,10 @@ func OutputsIn(dir string, check Check) Outputs {
 			return checked{File: file, dir: dir, name: name, request: request, check: check}, nil
 		}
 
+		if request.Listed {
+			return summed{plain{File: file, dir: dir, name: name}}, nil
+		}
+
 		return plain{File: file, dir: dir, name: name}, nil
 	}
 }

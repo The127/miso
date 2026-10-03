@@ -43,6 +43,10 @@ type Request struct {
 	// what a fetched disk must pass when booted
 	Checks []imagefile.Check
 
+	// the sum of the fetched file is listed in the SHA256SUMS of its
+	// directory
+	Listed bool
+
 	// the fetched disk is an ISO, booted from a CD when checked
 	CD bool
 

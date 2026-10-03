@@ -56,6 +56,20 @@ func TestAnUpdateOutputFetchesTheUKIAfterThePartitionsWithTheVersionInItsName(t 
 	assert.Equal(t, "updates/uki_1.2.efi", fetch.Output)
 }
 
+func TestTheFilesOfAnUpdateAreListedForSysupdate(t *testing.T) {
+	// arrange
+	source := planned(t, updateSource)
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	fetches := requests[len(requests)-2:]
+	assert.True(t, fetches[0].Listed)
+	assert.True(t, fetches[1].Listed)
+}
+
 func TestAnUpdateOutputWithASplitNameOfOnlyADashFailsNamingIt(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nPARTITION root Type=root SplitName=-\nOUTPUT update --version=1.2 updates\n")
