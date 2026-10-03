@@ -1,5 +1,33 @@
 # Contributing to miso
 
+## Development setup
+
+Required tooling:
+
+- [Go](https://go.dev/) 1.27+.
+- [golangci-lint](https://golangci-lint.run/) v2: linting, configured in
+  `.golangci.yml`.
+- [bats](https://bats-core.readthedocs.io/): tests of the built `miso`
+  from the outside, run by `just test-cli`.
+- [mdBook](https://rust-lang.github.io/mdBook/): builds the documentation
+  site in `site/`, run by `just docs`.
+- [just](https://just.systems/): task runner. `just` lists the available
+  recipes, `just ci` runs everything that must pass.
+- [lefthook](https://lefthook.dev/): git hooks (lint, prose, doc comment
+  and architecture checks on pre-commit, commit message and sign-off
+  checks on commit-msg).
+
+The package dependency rules in `arch-go.yml` are checked by
+[arch-go](https://github.com/arch-go/arch-go), which the Go toolchain
+fetches on its own (`go tool`). It is pinned in a module of its own,
+`hack/tools/go.mod`, so its dependencies stay out of miso's.
+
+After cloning, run the one-time setup. It activates the git hooks:
+
+```bash
+just setup
+```
+
 ## Developer Certificate of Origin
 
 Contributions must be signed off. By adding a `Signed-off-by` line to your

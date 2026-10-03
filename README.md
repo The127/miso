@@ -3,18 +3,43 @@
 [![ci](https://github.com/The127/miso/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/The127/miso/actions/workflows/ci.yml)
 [![coverage](https://codecov.io/gh/The127/miso/graph/badge.svg)](https://app.codecov.io/gh/The127/miso)
 
-Dockerfile-style builds for systemd-based operating systems. A build file
-of `FROM`, `COPY` and `RUN` steps becomes a stack of cached layers, and the
-result comes out as standard systemd artifacts: disk images, ISOs,
-discoverable disk images and the files systemd-sysupdate consumes. Every
-image is booted and checked before it leaves the build.
+miso builds operating system images from a build file that looks like
+a Dockerfile. The steps are cached as layers. The result comes out as
+standard systemd artifacts: disk images, ISOs, root file systems, portable
+services, system extensions, configuration extensions and the files
+`systemd-sysupdate` uses. A `CHECK` step boots the result and runs a command
+in it before the build writes anything.
 
-miso builds images. What happens on the machine afterwards (applying
-updates, configuration, first boot logic) is out of scope. miso emits
-standard systemd formats and leaves the rest to whoever runs the machine.
+miso builds images. It does not apply updates, configure machines or run
+anything on the target after installation.
 
-> **Status: early development.** Nothing here is usable yet. Usage will be
-> documented here once the interface exists.
+```
+FROM debian:sid
+RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
+RUN : > /etc/fstab
+
+CMDLINE rw console=ttyS0
+
+PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
+PARTITION root Type=root Format=ext4 CopyFiles=/:/ SizeMinBytes=3G
+
+OUTPUT disk os.raw
+
+CHECK command -v htop
+```
+
+```
+miso build -o out
+```
+
+This builds a Debian disk with htop in it, boots it, and writes `out/os.raw`.
+
+## Documentation
+
+The documentation is at <https://the127.github.io/miso>. It has a quick
+start, the reference for the Imagefile and the command line, and examples for
+every kind of output. The same examples are in the [examples](examples)
+directory.
 
 ## Installing
 
@@ -23,53 +48,14 @@ a `deb` and an `rpm` for linux amd64, with `checksums.txt`. The packages
 depend on qemu. They do not hold the builder kernel or the firmware, so
 the first build downloads them and checks their digests.
 
-### Verifying a release
-
-`checksums.txt` is signed with [cosign](https://github.com/sigstore/cosign).
-Download it with `checksums.txt.sigstore.json`, then run:
-
-```
-cosign verify-blob checksums.txt \
-  --bundle checksums.txt.sigstore.json \
-  --certificate-identity-regexp '^https://github.com/The127/miso/\.github/workflows/release\.yml@' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-sha256sum --ignore-missing -c checksums.txt
-```
-
-## Development setup
-
-Required tooling:
-
-- [Go](https://go.dev/) 1.27+.
-- [golangci-lint](https://golangci-lint.run/) v2: linting, configured in
-  `.golangci.yml`.
-- [bats](https://bats-core.readthedocs.io/): tests of the built `miso`
-  from the outside, run by `just test-cli`.
-- [mdBook](https://rust-lang.github.io/mdBook/): builds the documentation
-  site in `site/`, run by `just docs`.
-- [just](https://just.systems/): task runner. `just` lists the available
-  recipes, `just ci` runs everything that must pass.
-- [lefthook](https://lefthook.dev/): git hooks (lint, prose, doc comment
-  and architecture checks on pre-commit, commit message and sign-off
-  checks on commit-msg).
-
-The package dependency rules in `arch-go.yml` are checked by
-[arch-go](https://github.com/arch-go/arch-go), which the Go toolchain
-fetches on its own (`go tool`). It is pinned in a module of its own,
-`hack/tools/go.mod`, so its dependencies stay out of miso's.
-
-After cloning, run the one-time setup. It activates the git hooks:
-
-```bash
-just setup
-```
+miso needs access to `/dev/kvm`.
 
 ## Contributing
 
-Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). In
-short: commits follow plain Conventional Commits (`type: description`, no
-scopes) and must be DCO signed off (`git commit -s`). Both rules are
-enforced by git hooks.
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md), which also
+has the development setup. In short: commits follow plain Conventional Commits
+(`type: description`, no scopes) and must be DCO signed off (`git commit -s`).
+Both rules are enforced by git hooks.
 
 ## AI-assisted contributions
 
