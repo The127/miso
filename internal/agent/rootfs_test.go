@@ -283,18 +283,59 @@ func TestARootfsWrappedInAnImageTheAgentDoesNotKnowFailsNamingItAndKeepsNoLayer(
 	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
 }
 
-func TestASysextRootfsNeedsNoOsRelease(t *testing.T) {
-	// arrange
-	layers := t.TempDir()
-	worker := mountedBase(t, layers)
-	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release"}
+// withExtensionRelease makes an extension-release file for the name tools.
+const withExtensionRelease = "rm -f /etc/os-release /usr/lib/os-release && mkdir -p /usr/lib/extension-release.d && echo ID=_any > /usr/lib/extension-release.d/extension-release.tools"
+
+// sysextOf is a sysext of a name, made of the base and an image that ran the
+// command.
+func sysextOf(t *testing.T, worker *agent.Agent, name, command string) protocol.Rootfs {
+	t.Helper()
+
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: command}
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapSysext}
+
+	return protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapSysext, Name: name}
+}
+
+func TestASysextRootfsNeedsNoOsReleaseWhenItHasItsExtensionRelease(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := sysextOf(t, worker, "tools.raw", withExtensionRelease)
 
 	// act
-	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
+}
+
+func TestASysextRootfsWithoutItsExtensionReleaseFailsSayingSoAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := sysextOf(t, worker, "other.raw", withExtensionRelease)
+	var out strings.Builder
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, &out)
+
+	// assert
+	assert.Error(t, err)
+	assert.Contains(t, out.String(), "extension-release.other")
+	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
+}
+
+func TestASysextRootfsWhoseExtensionReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := sysextOf(t, worker, "tools.raw", "mkdir -p /usr/lib/extension-release.d && ln -s /not/in/the/tools /usr/lib/extension-release.d/extension-release.tools")
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
 
 	// assert
 	assert.NoError(t, err)

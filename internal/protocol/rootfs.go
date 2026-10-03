@@ -27,6 +27,9 @@ type Rootfs struct {
 	// the file system to make
 	Format string
 
+	// the name of the output file, which a sysext is named by
+	Name string
+
 	// the kind of image the file system is wrapped in, a disk of its own,
 	// empty when it is not wrapped
 	Wrap string

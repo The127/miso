@@ -76,6 +76,7 @@ func TestARootfsOutputIsAnExt4FileSystemOfTheLayersOfItsStageWithTheLayersOfTheT
 		Layers: []string{image.BaseKey, image.Steps[0].Key},
 		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
 		Format: "ext4",
+		Name:   "os.ext4",
 	}, requests[len(requests)-2].Message)
 }
 
@@ -134,6 +135,7 @@ func TestASysextOutputIsARootfsThatIsWrappedInADiskAsASysext(t *testing.T) {
 	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
 	require.True(t, isRootfs)
 	assert.Equal(t, protocol.WrapSysext, rootfs.Wrap)
+	assert.Equal(t, "tools.raw", rootfs.Name)
 }
 
 func TestASysextOutputWithAFormatAsksForThatFormat(t *testing.T) {

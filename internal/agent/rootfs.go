@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/The127/miso/internal/protocol"
 )
@@ -38,6 +39,16 @@ if [ -z "$found" ]; then
 fi
 `
 
+// requiresExtensionRelease refuses a sysext that systemd-sysext would not
+// merge, which is one without the release file of its name. A link counts as
+// there for the reason above.
+const requiresExtensionRelease = `file="/run/miso/image/usr/lib/extension-release.d/extension-release.$MISO_IMAGE"
+if [ ! -e "$file" ] && [ ! -L "$file" ]; then
+	echo "miso: a sysext needs /usr/lib/extension-release.d/extension-release.$MISO_IMAGE" >&2
+	exit 1
+fi
+`
+
 // makers are the scripts that make the file systems a rootfs can be.
 var makers = map[string]string{
 	protocol.FormatExt4:  mkfsExt4,
@@ -48,7 +59,7 @@ var makers = map[string]string{
 // run before repart.
 var wraps = map[string]string{
 	protocol.WrapPortable: requiresOsRelease,
-	protocol.WrapSysext:   "",
+	protocol.WrapSysext:   requiresExtensionRelease,
 }
 
 // Rootfs makes a file system of the image's layers with the tools of
@@ -99,7 +110,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 				defer unbindDefinitions()
 			}
 
-			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: command}, out)
+			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: command, Env: []string{"MISO_IMAGE=" + strings.TrimSuffix(request.Name, ".raw")}}, out)
 		}, nil
 	})
 }
