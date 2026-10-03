@@ -178,3 +178,60 @@ func TestAFailingCheckFailsABuildThatWritesNoOutputsOnTheBuilderKernel(t *testin
 	require.Error(t, err)
 	assert.Contains(t, string(said), file+":9: CHECK false: exit code 1")
 }
+
+func TestAFailingStepSaysHowToGetAShellBeforeIt(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nRUN false\n"), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), "miso shell --before 2 "+dir)
+}
+
+func TestTheShellAFailingStepSaysToOpenKeepsTheBuildFileOfTheBuild(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Other")
+	require.NoError(t, os.WriteFile(file, []byte("FROM debian:13\nRUN false\n"), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", "-f", file, dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), "miso shell --before 2 -f "+file+" "+dir)
+}
+
+func TestTheHintForAContextWithADashInFrontNamesItWithADot(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "-x"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "-x", "Imagefile"), []byte("FROM debian:13\nRUN false\n"), 0o600))
+	build := exec.CommandContext(t.Context(), miso(t), "build", "--", "-x") //nolint:gosec // the test names the binary
+	build.Dir = dir
+
+	// act
+	said, err := build.CombinedOutput()
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), "miso shell --before 2 ./-x")
+}
+
+func TestTheHintForAContextWithSpacesAndQuotesQuotesIt(t *testing.T) {
+	// arrange
+	dir := filepath.Join(t.TempDir(), "my 'odd' dir")
+	require.NoError(t, os.Mkdir(dir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Imagefile"), []byte("FROM debian:13\nRUN false\n"), 0o600))
+
+	// act
+	said, err := exec.CommandContext(t.Context(), miso(t), "build", dir).CombinedOutput() //nolint:gosec // the test names the binary
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, string(said), "miso shell --before 2 '"+filepath.Dir(dir)+"/my '\\''odd'\\'' dir'")
+}

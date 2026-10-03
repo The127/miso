@@ -49,7 +49,9 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 		}
 
 		return boot(func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
-			return imagefile.InFile(have.file, builder.Ask(ctx, vm, dial, agentName(), have.requests, contextfiles.Of(have.files), outputs, command.Root().Writer))
+			err := builder.Ask(ctx, vm, dial, agentName(), have.requests, contextfiles.Of(have.files), outputs, command.Root().Writer)
+
+			return withShellHint(command, have.requests, imagefile.InFile(have.file, err))
 		})
 	})
 }

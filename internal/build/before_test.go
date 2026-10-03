@@ -252,3 +252,18 @@ func TestAShellBeforeAnOutputStandsOnTheLayersBelowIt(t *testing.T) {
 	require.True(t, isShell)
 	assert.Equal(t, []string{"base", "k1"}, shell.Layers)
 }
+
+func TestTheLineOfAFromIsNoStepToStandBefore(t *testing.T) {
+	// arrange
+	planned := twoRuns()
+	planned.Stages[0].Line = 1
+	requests, err := build.Requests(planned, network)
+	require.NoError(t, err)
+
+	// act
+	from, step := build.IsFrom(requests, 1), build.IsFrom(requests, 2)
+
+	// assert
+	assert.True(t, from)
+	assert.False(t, step)
+}

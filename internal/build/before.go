@@ -59,3 +59,15 @@ func shellOf(step plan.Step, under rootfs, network protocol.Network) Request {
 func shellRequest(under rootfs, network *protocol.Network, line int, written string) Request {
 	return Request{Line: line, Written: written, Message: protocol.Shell{Layers: under.layers, Env: under.env, Network: network}}
 }
+
+// IsFrom tells whether the line of the build file is the FROM of a stage,
+// which brings an image in and is no step a shell can stand before.
+func IsFrom(requests []Request, line int) bool {
+	for _, request := range requests {
+		if _, isImport := request.Message.(protocol.Import); isImport && request.Line == line {
+			return true
+		}
+	}
+
+	return false
+}
