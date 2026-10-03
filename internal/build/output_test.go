@@ -104,7 +104,7 @@ func TestAPortableOutputIsARootfsThatIsWrappedInADisk(t *testing.T) {
 	require.NoError(t, err)
 	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
 	require.True(t, isRootfs)
-	assert.True(t, rootfs.Portable)
+	assert.Equal(t, protocol.WrapPortable, rootfs.Wrap)
 	assert.Equal(t, "ext4", rootfs.Format)
 }
 

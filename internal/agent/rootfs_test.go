@@ -220,7 +220,7 @@ func TestAPortableRootfsIsOneRootPartitionRepartCopiesTheImageInto(t *testing.T)
 	worker := mountedBase(t, layers)
 	repart := `for arg; do case $arg in --definitions=*) definitions=${arg#--definitions=} ;; esac; last=$arg; done
 cat "$definitions"/*.conf > "$last"`
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, repart), Format: protocol.FormatErofs, Portable: true}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, repart), Format: protocol.FormatErofs, Wrap: protocol.WrapPortable}
 
 	// act
 	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
@@ -240,7 +240,7 @@ func TestAPortableRootfsWithoutAnOsReleaseFailsSayingSoAndKeepsNoLayer(t *testin
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Portable: true}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapPortable}
 	var out strings.Builder
 
 	// act
@@ -260,7 +260,7 @@ func TestAPortableRootfsWhoseOsReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing
 	code, err := worker.Run(context.Background(), image, io.Discard)
 	require.NoError(t, err)
 	require.Equal(t, 0, code)
-	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Portable: true}
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapPortable}
 
 	// act
 	err = worker.Rootfs(context.Background(), rootfs, io.Discard)

@@ -27,7 +27,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	}
 
 	if takesFormat(instruction.Kind) {
-		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Portable: instruction.Kind == plan.KindPortable}, nil
+		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Wrap: wrapOf(instruction.Kind)}, nil
 	}
 
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
@@ -48,6 +48,16 @@ func refusal(instruction imagefile.Output) error {
 	}
 
 	return nil
+}
+
+// wrapOf is the image a file system of a kind is wrapped in, empty when it is
+// not.
+func wrapOf(kind string) string {
+	if kind == plan.KindPortable {
+		return protocol.WrapPortable
+	}
+
+	return ""
 }
 
 // takesFormat says whether an output of a kind is a file system of a format.

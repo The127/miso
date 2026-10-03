@@ -6,6 +6,11 @@ const (
 	FormatErofs = "erofs"
 )
 
+// The images a file system can be wrapped in.
+const (
+	WrapPortable = "portable"
+)
+
 // Rootfs asks the agent to make a file system image of layers with the
 // tools of another stage, and keep it as the output of the key.
 type Rootfs struct {
@@ -21,9 +26,9 @@ type Rootfs struct {
 	// the file system to make
 	Format string
 
-	// whether the file system is wrapped in a disk of its own, which makes
-	// a portable service
-	Portable bool
+	// the kind of image the file system is wrapped in, a disk of its own,
+	// empty when it is not wrapped
+	Wrap string
 }
 
 func (r Rootfs) into(e *envelope) { e.Rootfs = &r }

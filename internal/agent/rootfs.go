@@ -57,7 +57,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 		var definitions string
 
-		if request.Portable {
+		if request.Wrap != "" {
 			var err error
 
 			definitions, err = makeDefinitions(dir.scratch, []protocol.Partition{portablePartition(request.Format)})
@@ -76,7 +76,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 			defer unbindOutput()
 
-			if request.Portable {
+			if request.Wrap != "" {
 				unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
 				if err != nil {
 					return 0, err
