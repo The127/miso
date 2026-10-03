@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -131,6 +132,50 @@ cat "$dir/etc/miso-image" > "$last"`
 	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
 	require.NoError(t, err)
 	assert.Equal(t, mark+"\n", string(written))
+}
+
+func TestARootfsHasTheMountPointsOfAKernelWhenNoLayerHasThem(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	bare, err := layer.Open(layers).Begin("bare")
+	require.NoError(t, err)
+	require.NoError(t, bare.Finish())
+	mkfs := `for arg; do if [ "$prev" = -d ]; then dir=$arg; fi; prev=$arg; last=$arg; done
+ls -A "$dir" > "$last"`
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"bare"}, Tools: fakeMkfs(t, worker, mkfs), Format: protocol.FormatExt4}
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "dev\nproc\nsys\n", string(written))
+}
+
+func TestTheMountPointsOfARootfsAreOpenToAllWhateverTheUmask(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	bare, err := layer.Open(layers).Begin("bare")
+	require.NoError(t, err)
+	require.NoError(t, bare.Finish())
+	mkfs := `for arg; do if [ "$prev" = -d ]; then dir=$arg; fi; prev=$arg; last=$arg; done
+cd "$dir" && stat -c '%a %n' dev proc sys > "$last"`
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"bare"}, Tools: fakeMkfs(t, worker, mkfs), Format: protocol.FormatExt4}
+	before := syscall.Umask(0o077)
+	t.Cleanup(func() { syscall.Umask(before) })
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "rootfs", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "755 dev\n755 proc\n755 sys\n", string(written))
 }
 
 func TestARootfsWhoseLayerIsThereAlreadyIsNotMadeAgain(t *testing.T) {
