@@ -48,7 +48,7 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 // inBuilder does the work with the builder VM booted, its console in a log
 // file, and stops the VM afterwards. The work dials the VM's agent. What the
 // user should know about how it runs goes to said.
-func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Writer, work func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error) error {
+func inBuilder(ctx context.Context, machine qemu.Machine, log string, said io.Writer, work inVM) error {
 	console, err := os.Create(log)
 	if err != nil {
 		return err
