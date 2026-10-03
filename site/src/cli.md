@@ -134,7 +134,8 @@ least one option is needed. Without one, `prune` stops with an error.
 Both limits must be above zero. With both, what either of them selects is
 removed.
 
-`prune` prints how many downloads it removed and how many bytes that freed.
+`prune` prints how many layers it removed, then how many downloads, each with
+the bytes it freed.
 
 ## miso resize
 

@@ -73,6 +73,9 @@ A rootfs does not contain a kernel. Write `OUTPUT kernel` and `OUTPUT initrd`
 next to it to get the files to boot it with. `examples/microvm` does this and
 the result boots in Firecracker and in QEMU.
 
+A rootfs always has empty `/dev`, `/proc` and `/sys` for the kernel to mount
+on, even when the stage has none.
+
 A `CHECK` on a rootfs boots the kernel and the initrd of the stage with the
 rootfs as a virtual disk. So the stage needs, above the rootfs:
 
