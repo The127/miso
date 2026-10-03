@@ -146,12 +146,7 @@ func importOf(stage plan.Stage) Request {
 func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs) (protocol.Message, error) {
 	switch instruction := step.Instruction.(type) {
 	case imagefile.Run:
-		run := protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command}
-		if !instruction.Offline {
-			run.Network = &network
-		}
-
-		return run, nil
+		return protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command, Network: networkFor(instruction, network)}, nil
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
@@ -159,4 +154,13 @@ func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network pro
 	}
 
 	return nil, nil
+}
+
+// networkFor is the network a step has, and only an offline run has none.
+func networkFor(instruction imagefile.Instruction, network protocol.Network) *protocol.Network {
+	if run, isRun := instruction.(imagefile.Run); isRun && run.Offline {
+		return nil
+	}
+
+	return &network
 }

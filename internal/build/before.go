@@ -31,11 +31,7 @@ func Before(planned plan.Plan, network protocol.Network, line int) ([]Request, e
 // shellOf is a shell on the layers and the environment a step would run on,
 // with the network the step would have.
 func shellOf(step plan.Step, under rootfs, network protocol.Network) Request {
-	shell := protocol.Shell{Layers: under.layers, Env: under.env}
-	if run, isRun := step.Instruction.(imagefile.Run); !isRun || !run.Offline {
-		shell.Network = &network
-	}
-
+	shell := protocol.Shell{Layers: under.layers, Env: under.env, Network: networkFor(step.Instruction, network)}
 	line, written := imagefile.Written(step.Instruction)
 
 	return Request{Line: line, Written: "shell before " + written, Message: shell}
