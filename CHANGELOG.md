@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-rc.4](https://github.com/The127/miso/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2026-10-03)
+
+
+### Features
+
+* let OUTPUT kernel and initrd take a path to the file ([d7bc2bd](https://github.com/The127/miso/commit/d7bc2bdb424f6ebcf5f5e331fea324ff4f512724))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0-rc.4 ([612832f](https://github.com/The127/miso/commit/612832f3dd6fa6a8f9ba9e03155599a38f5d3a07))
+
 ## [1.0.0-rc.3](https://github.com/The127/miso/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-10-03)
 
 
