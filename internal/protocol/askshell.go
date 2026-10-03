@@ -36,18 +36,7 @@ func (c *Conn) AskShell(shell Shell, term Terminal, out io.Writer) (int, error) 
 	over := make(chan struct{})
 	defer close(over)
 
-	go func() {
-		for {
-			select {
-			case size := <-term.Resized:
-				if c.Send(size) != nil {
-					return
-				}
-			case <-over:
-				return
-			}
-		}
-	}()
+	go term.Follow(over, func(size Resize) bool { return c.Send(size) == nil })
 
 	err := c.answered(shell, nil, nil, out)
 	if exited, ok := errors.AsType[exitError](err); ok {

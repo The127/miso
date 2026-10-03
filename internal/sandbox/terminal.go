@@ -38,17 +38,12 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, term
 		_, _ = io.Copy(out, master)
 	}()
 
-	go func() {
-		for {
-			select {
-			case size := <-term.Resized:
-				// a terminal that is gone has no size to keep
-				_ = resize(master, size.Rows, size.Cols)
-			case <-printed:
-				return
-			}
-		}
-	}()
+	go term.Follow(printed, func(size protocol.Resize) bool {
+		// a terminal that is gone has no size to keep
+		_ = resize(master, size.Rows, size.Cols)
+
+		return true
+	})
 
 	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, func(cmd *exec.Cmd) {
 		cmd.Stdin = slave

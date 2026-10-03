@@ -45,13 +45,7 @@ func onUserTerminal(in io.Reader, requests []build.Request) (protocol.Terminal, 
 					continue
 				}
 
-				// only the latest size matters, and this is the only sender
-				select {
-				case <-resized:
-				default:
-				}
-
-				resized <- protocol.Resize{Rows: uint16(rows), Cols: uint16(cols)} //nolint:gosec // a terminal is far smaller than 65536 rows or columns
+				protocol.Latest(resized, protocol.Resize{Rows: uint16(rows), Cols: uint16(cols)}) //nolint:gosec // a terminal is far smaller than 65536 rows or columns
 			case <-over:
 				return
 			}

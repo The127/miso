@@ -115,11 +115,8 @@ func (c *Conn) serveRun(runner Runner, request Run) error {
 	defer cancel()
 
 	code, err := runner.Run(ctx, request, outputs{c})
-	if err == nil && code != 0 {
-		return c.Send(Exited{Code: code})
-	}
 
-	return c.answer(err)
+	return c.answerCode(code, err)
 }
 
 // serveShell has the runner run a shell on what the host types. Unlike
@@ -149,13 +146,7 @@ func (c *Conn) serveShell(runner Runner, request Shell) error {
 					return
 				}
 			case Resize:
-				// only the latest size matters, and this is the only sender
-				select {
-				case <-resized:
-				default:
-				}
-
-				resized <- m
+				Latest(resized, m)
 			default:
 				return
 			}
@@ -163,11 +154,8 @@ func (c *Conn) serveShell(runner Runner, request Shell) error {
 	}()
 
 	code, err := runner.Shell(ctx, request, Terminal{In: in, Resized: resized}, outputs{c})
-	if err == nil && code != 0 {
-		return c.Send(Exited{Code: code})
-	}
 
-	return c.answer(err)
+	return c.answerCode(code, err)
 }
 
 // watching does the work of a request until the host goes away, and tells
@@ -190,6 +178,16 @@ func (c *Conn) watched() (context.Context, context.CancelFunc) {
 	}()
 
 	return ctx, cancel
+}
+
+// answerCode tells the host how a command ended, with the code it exited
+// with when that is not 0.
+func (c *Conn) answerCode(code int, err error) error {
+	if err == nil && code != 0 {
+		return c.Send(Exited{Code: code})
+	}
+
+	return c.answer(err)
 }
 
 // answer tells the host how the request ended.
