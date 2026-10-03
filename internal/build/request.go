@@ -61,15 +61,27 @@ type Request struct {
 // Requests are what the agent is asked, in the order it is asked. A run
 // with network gets the network the host set up for the builder.
 func Requests(planned plan.Plan, network protocol.Network) ([]Request, error) {
-	requests, _, err := requestsUntil(planned, network, 0)
+	requests, _, err := requestsUntil(planned, network, shellAt{})
 
 	return requests, err
 }
 
-// requestsUntil are the requests of Requests, ending with a shell on the
-// layers below the step on the line before, if there is one. It says whether
-// it stopped there. Line 0 stops nowhere.
-func requestsUntil(planned plan.Plan, network protocol.Network, before int) ([]Request, bool, error) {
+// shellAt says where the requests end with a shell, if they do. The zero
+// value ends nowhere.
+type shellAt struct {
+	// before the step on this line of the build file
+	line int
+
+	// after the last step of the last stage
+	end bool
+}
+
+func (s shellAt) wanted() bool { return s.line != 0 || s.end }
+
+// requestsUntil are the requests of Requests, ending with a shell where
+// shell says, which has no use for outputs and checks, so those are left
+// out. It says whether it ended with a shell.
+func requestsUntil(planned plan.Plan, network protocol.Network, shell shellAt) ([]Request, bool, error) {
 	if len(planned.Downloads) > 0 {
 		return nil, false, fmt.Errorf("%s: %w", strings.Join(planned.Downloads, ", "), ErrNotFetched)
 	}
@@ -93,11 +105,20 @@ func requestsUntil(planned plan.Plan, network protocol.Network, before int) ([]R
 
 		boots := newBootingOutputs()
 		fetchedKind := ""
+		// the layers as they are at the step, which a check does not build on
+		current := roots[stage.BaseKey]
 		for _, step := range stage.Steps {
 			under := roots[step.BuiltOn[0]]
 
-			if at, _ := imagefile.Written(step.Instruction); before != 0 && at == before {
-				return append(requests, shellOf(step, under, network)), true, nil
+			if at, _ := imagefile.Written(step.Instruction); shell.line != 0 && at == shell.line {
+				return append(requests, shellOf(step, current, network)), true, nil
+			}
+
+			if shell.wanted() && buildsOutput(step.Instruction) {
+				roots[step.Key] = under.after(step)
+				current = current.after(step)
+
+				continue
 			}
 
 			inputs.add(step.Instruction)
@@ -128,9 +149,16 @@ func requestsUntil(planned plan.Plan, network protocol.Network, before int) ([]R
 			}
 
 			roots[step.Key] = under.after(step)
+			current = current.after(step)
 		}
 
 		ends[stage.Name] = roots[stage.End]
+	}
+
+	if shell.end && len(planned.Stages) > 0 {
+		last := planned.Stages[len(planned.Stages)-1]
+
+		return append(requests, shellRequest(ends[last.Name], &network, 0, "")), true, nil
 	}
 
 	return requests, false, nil
@@ -163,4 +191,15 @@ func networkFor(instruction imagefile.Instruction, network protocol.Network) *pr
 	}
 
 	return &network
+}
+
+// buildsOutput tells whether a step makes or checks an output, which a shell
+// has no use for.
+func buildsOutput(instruction imagefile.Instruction) bool {
+	switch instruction.(type) {
+	case imagefile.Output, imagefile.Check:
+		return true
+	}
+
+	return false
 }
