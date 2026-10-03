@@ -5,12 +5,16 @@ changes only the end of an Imagefile runs only the steps from the change on.
 
 ## Cache keys
 
-Every step has a cache key. `miso plan` lists the key of each step:
+Every step has a cache key. `miso plan` lists the key of each step, and says
+whether its layer is cached:
 
 ```
-   2  3e624b25c9ad  RUN apt-get update && apt-get install -y ...
-   4  71d3dcea2f22  RUN : > /etc/fstab
+   2  3e624b25c9ad  cached  RUN apt-get update && apt-get install -y ...
+   4  71d3dcea2f22  run     RUN : > /etc/fstab
 ```
+
+`run` is a step that a build would run. After a change, the changed step and
+every step after it say `run`.
 
 The key of a step is made from:
 

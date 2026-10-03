@@ -68,6 +68,12 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 // pruneLayers has the builder VM remove the layers the limit lets go, from
 // the cache disk in dir, which the caller holds.
 func pruneLayers(ctx context.Context, command *cli.Command, dir cachedisk.Dir, blobs *download.Store, limit protocol.Prune) error {
+	return askBuilder(ctx, command, dir, blobs, limit, command.Root().Writer)
+}
+
+// askBuilder has the builder VM answer one request that reaches nothing
+// outside the VM, from the cache disk in dir, which the caller holds.
+func askBuilder(ctx context.Context, command *cli.Command, dir cachedisk.Dir, blobs *download.Store, request protocol.Message, out io.Writer) error {
 	boot, err := bootFiles(ctx, blobs)
 	if err != nil {
 		return err
@@ -80,13 +86,12 @@ func pruneLayers(ctx context.Context, command *cli.Command, dir cachedisk.Dir, b
 		return err
 	}
 
-	// a prune reaches nothing outside the VM
 	machine.Card = nil
 
-	requests := []build.Request{{Message: limit}}
+	requests := []build.Request{{Message: request}}
 
 	return inBuilder(ctx, machine, dir.BuilderLog(), command.Root().ErrWriter, func(vm *qemu.VM, dial func() (io.ReadWriteCloser, error)) error {
-		return builder.Ask(ctx, vm, dial, agentName(), requests, nil, nil, command.Root().Writer)
+		return builder.Ask(ctx, vm, dial, agentName(), requests, nil, nil, out)
 	})
 }
 

@@ -21,7 +21,7 @@ func TestAnEnvStepReadsAsWritten(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestACopyStepReadsAsWritten(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestACopyFromAStageShowsTheStage(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestAnOutputStepShowsItsOptionsInOneOrder(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestACheckStepReadsAsWritten(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestAPartitionStepReadsAsWritten(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func TestACmdlineStepReadsAsWritten(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)

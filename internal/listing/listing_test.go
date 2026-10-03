@@ -22,7 +22,7 @@ func TestAStepShowsItsLineItsKeyAndItsCommand(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -38,7 +38,7 @@ func TestAnOfflineStepShowsItHasNoNetwork(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestAKeyIsShortenedToTwelveCharacters(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestANamedStageShowsItsName(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestAStageOnAnImageShowsTheDigestOfItsBase(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestAContextCopyListsItsFilesWithTheirDigests(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestADigestIsShortenedAfterItsFormatName(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestAListingNamesTheAgentThatKeyedIt(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestAListingStopsAtTheFirstWriteError(t *testing.T) {
 	planned := plan.Plan{Agent: "miso v0.3.1", Stages: []plan.Stage{{Base: "scratch"}}}
 
 	// act
-	err := listing.Write(brokenWriter{}, planned)
+	err := listing.Write(brokenWriter{}, planned, nil)
 
 	// assert
 	assert.EqualError(t, err, "the pipe is gone")
@@ -174,7 +174,7 @@ func TestAStepWithoutAKeyShowsDashes(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
@@ -187,9 +187,79 @@ func TestAListingNamesWhatABuildDownloadsFirst(t *testing.T) {
 	var out bytes.Buffer
 
 	// act
-	err := listing.Write(&out, planned)
+	err := listing.Write(&out, planned, nil)
 
 	// assert
 	require.NoError(t, err)
 	assert.Equal(t, "agent miso v0.3.1\ndownload debian:sid\nFROM debian:sid\n", out.String())
+}
+
+func TestAStepWhoseKeyIsCachedSaysCached(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "make"}, Key: "9a8b7c6d5e4f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned, map[string]bool{"9a8b7c6d5e4f": true})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   2  9a8b7c6d5e4f  cached  RUN make\n", out.String())
+}
+
+func TestAStepWhoseKeyIsNotCachedSaysRun(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Run{Line: 2, Command: "make"}, Key: "9a8b7c6d5e4f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned, map[string]bool{})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   2  9a8b7c6d5e4f  run     RUN make\n", out.String())
+}
+
+func TestAStepThatMakesNoLayerSaysNeitherButKeepsTheColumn(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base:  "scratch",
+		Steps: []plan.Step{{Instruction: imagefile.Env{Line: 2, Key: "A", Value: "b"}, Key: "9a8b7c6d5e4f"}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned, map[string]bool{})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n   2  9a8b7c6d5e4f          ENV A=b\n", out.String())
+}
+
+func TestTheFilesOfACopyStayUnderItsTextWhenTheCacheIsShown(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Stages: []plan.Stage{{
+		Base: "scratch",
+		Steps: []plan.Step{{
+			Instruction: imagefile.Copy{Line: 2, Sources: []string{"etc/motd"}, Destination: "/etc/"},
+			Key:         "9a8b7c6d5e4f",
+			Files:       []plan.File{{Path: "etc/motd", Digest: "47348ce3c15ba0348ac0887f85dd16b27501e538ff66fc2756c2fa642dc4102c"}},
+		}},
+	}}}
+	var out bytes.Buffer
+
+	// act
+	err := listing.Write(&out, planned, map[string]bool{})
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "FROM scratch\n"+
+		"   2  9a8b7c6d5e4f  run     COPY etc/motd /etc/\n"+
+		"                            etc/motd  47348ce3c15b\n", out.String())
 }

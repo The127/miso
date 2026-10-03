@@ -23,13 +23,13 @@ var planCommand = &cli.Command{
 	Action: listPlan,
 }
 
-func listPlan(_ context.Context, command *cli.Command) error {
+func listPlan(ctx context.Context, command *cli.Command) error {
 	cache, err := cacheDir()
 	if err != nil {
 		return err
 	}
 
-	_, bases := baseImages(cache)
+	blobs, bases := baseImages(cache)
 
 	dir, _ := located(command)
 	files, err := buildcontext.Open(dir)
@@ -44,7 +44,12 @@ func listPlan(_ context.Context, command *cli.Command) error {
 		return err
 	}
 
-	return listing.Write(command.Root().Writer, planned)
+	cached, err := cachedKeys(ctx, command, cache, blobs, planned)
+	if err != nil {
+		return err
+	}
+
+	return listing.Write(command.Root().Writer, planned, cached)
 }
 
 // planOf is the plan of the build file the command names, on the files of

@@ -18,6 +18,7 @@ type Runner interface {
 	BootPart(ctx context.Context, request BootPart, out io.Writer) error
 	Fetch(ctx context.Context, request Fetch, pieces Pieces, out io.Writer) error
 	Prune(ctx context.Context, request Prune, out io.Writer) error
+	Cached(ctx context.Context, request Cached, out io.Writer) error
 	Shell(ctx context.Context, request Shell, term Terminal, out io.Writer) (code int, err error)
 }
 
@@ -33,6 +34,8 @@ func (c *Conn) Serve(runner Runner) error {
 	}
 
 	switch request := message.(type) {
+	case Cached:
+		return c.serveCached(runner, request)
 	case Copy:
 		return c.serveCopy(runner, request)
 	case Disk:
@@ -72,6 +75,12 @@ func (c *Conn) serveCopy(runner Runner, request Copy) error {
 	}
 
 	return c.answer(err)
+}
+
+func (c *Conn) serveCached(runner Runner, request Cached) error {
+	return c.watching(func(ctx context.Context) error {
+		return runner.Cached(ctx, request, outputs{c})
+	})
 }
 
 func (c *Conn) serveDisk(runner Runner, request Disk) error {

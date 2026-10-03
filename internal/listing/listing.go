@@ -10,9 +10,10 @@ import (
 )
 
 // Write lists a plan, a stage as its FROM line and every step as its line
-// number, its key and the instruction as written.
-func Write(w io.Writer, planned plan.Plan) error {
-	out := &lines{w: w}
+// number, its key and the instruction as written. A step whose key is in
+// cached says so. A nil cached says nothing about the cache.
+func Write(w io.Writer, planned plan.Plan, cached map[string]bool) error {
+	out := &lines{w: w, cached: cached}
 	if planned.Agent != "" {
 		out.print("agent %s", planned.Agent)
 	}
@@ -34,8 +35,9 @@ func Write(w io.Writer, planned plan.Plan) error {
 // lines keeps the first error a writer gives, so that the listing can be
 // written as its lines and the error is checked once at the end.
 type lines struct {
-	w   io.Writer
-	err error
+	w      io.Writer
+	cached map[string]bool
+	err    error
 }
 
 func (l *lines) print(format string, args ...any) {
@@ -48,10 +50,11 @@ func (l *lines) print(format string, args ...any) {
 
 func (l *lines) step(step plan.Step) {
 	line, text := imagefile.Written(step.Instruction)
-	l.print("%4d  %s  %s", line, short(step.Key), text)
+	marker := l.marker(step)
+	l.print("%4d  %s  %s%s", line, short(step.Key), marker, text)
 
 	for _, file := range step.Files {
-		l.print("%20s%s  %s", "", file.Path, short(file.Digest))
+		l.print("%*s%s  %s", 20+len(marker), "", file.Path, short(file.Digest))
 	}
 }
 
@@ -82,4 +85,34 @@ func short(key string) string {
 	}
 
 	return name + ":" + hex[:12]
+}
+
+// The markers of the cache column, of one width so the text lines up.
+const (
+	markerCached = "cached  "
+	markerRun    = "run     "
+	markerNone   = "        "
+)
+
+func (l *lines) marker(step plan.Step) string {
+	switch {
+	case l.cached == nil:
+		return ""
+	case !makesLayer(step.Instruction):
+		return markerNone
+	case l.cached[step.Key]:
+		return markerCached
+	}
+
+	return markerRun
+}
+
+// makesLayer is an instruction whose key is the key of a layer in the cache.
+func makesLayer(instruction imagefile.Instruction) bool {
+	switch instruction.(type) {
+	case imagefile.Run, imagefile.Copy, imagefile.Output:
+		return true
+	}
+
+	return false
 }

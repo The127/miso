@@ -44,6 +44,11 @@ func (u Unstarted) BootPart(context.Context, protocol.BootPart, io.Writer) error
 	return u.why()
 }
 
+// Cached fails naming why the agent did not start.
+func (u Unstarted) Cached(context.Context, protocol.Cached, io.Writer) error {
+	return u.why()
+}
+
 // Fetch fails naming why the agent did not start.
 func (u Unstarted) Fetch(context.Context, protocol.Fetch, protocol.Pieces, io.Writer) error {
 	return u.why()

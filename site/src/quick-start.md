@@ -48,8 +48,9 @@ miso plan
 ```
 
 Each stage starts with its `FROM` line. Under it, every step shows its line
-number, its cache key and the step as written. The stage named `miso tools`
-is not in your file. miso adds it for the tools that write the disk.
+number, its cache key, whether the layer is `cached` or would `run`, and the
+step as written. The stage named `miso tools` is not in your file. miso adds
+it for the tools that write the disk.
 
 ## Build
 
@@ -66,4 +67,4 @@ partition, and it boots under UEFI.
 miso keeps the result of every step as a layer. If you change a step, miso
 builds that step and all steps after it again and reuses the rest. Edit the
 `RUN` line with htop and run `miso plan` to see it: the cache key of that
-step and of every step after it changes.
+step and of every step after it changes, and those steps say `run`.
