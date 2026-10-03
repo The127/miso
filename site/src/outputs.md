@@ -89,13 +89,19 @@ driver of the virtual disk.
 ```
 OUTPUT kernel vmlinuz
 OUTPUT kernel vmlinux --elf
+OUTPUT kernel vmlinuz --path=/src/linux/arch/x86/boot/bzImage
 OUTPUT initrd initrd.img
+OUTPUT initrd initrd.img --path=/src/initrd.img
 ```
 
 The kernel and the initrd of the image, copied as they are.
 
 `--elf` unpacks the kernel to the ELF file it contains. Firecracker needs
 that form.
+
+`--path` names the file in the image, for a kernel or an initrd that a `RUN`
+built somewhere else. It must be an absolute path. It works together with
+`--elf`.
 
 These outputs cannot be booted, so they take no `CHECK`.
 
@@ -205,6 +211,7 @@ It also gives the reason. These are the ones from the `OUTPUT` line itself:
 - `unknown kind of output`
 - `--x: unknown option`
 - `--elf: option takes no value`
+- `--path=x: path is not absolute`
 - `--format=x: unknown file system`
 - `not a plain file name`, when the name has a `/` in it
 - `file name taken`, when two outputs have the same name

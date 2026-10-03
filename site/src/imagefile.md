@@ -246,11 +246,11 @@ to `miso build -o`.
 | `sysext` | A system extension in a disk image with one root partition. | `--format` |
 | `confext` | A configuration extension in a disk image with one root partition. | `--format` |
 | `update` | A directory with the files `systemd-sysupdate` uses. | `--version=<version>` (required) |
-| `kernel` | The kernel of the image. | `--elf` unpacks it to an ELF file |
-| `initrd` | The initrd of the image. | |
+| `kernel` | The kernel of the image. | `--elf` unpacks it to an ELF file, `--path=<file>` names it |
+| `initrd` | The initrd of the image. | `--path=<file>` names it |
 
 The kernel and the initrd are found in the image. miso uses the newest
-version under `/usr/lib/modules`.
+version under `/usr/lib/modules`, unless `--path` names the file.
 
 Disks are written as sparse files.
 

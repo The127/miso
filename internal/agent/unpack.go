@@ -45,12 +45,12 @@ func (a *Agent) unpack(ctx context.Context, request protocol.BootPart, out io.Wr
 		// links in the image mean places in the image, never in the builder VM
 		imageFS := place.Open(dir.image.dir).FS()
 
-		found, err := kernel.Find(imageFS, "")
+		linux, err := partPath(imageFS, request)
 		if err != nil {
 			return nil, err
 		}
 
-		stream, unpacked, err := keepStream(imageFS, found.Linux, dir.scratch)
+		stream, unpacked, err := keepStream(imageFS, linux, dir.scratch)
 		if err != nil {
 			return nil, err
 		}

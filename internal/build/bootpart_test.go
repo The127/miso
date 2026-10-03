@@ -75,3 +75,44 @@ func TestAnElfOptionWithAValueFailsAtItsLineNamingIt(t *testing.T) {
 	assert.ErrorContains(t, err, "line 2")
 	assert.ErrorContains(t, err, "--elf")
 }
+
+func TestAKernelOutputWithAPathAsksForThatFileOfTheImage(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT kernel --path=/src/linux/arch/x86/boot/bzImage vmlinuz\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	part, isPart := requests[len(requests)-2].Message.(protocol.BootPart)
+	require.True(t, isPart)
+	assert.Equal(t, "/src/linux/arch/x86/boot/bzImage", part.Path)
+}
+
+func TestAnInitrdOutputWithAPathAsksForThatFileOfTheImage(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT initrd --path=/src/initrd.img initrd.img\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	part, isPart := requests[len(requests)-2].Message.(protocol.BootPart)
+	require.True(t, isPart)
+	assert.Equal(t, "/src/initrd.img", part.Path)
+}
+
+func TestAPathThatIsNotAbsoluteFailsAtItsLineNamingIt(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT kernel --path=arch/x86/boot/bzImage vmlinuz\n")
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrPathNotAbsolute)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "--path")
+}

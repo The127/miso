@@ -208,3 +208,22 @@ func TestALzopStreamIsUnpackedByLzop(t *testing.T) {
 func TestALz4StreamIsUnpackedByLz4(t *testing.T) {
 	assert.Equal(t, "\x7fELF -dc", unpackedBy(t, []byte{0x02, 0x21, 0x4c, 0x18, 0x00, 0x00}, "lz4", "-dc"))
 }
+
+func TestAnUnpackedKernelWithAPathIsTheELFFileOfThatKernelNotOfTheInstalledOne(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	elf := []byte("\x7fELF the built kernel")
+	encoded := base64.StdEncoding.EncodeToString(bzImage(t, gzipped(t, elf), uint32(len(elf)))) //nolint:gosec // a few bytes
+	withImage(t, worker, "mkdir -p /src && echo "+encoded+" | base64 -d > /src/bzImage")
+	part := protocol.BootPart{Key: "elf", Layers: []string{"base", "image"}, Tools: []string{"base"}, Part: protocol.PartKernel, ELF: true, Path: "/src/bzImage"}
+
+	// act
+	err := worker.BootPart(context.Background(), part, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "elf", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, elf, written)
+}

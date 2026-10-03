@@ -23,6 +23,9 @@ type BootPart struct {
 
 	// the kernel is unpacked into the ELF file it boots from
 	ELF bool
+
+	// the file of the image to keep, empty for the one the image installs
+	Path string
 }
 
 func (b BootPart) into(e *envelope) { e.BootPart = &b }

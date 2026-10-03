@@ -24,6 +24,9 @@ var ErrUnknownKind = errors.New("unknown kind of output")
 // ErrUnknownOption is an option an output of its kind does not take.
 var ErrUnknownOption = errors.New("unknown option")
 
+// ErrPathNotAbsolute is a path of the image that does not start at its root.
+var ErrPathNotAbsolute = errors.New("path is not absolute")
+
 // ErrOptionTakesNoValue is an option that only says yes, given a value.
 var ErrOptionTakesNoValue = errors.New("option takes no value")
 

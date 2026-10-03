@@ -3,6 +3,7 @@ package build
 import (
 	"fmt"
 	"maps"
+	"path"
 	"slices"
 	"strings"
 
@@ -28,7 +29,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	}
 
 	if part, isPart := bootParts[instruction.Kind]; isPart {
-		return protocol.BootPart{Key: step.Key, Layers: under.layers, Tools: tools.layers, Part: part, ELF: plan.Unpacks(instruction)}, nil
+		return protocol.BootPart{Key: step.Key, Layers: under.layers, Tools: tools.layers, Part: part, ELF: plan.Unpacks(instruction), Path: instruction.Options[plan.OptionPath]}, nil
 	}
 
 	if plan.TakesFormat(instruction.Kind) {
@@ -48,11 +49,19 @@ func refusal(instruction imagefile.Output) error {
 		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case instruction.Options[plan.OptionELF] != "":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
+	case pathGiven(instruction.Options) && !path.IsAbs(instruction.Options[plan.OptionPath]):
+		return fmt.Errorf("--%s=%s: %w", plan.OptionPath, instruction.Options[plan.OptionPath], ErrPathNotAbsolute)
 	case plan.TakesFormat(instruction.Kind) && !slices.Contains(formats, formatOf(instruction.Options)):
 		return fmt.Errorf("--format=%s: %w", formatOf(instruction.Options), ErrUnknownFormat)
 	}
 
 	return nil
+}
+
+func pathGiven(options map[string]string) bool {
+	_, given := options[plan.OptionPath]
+
+	return given
 }
 
 // wrapOf is the image a file system of a kind is wrapped in, empty when it is

@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/The127/miso/internal/kernel"
 	"github.com/The127/miso/internal/place"
@@ -50,14 +53,9 @@ func (a *Agent) BootPart(ctx context.Context, request protocol.BootPart, out io.
 	// links in the image mean places in the image, never in the builder VM
 	imageFS := place.Open(image.dir).FS()
 
-	found, err := kernel.Find(imageFS, "")
+	path, err := partPath(imageFS, request)
 	if err != nil {
 		return err
-	}
-
-	path := found.Linux
-	if request.Part == protocol.PartInitrd {
-		path = found.Initrd
 	}
 
 	work, err := a.layers.Begin(request.Key)
@@ -72,4 +70,23 @@ func (a *Agent) BootPart(ctx context.Context, request protocol.BootPart, out io.
 	}
 
 	return work.FinishAt(at)
+}
+
+// partPath is the file of the image a request keeps: the one it names, or
+// the one the image installs.
+func partPath(imageFS fs.FS, request protocol.BootPart) (string, error) {
+	if request.Path != "" {
+		return strings.TrimPrefix(path.Clean("/"+request.Path), "/"), nil
+	}
+
+	found, err := kernel.Find(imageFS, "")
+	if err != nil {
+		return "", err
+	}
+
+	if request.Part == protocol.PartInitrd {
+		return found.Initrd, nil
+	}
+
+	return found.Linux, nil
 }

@@ -136,3 +136,21 @@ func TestABootPartOfAPartTheAgentCannotKeepFailsNamingItAndKeepsNoLayer(t *testi
 	assert.ErrorContains(t, err, "banana")
 	assert.NoDirExists(t, filepath.Join(layers, "part"))
 }
+
+func TestAKernelPartWithAPathIsThatFileOfAnImageThatInstallsNoKernel(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	files := "mkdir -p /src && echo built > /src/bzImage"
+	withImage(t, worker, files)
+	part := protocol.BootPart{Key: "kernel", Layers: []string{"base", "image"}, Part: protocol.PartKernel, Path: "/src/bzImage"}
+
+	// act
+	err := worker.BootPart(context.Background(), part, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(filepath.Join(layers, "kernel", "disk.raw"))
+	require.NoError(t, err)
+	assert.Equal(t, "built\n", string(written))
+}

@@ -24,6 +24,9 @@ const (
 	// OptionELF asks for the kernel as the ELF file it unpacks to.
 	OptionELF = "elf"
 
+	// OptionPath names the file of the image a kernel or an initrd is.
+	OptionPath = "path"
+
 	// OptionFormat names the file system of a rootfs or a wrapped image.
 	OptionFormat = "format"
 
@@ -57,8 +60,8 @@ var kinds = map[string]kind{
 	KindSysext:   {tools: true, neverBooted: true, wrapped: true, options: []string{OptionFormat}},
 	KindConfext:  {tools: true, neverBooted: true, wrapped: true, options: []string{OptionFormat}},
 	KindUpdate:   {tools: true, neverBooted: true, options: []string{OptionVersion}},
-	KindKernel:   {neverBooted: true, options: []string{OptionELF}},
-	KindInitrd:   {neverBooted: true},
+	KindKernel:   {neverBooted: true, options: []string{OptionELF, OptionPath}},
+	KindInitrd:   {neverBooted: true, options: []string{OptionPath}},
 }
 
 // Known is a kind of output miso makes.
