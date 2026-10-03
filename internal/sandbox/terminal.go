@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/exec"
 	"slices"
 
 	"golang.org/x/sys/unix"
@@ -45,13 +44,7 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, term
 		return true
 	})
 
-	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, func(cmd *exec.Cmd) {
-		cmd.Stdin = slave
-		cmd.Stdout = slave
-		cmd.Stderr = slave
-		cmd.SysProcAttr.Setsid = true
-		cmd.SysProcAttr.Setctty = true
-	})
+	code, err := start(ctx, root, []string{"-i"}, envOf(shell), shell.Network, streams{terminal: slave})
 	_ = slave.Close()
 	<-printed
 

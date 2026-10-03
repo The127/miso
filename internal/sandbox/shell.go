@@ -15,15 +15,18 @@ import (
 
 // Run runs the command of a run in a root and answers its exit code.
 func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int, error) {
-	return start(ctx, root, []string{"-c", run.Command}, run.Env, run.Network, func(cmd *exec.Cmd) {
-		cmd.Stdout = out
-		cmd.Stderr = out
-	})
+	return start(ctx, root, []string{"-c", run.Command}, run.Env, run.Network, streams{out: out})
+}
+
+// streams are what the shell of a run reads and writes. It writes to out, or
+// to a terminal, which it also reads and has as its controlling terminal.
+type streams struct {
+	out      io.Writer
+	terminal *os.File
 }
 
 // start runs /bin/sh with the arguments in a root and answers its exit code.
-// What it reads and writes is for attach to set.
-func start(ctx context.Context, root string, args, env []string, network *protocol.Network, attach func(cmd *exec.Cmd)) (int, error) {
+func start(ctx context.Context, root string, args, env []string, network *protocol.Network, std streams) (int, error) {
 	// Go runs nothing between clone and exec, so the agent itself goes first
 	// to set up the namespaces, then becomes the shell
 	cmd := exec.CommandContext(ctx, "/proc/self/exe", append([]string{root}, args...)...) //nolint:gosec // running what the build file says is what a RUN is
@@ -33,7 +36,16 @@ func start(ctx context.Context, root string, args, env []string, network *protoc
 	// mount private in the new mount namespace, so what the run mounts never
 	// reaches the agent. A name and network the run changes stay its own
 	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWUTS | syscall.CLONE_NEWNET, Unshareflags: syscall.CLONE_NEWNS}
-	attach(cmd)
+
+	if std.terminal != nil {
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = std.terminal, std.terminal, std.terminal
+		cmd.SysProcAttr.Setsid = true
+		cmd.SysProcAttr.Setctty = true
+	} else {
+		cmd.Stdout = std.out
+		cmd.Stderr = std.out
+	}
+
 	// Docker's defaults, and os/exec keeps the last of a key, so the build
 	// file's own values win
 	cmd.Env = append([]string{
@@ -99,6 +111,12 @@ func start(ctx context.Context, root string, args, env []string, network *protoc
 		return 0, fmt.Errorf("start run: %s", reason)
 	}
 
+	return exitCodeOf(ctx, err)
+}
+
+// exitCodeOf is the exit code a finished shell answers, from what its wait
+// returned.
+func exitCodeOf(ctx context.Context, err error) (int, error) {
 	// the kill that stops a cancelled command looks like an exit of its own
 	if ctx.Err() != nil {
 		return 0, ctx.Err()
