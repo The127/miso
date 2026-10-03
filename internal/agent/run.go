@@ -35,16 +35,9 @@ func (a *Agent) Run(ctx context.Context, run protocol.Run, out io.Writer) (int, 
 // directory, which is no longer mounted once it returns.
 func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out io.Writer) (int, error) {
 	code := 0
-	var ceiling func(scratch string, below []string) (string, error)
-	if run.Network != nil {
-		ceiling = func(scratch string, below []string) (string, error) {
-			return sandbox.Ceiling(scratch, below, run.Network)
-		}
-	}
-
 	// the run's mount points live below every layer, so a layer holds only
 	// what its command wrote
-	err := a.overlaid(run.Layers, sandbox.Floor, ceiling, upper, func(root string) (bool, error) {
+	err := a.overlaid(run.Layers, sandbox.Floor, ceilingFor(run.Network), upper, func(root string) (bool, error) {
 		var err error
 		code, err = sandbox.Run(ctx, root, run, out)
 
@@ -52,4 +45,16 @@ func (a *Agent) runOn(ctx context.Context, upper string, run protocol.Run, out i
 	})
 
 	return code, err
+}
+
+// ceilingFor is the ceiling of a run with the network, and none for a run
+// without.
+func ceilingFor(network *protocol.Network) func(scratch string, below []string) (string, error) {
+	if network == nil {
+		return nil
+	}
+
+	return func(scratch string, below []string) (string, error) {
+		return sandbox.Ceiling(scratch, below, network)
+	}
 }
