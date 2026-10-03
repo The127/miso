@@ -11,6 +11,9 @@ Releases are made from the commit messages on `main`. Nobody tags by hand.
 3. In the same workflow, goreleaser builds `miso` for linux amd64 and
    uploads a `tar.gz`, a `deb`, an `rpm` and `checksums.txt` to that
    release. Tags with a suffix such as `-rc.1` are marked as pre-releases.
+4. Also in that workflow, cosign signs `checksums.txt` without a key. The
+   workflow's own identity signs it, so there is no key or secret to keep.
+   The signature is uploaded as `checksums.txt.sigstore.json`.
 
 The binary reports its version from the Go build info stamp. A clean
 checkout of the tag is enough, there are no ldflags.

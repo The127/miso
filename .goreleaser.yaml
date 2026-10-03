@@ -40,6 +40,17 @@ nfpms:
 checksum:
   name_template: checksums.txt
 
+# keyless: the workflow's own identity signs, there is no key to keep
+signs:
+  - cmd: cosign
+    signature: ${artifact}.sigstore.json
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - --yes
+      - ${artifact}
+    artifacts: checksum
+
 # release-please writes the notes
 changelog:
   disable: true

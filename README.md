@@ -23,6 +23,19 @@ a `deb` and an `rpm` for linux amd64, with `checksums.txt`. The packages
 depend on qemu. They do not hold the builder kernel or the firmware, so
 the first build downloads them and checks their digests.
 
+### Verifying a release
+
+`checksums.txt` is signed with [cosign](https://github.com/sigstore/cosign).
+Download it with `checksums.txt.sigstore.json`, then run:
+
+```
+cosign verify-blob checksums.txt \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/The127/miso/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum --ignore-missing -c checksums.txt
+```
+
 ## Development setup
 
 Required tooling:
