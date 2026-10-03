@@ -268,3 +268,34 @@ func TestAPortableRootfsWhoseOsReleaseIsALinkToAPlaceOfTheToolsIsMade(t *testing
 	// assert
 	assert.NoError(t, err)
 }
+
+func TestARootfsWrappedInAnImageTheAgentDoesNotKnowFailsNamingItAndKeepsNoLayer(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: "confext"}
+
+	// act
+	err := worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "confext")
+	assert.NoDirExists(t, filepath.Join(layers, "rootfs"))
+}
+
+func TestASysextRootfsNeedsNoOsRelease(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	image := protocol.Run{Key: "image", Layers: []string{"base"}, Command: "rm -f /etc/os-release /usr/lib/os-release"}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	rootfs := protocol.Rootfs{Key: "rootfs", Layers: []string{"base", "image"}, Tools: fakeTools(t, worker, writesDisk), Format: protocol.FormatExt4, Wrap: protocol.WrapSysext}
+
+	// act
+	err = worker.Rootfs(context.Background(), rootfs, io.Discard)
+
+	// assert
+	assert.NoError(t, err)
+}

@@ -53,8 +53,11 @@ func refusal(instruction imagefile.Output) error {
 // wrapOf is the image a file system of a kind is wrapped in, empty when it is
 // not.
 func wrapOf(kind string) string {
-	if kind == plan.KindPortable {
+	switch kind {
+	case plan.KindPortable:
 		return protocol.WrapPortable
+	case plan.KindSysext:
+		return protocol.WrapSysext
 	}
 
 	return ""
@@ -62,7 +65,7 @@ func wrapOf(kind string) string {
 
 // takesFormat says whether an output of a kind is a file system of a format.
 func takesFormat(kind string) bool {
-	return kind == plan.KindRootfs || kind == plan.KindPortable
+	return kind == plan.KindRootfs || wrapOf(kind) != ""
 }
 
 // formatOption names the file system of a rootfs.
@@ -84,7 +87,7 @@ func formatOf(options map[string]string) string {
 // optionsOf are the options an output of a kind takes.
 func optionsOf(kind string) []string {
 	switch kind {
-	case plan.KindRootfs, plan.KindPortable:
+	case plan.KindRootfs, plan.KindPortable, plan.KindSysext:
 		return []string{formatOption}
 	case plan.KindKernel:
 		return []string{plan.OptionELF}

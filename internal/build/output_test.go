@@ -122,6 +122,34 @@ func TestAPortableOutputWithAFormatAsksForThatFormat(t *testing.T) {
 	assert.Equal(t, "erofs", rootfs.Format)
 }
 
+func TestASysextOutputIsARootfsThatIsWrappedInADiskAsASysext(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT sysext tools.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, protocol.WrapSysext, rootfs.Wrap)
+}
+
+func TestASysextOutputWithAFormatAsksForThatFormat(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT sysext --format=erofs tools.raw\n")
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	rootfs, isRootfs := requests[len(requests)-2].Message.(protocol.Rootfs)
+	require.True(t, isRootfs)
+	assert.Equal(t, "erofs", rootfs.Format)
+}
+
 func TestARootfsOfAFormatMisoCannotMakeFailsAtItsLine(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT rootfs --format=btrfs os.img\n")

@@ -9,6 +9,7 @@ const (
 // The images a file system can be wrapped in.
 const (
 	WrapPortable = "portable"
+	WrapSysext   = "sysext"
 )
 
 // Rootfs asks the agent to make a file system image of layers with the

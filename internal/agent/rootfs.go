@@ -44,6 +44,13 @@ var makers = map[string]string{
 	protocol.FormatErofs: mkfsErofs,
 }
 
+// wraps are the checks of the images a file system can be wrapped in, which
+// run before repart.
+var wraps = map[string]string{
+	protocol.WrapPortable: requiresOsRelease,
+	protocol.WrapSysext:   "",
+}
+
 // Rootfs makes a file system of the image's layers with the tools of
 // another stage. A key whose layer is there already has its file system.
 func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writer) error {
@@ -52,20 +59,27 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 		return fmt.Errorf("no file system %q can be made", request.Format)
 	}
 
+	wrapped := request.Wrap != ""
+
+	requirements, known := wraps[request.Wrap]
+	if wrapped && !known {
+		return fmt.Errorf("no image of kind %q can be made", request.Wrap)
+	}
+
 	return a.madeByTools(request.Key, request.Layers, request.Tools, "file system", func(dir toolsDir) (toolsRun, error) {
 		command := maker
 
 		var definitions string
 
-		if request.Wrap != "" {
+		if wrapped {
 			var err error
 
-			definitions, err = makeDefinitions(dir.scratch, []protocol.Partition{portablePartition(request.Format)})
+			definitions, err = makeDefinitions(dir.scratch, []protocol.Partition{wrappedPartition(request.Format)})
 			if err != nil {
 				return nil, err
 			}
 
-			command = requiresOsRelease + repart
+			command = requirements + repart
 		}
 
 		return func(root string) (int, error) {
@@ -76,7 +90,7 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 
 			defer unbindOutput()
 
-			if request.Wrap != "" {
+			if wrapped {
 				unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
 				if err != nil {
 					return 0, err
@@ -90,11 +104,11 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 	})
 }
 
-// portablePartition is the one partition of a portable image, which holds
-// the whole image. Without Minimize repart sizes an ext4 too small, and best
+// wrappedPartition is the one partition of a wrapped image, which holds the
+// whole image. Without Minimize repart sizes an ext4 too small, and best
 // is refused for ext4. Type=root names the root of x86-64 only, which is
 // the one architecture miso builds for.
-func portablePartition(format string) protocol.Partition {
+func wrappedPartition(format string) protocol.Partition {
 	return protocol.Partition{Name: "root", Settings: []protocol.Setting{
 		{Key: "Type", Value: "root"},
 		{Key: "Format", Value: format},
