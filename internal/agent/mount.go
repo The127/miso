@@ -92,6 +92,31 @@ func bindOutput(root, dir string) (func(), error) {
 	return bind(dir, filepath.Join(root, "run", "miso", "out"))
 }
 
+// bindForTools shows the tools in root the output, and the definitions when
+// there are any. The function it answers takes them away again.
+func bindForTools(root, output, definitions string) (func(), error) {
+	unbindOutput, err := bindOutput(root, output)
+	if err != nil {
+		return nil, err
+	}
+
+	if definitions == "" {
+		return unbindOutput, nil
+	}
+
+	unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
+	if err != nil {
+		unbindOutput()
+
+		return nil, err
+	}
+
+	return func() {
+		unbindDefinitions()
+		unbindOutput()
+	}, nil
+}
+
 // cloneInto shows a mount at another place. The clone keeps the attributes
 // of the mount, so a device in an image opens nothing of the builder's.
 func cloneInto(mount, at string) error {

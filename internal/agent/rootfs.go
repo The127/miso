@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/The127/miso/internal/protocol"
@@ -73,47 +72,49 @@ func (a *Agent) Rootfs(ctx context.Context, request protocol.Rootfs, out io.Writ
 		return fmt.Errorf("no file system %q can be made", request.Format)
 	}
 
-	wrapped := request.Wrap != ""
-
-	requirements, known := wraps[request.Wrap]
-	if wrapped && !known {
-		return fmt.Errorf("no image of kind %q can be made", request.Wrap)
+	if request.Wrap != "" {
+		return a.wrapped(ctx, request, out)
 	}
 
 	return a.madeByTools(request.Key, request.Layers, request.Tools, "file system", func(dir toolsDir) (toolsRun, error) {
-		command := maker
-
-		var definitions string
-
-		if wrapped {
-			var err error
-
-			definitions, err = makeDefinitions(dir.scratch, []protocol.Partition{wrappedPartition(request.Format)})
-			if err != nil {
-				return nil, err
-			}
-
-			command = requirements + repart
-		}
-
 		return func(root string) (int, error) {
-			unbindOutput, err := bindOutput(root, dir.output)
+			unbind, err := bindForTools(root, dir.output, "")
 			if err != nil {
 				return 0, err
 			}
 
-			defer unbindOutput()
+			defer unbind()
 
-			if wrapped {
-				unbindDefinitions, err := bind(definitions, filepath.Join(root, "run", "miso", "definitions"))
-				if err != nil {
-					return 0, err
-				}
+			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: maker}, out)
+		}, nil
+	})
+}
 
-				defer unbindDefinitions()
+// wrapped makes a file system of the image's layers, wrapped in a disk of
+// its own by repart, after the checks of the kind of image.
+func (a *Agent) wrapped(ctx context.Context, request protocol.Rootfs, out io.Writer) error {
+	requirements, known := wraps[request.Wrap]
+	if !known {
+		return fmt.Errorf("no image of kind %q can be made", request.Wrap)
+	}
+
+	return a.madeByTools(request.Key, request.Layers, request.Tools, "file system", func(dir toolsDir) (toolsRun, error) {
+		definitions, err := makeDefinitions(dir.scratch, []protocol.Partition{wrappedPartition(request.Format)})
+		if err != nil {
+			return nil, err
+		}
+
+		run := protocol.Run{Command: requirements + repart, Env: []string{"MISO_IMAGE=" + strings.TrimSuffix(request.Name, ".raw")}}
+
+		return func(root string) (int, error) {
+			unbind, err := bindForTools(root, dir.output, definitions)
+			if err != nil {
+				return 0, err
 			}
 
-			return overImage(ctx, root, dir.booting, dir.image.below, protocol.Run{Command: command, Env: []string{"MISO_IMAGE=" + strings.TrimSuffix(request.Name, ".raw")}}, out)
+			defer unbind()
+
+			return overImage(ctx, root, dir.booting, dir.image.below, run, out)
 		}, nil
 	})
 }

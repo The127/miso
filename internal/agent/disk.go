@@ -67,15 +67,18 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 			return nil, err
 		}
 
-		definitions, err := makeDefinitions(dir.scratch, request.Partitions)
-		if err != nil {
-			return nil, err
+		// without partitions the image's own definitions are the layout
+		var definitions string
+		if len(request.Partitions) > 0 {
+			definitions, err = makeDefinitions(dir.scratch, request.Partitions)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		in := toolsInput{
 			output:      dir.output,
 			definitions: definitions,
-			partitions:  len(request.Partitions) > 0,
 			boot:        boot,
 			booting:     dir.booting,
 			// the ESP is whole once the UKI is in it, and no lower layer may
@@ -100,7 +103,6 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 type toolsInput struct {
 	output      string
 	definitions string
-	partitions  bool
 	boot        boot
 	booting     string
 	below       []string
@@ -110,21 +112,12 @@ type toolsInput struct {
 
 // runTools has the tools in root build the UKI and make the disk.
 func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (int, error) {
-	unbindOutput, err := bindOutput(root, in.output)
+	unbind, err := bindForTools(root, in.output, in.definitions)
 	if err != nil {
 		return 0, err
 	}
 
-	defer unbindOutput()
-
-	if in.partitions {
-		unbindDefinitions, err := bind(in.definitions, filepath.Join(root, "run", "miso", "definitions"))
-		if err != nil {
-			return 0, err
-		}
-
-		defer unbindDefinitions()
-	}
+	defer unbind()
 
 	code, err := buildUKI(ctx, root, in.boot.parts, in.boot.esp, in.boot.kernel.Version, out)
 	if err != nil || code != 0 {
