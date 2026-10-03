@@ -24,6 +24,9 @@ const repart = `set --
 if [ -n "$MISO_EL_TORITO" ]; then
 	set -- --el-torito=yes
 fi
+if [ -n "$MISO_SPLIT" ]; then
+	set -- "$@" --split=yes
+fi
 if [ -d /run/miso/definitions ]; then
 	set -- --definitions=/run/miso/definitions "$@"
 fi
@@ -79,6 +82,7 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 			// change under a mounted overlay
 			below:    append([]string{boot.esp}, dir.image.below...),
 			elTorito: request.ElTorito,
+			split:    request.Split,
 		}
 
 		return func(root string) (int, error) { return runTools(ctx, root, in, out) }, nil
@@ -94,6 +98,7 @@ type toolsInput struct {
 	booting     string
 	below       []string
 	elTorito    bool
+	split       bool
 }
 
 // runTools has the tools in root build the UKI and make the disk.
@@ -121,7 +126,11 @@ func runTools(ctx context.Context, root string, in toolsInput, out io.Writer) (i
 
 	run := protocol.Run{Command: repart}
 	if in.elTorito {
-		run.Env = []string{"MISO_EL_TORITO=1"}
+		run.Env = append(run.Env, "MISO_EL_TORITO=1")
+	}
+
+	if in.split {
+		run.Env = append(run.Env, "MISO_SPLIT=1")
 	}
 
 	return overImage(ctx, root, in.booting, in.below, run, out)

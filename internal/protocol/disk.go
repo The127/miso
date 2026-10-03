@@ -15,6 +15,10 @@ type Disk struct {
 	// the disk boots from an optical drive too, as an ISO
 	ElTorito bool
 
+	// repart writes each partition to a file of its own as well, named by
+	// the SplitName of its definition
+	Split bool
+
 	// the partitions of the disk, in the order they are laid out
 	Partitions []Partition
 
