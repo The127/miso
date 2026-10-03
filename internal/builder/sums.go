@@ -34,33 +34,28 @@ func (s summed) Close() error {
 // listSum puts the sum of the file a name gives into the SHA256SUMS of its
 // directory, whose lines stay in the order of their names.
 func listSum(dir, name string) error {
-	root, err := os.OpenRoot(dir)
-	if err != nil {
-		return err
-	}
+	return inRoot(dir, func(root *os.Root) error {
+		sum, err := sumOf(root, name)
+		if err != nil {
+			return err
+		}
 
-	defer func() { _ = root.Close() }()
+		listing := path.Join(path.Dir(name), sumsFile)
 
-	sum, err := sumOf(root, name)
-	if err != nil {
-		return err
-	}
+		lines, err := linesOf(root, listing)
+		if err != nil {
+			return err
+		}
 
-	listing := path.Join(path.Dir(name), sumsFile)
+		lines[path.Base(name)] = sum
 
-	lines, err := linesOf(root, listing)
-	if err != nil {
-		return err
-	}
+		var text strings.Builder
+		for _, file := range slices.Sorted(maps.Keys(lines)) {
+			text.WriteString(lines[file] + "  " + file + "\n")
+		}
 
-	lines[path.Base(name)] = sum
-
-	var text strings.Builder
-	for _, file := range slices.Sorted(maps.Keys(lines)) {
-		text.WriteString(lines[file] + "  " + file + "\n")
-	}
-
-	return root.WriteFile(listing, []byte(text.String()), 0o644)
+		return root.WriteFile(listing, []byte(text.String()), 0o644)
+	})
 }
 
 // sumOf is the SHA-256 of a file, in hex.

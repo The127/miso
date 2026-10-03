@@ -47,38 +47,41 @@ func fetch(conn *protocol.Conn, request protocol.Fetch, file Output, out io.Writ
 // is booted through check before it gets its name.
 func OutputsIn(dir string, check Check) Outputs {
 	return func(request build.Request) (Output, error) {
-		root, err := os.OpenRoot(dir)
-		if err != nil {
-			return nil, err
-		}
-
-		defer func() { _ = root.Close() }()
-
 		name := request.Output
-		if len(request.Checks) > 0 {
+		if needsCheck(request) {
 			name = unchecked(name)
 		}
 
-		if err := root.MkdirAll(path.Dir(name), 0o750); err != nil {
-			return nil, err
-		}
+		var file *os.File
 
-		// the holes of a disk are never written, so an older file under the
-		// name would show through them
-		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		err := inRoot(dir, func(root *os.Root) error {
+			if err := root.MkdirAll(path.Dir(name), 0o750); err != nil {
+				return err
+			}
+
+			// the holes of a disk are never written, so an older file under
+			// the name would show through them
+			var err error
+
+			file, err = root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+
+			return err
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		if len(request.Checks) > 0 {
-			return checked{File: file, dir: dir, name: name, request: request, check: check}, nil
+		fetched := plain{File: file, dir: dir, name: name}
+
+		if needsCheck(request) {
+			return checked{plain: fetched, request: request, check: check}, nil
 		}
 
 		if request.Listed {
-			return summed{plain{File: file, dir: dir, name: name}}, nil
+			return summed{fetched}, nil
 		}
 
-		return plain{File: file, dir: dir, name: name}, nil
+		return fetched, nil
 	}
 }
 
@@ -96,12 +99,5 @@ func (p plain) Discard() error {
 		return err
 	}
 
-	root, err := os.OpenRoot(p.dir)
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = root.Close() }()
-
-	return root.Remove(p.name)
+	return inRoot(p.dir, func(root *os.Root) error { return root.Remove(p.name) })
 }

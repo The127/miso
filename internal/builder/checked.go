@@ -16,12 +16,16 @@ type Check func(disk string, request build.Request) error
 // they passed, so a disk that never booted never shows under its output's
 // name.
 type checked struct {
-	*os.File
+	plain
 
-	dir     string
-	name    string
 	request build.Request
 	check   Check
+}
+
+// needsCheck says whether the disk of a request is booted before it gets its
+// name.
+func needsCheck(request build.Request) bool {
+	return len(request.Checks) > 0
 }
 
 // unchecked is the name a disk has until its checks passed.
@@ -34,34 +38,13 @@ func (c checked) Close() error {
 		return err
 	}
 
-	root, err := os.OpenRoot(c.dir)
-	if err != nil {
-		return err
-	}
+	return inRoot(c.dir, func(root *os.Root) error {
+		if err := c.check(filepath.Join(c.dir, c.name), c.request); err != nil {
+			return errors.Join(err, root.Remove(c.name))
+		}
 
-	defer func() { _ = root.Close() }()
-
-	if err := c.check(filepath.Join(c.dir, c.name), c.request); err != nil {
-		return errors.Join(err, root.Remove(c.name))
-	}
-
-	return root.Rename(c.name, c.request.Output)
-}
-
-// Discard throws the disk away without booting it.
-func (c checked) Discard() error {
-	if err := c.File.Close(); err != nil {
-		return err
-	}
-
-	root, err := os.OpenRoot(c.dir)
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = root.Close() }()
-
-	return root.Remove(c.name)
+		return root.Rename(c.name, c.request.Output)
+	})
 }
 
 // OnlyChecked are outputs for the disks with checks alone and the files that
@@ -69,7 +52,7 @@ func (c checked) Discard() error {
 // boots what it must check.
 func OnlyChecked(outputs Outputs) Outputs {
 	return func(request build.Request) (Output, error) {
-		if len(request.Checks) == 0 && !request.Needed {
+		if !needsCheck(request) && !request.Needed {
 			return nil, nil
 		}
 
