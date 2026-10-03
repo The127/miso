@@ -15,23 +15,31 @@ import (
 
 // Run runs the command of a run in a root and answers its exit code.
 func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int, error) {
+	return start(ctx, root, []string{"-c", run.Command}, run.Env, run.Network, func(cmd *exec.Cmd) {
+		cmd.Stdout = out
+		cmd.Stderr = out
+	})
+}
+
+// start runs /bin/sh with the arguments in a root and answers its exit code.
+// What it reads and writes is for attach to set.
+func start(ctx context.Context, root string, args, env []string, network *protocol.Network, attach func(cmd *exec.Cmd)) (int, error) {
 	// Go runs nothing between clone and exec, so the agent itself goes first
 	// to set up the namespaces, then becomes the shell
-	cmd := exec.CommandContext(ctx, "/proc/self/exe", root, run.Command) //nolint:gosec // running what the build file says is what a RUN is
+	cmd := exec.CommandContext(ctx, "/proc/self/exe", append([]string{root}, args...)...) //nolint:gosec // running what the build file says is what a RUN is
 	cmd.Args[0] = helperName
 	// the shell is the init of its own PID namespace, so the kernel kills
 	// whatever it leaves behind before the wait for it returns. Go makes every
 	// mount private in the new mount namespace, so what the run mounts never
 	// reaches the agent. A name and network the run changes stay its own
 	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWUTS | syscall.CLONE_NEWNET, Unshareflags: syscall.CLONE_NEWNS}
-	cmd.Stdout = out
-	cmd.Stderr = out
+	attach(cmd)
 	// Docker's defaults, and os/exec keeps the last of a key, so the build
 	// file's own values win
 	cmd.Env = append([]string{
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		"HOME=/root",
-	}, run.Env...)
+	}, env...)
 	setup, failed, err := os.Pipe()
 	if err != nil {
 		return 0, err
@@ -60,8 +68,8 @@ func Run(ctx context.Context, root string, run protocol.Run, out io.Writer) (int
 		return 0, err
 	}
 
-	if run.Network != nil {
-		removeCard, err := runnet.AddCard(cmd.Process.Pid, run.Network)
+	if network != nil {
+		removeCard, err := runnet.AddCard(cmd.Process.Pid, network)
 		if err != nil {
 			// a gate closed unopened stops the helper before its shell
 			_ = open.Close()

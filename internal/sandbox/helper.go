@@ -24,14 +24,14 @@ func Helper() {
 	// the agent opens it once the run's network is ready
 	gate := os.NewFile(4, "gate")
 	syscall.CloseOnExec(4)
-	root, command := os.Args[1], os.Args[2]
+	root, args := os.Args[1], os.Args[2:]
 	// returns only when the shell did not start
-	err := helper(root, command, gate)
+	err := helper(root, args, gate)
 	_, _ = fmt.Fprint(failed, err)
 	os.Exit(1)
 }
 
-func helper(root, command string, gate io.Reader) error {
+func helper(root string, args []string, gate io.Reader) error {
 	if err := enterRoot(root); err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func helper(root, command string, gate io.Reader) error {
 		return fmt.Errorf("wait for the network: %w", err)
 	}
 
-	err := syscall.Exec("/bin/sh", []string{"/bin/sh", "-c", command}, os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
+	err := syscall.Exec("/bin/sh", append([]string{"/bin/sh"}, args...), os.Environ()) //nolint:gosec // running what the build file says is what a RUN is
 
 	return fmt.Errorf("run /bin/sh: %w", err)
 }
