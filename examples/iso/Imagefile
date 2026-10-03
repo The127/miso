@@ -1,0 +1,37 @@
+# A Debian sid ISO that boots from a CD. It is booted and checked before it
+# is written.
+#
+#   miso build -o out examples/iso
+#
+# leaves out/os.iso, an ISO that boots under UEFI from a CD drive.
+#
+# The root is read only and sits on a CD, so the initrd has to be able to
+# find a root there. Debian's dracut does that only with the loop unit and
+# systemd-dissect added, and with the drivers of the CD and of erofs. The
+# initrd of the cloud image is bound to the cloud image's disk, so it is made
+# again for any machine.
+
+FROM debian:sid
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade && \
+    DEBIAN_FRONTEND=noninteractive apt-get purge -y 'linux-image-*cloud*' && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-image-amd64 dracut systemd-boot-efi systemd-container
+RUN v=$(ls /usr/lib/modules | sort -V | tail -1) && \
+    dracut --force --no-hostonly --add-drivers "erofs sr_mod loop" \
+      --install "/usr/bin/systemd-dissect /usr/lib/systemd/system/systemd-loop@.service /usr/lib/udev/rules.d/99-systemd.rules" \
+      --kver "$v" "/boot/initrd.img-$v"
+
+# The cloud image's fstab names the cloud image's partitions.
+RUN : > /etc/fstab
+
+# A read only root, with a writable overlay in memory on top of it.
+CMDLINE ro rootfstype=erofs systemd.volatile=overlay console=ttyS0
+
+PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
+PARTITION root Type=root Format=erofs CopyFiles=/:/ ExcludeFiles=/efi/ Minimize=best ReadOnly=yes
+
+OUTPUT iso os.iso
+
+# Boots the ISO as a CD and runs in it. A failing check fails the build and
+# leaves no ISO.
+CHECK test -b /dev/sr0
