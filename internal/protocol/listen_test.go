@@ -138,3 +138,7 @@ func TestAConnectionIsClosedOnceAnswered(t *testing.T) {
 }
 
 func (blocking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (blocking) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}

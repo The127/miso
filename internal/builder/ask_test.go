@@ -677,3 +677,23 @@ func (e exiting) Prune(context.Context, protocol.Prune, io.Writer) error { retur
 func (f failing) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
 
 func (w waiting) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (r *recording) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (s saying) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (waiting) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (exiting) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (failing) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}

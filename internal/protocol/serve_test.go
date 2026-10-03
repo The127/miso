@@ -753,3 +753,36 @@ func (r *reading) Prune(context.Context, protocol.Prune, io.Writer) error { retu
 func (b breaking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
 
 func (c checking) Prune(context.Context, protocol.Prune, io.Writer) error { return nil }
+
+func (r runner) Shell(_ context.Context, _ protocol.Shell, in io.Reader, out io.Writer) (int, error) {
+	_, err := io.Copy(out, in)
+
+	return r.code, err
+}
+
+func (w *watched) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (w *waiting) Shell(ctx context.Context, _ protocol.Shell, _ io.Reader, _ io.Writer) (int, error) {
+	select {
+	case <-ctx.Done():
+		w.cancelled = true
+
+		return 0, ctx.Err()
+	case <-time.After(5 * time.Second):
+		return 0, errors.New("never cancelled")
+	}
+}
+
+func (r *reading) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (b breaking) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}
+
+func (c checking) Shell(context.Context, protocol.Shell, io.Reader, io.Writer) (int, error) {
+	return 0, nil
+}

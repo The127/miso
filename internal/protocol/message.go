@@ -22,6 +22,8 @@ type envelope struct {
 	BootPart *BootPart `json:",omitempty"`
 	Fetch    *Fetch    `json:",omitempty"`
 	Prune    *Prune    `json:",omitempty"`
+	Shell    *Shell    `json:",omitempty"`
+	Input    *Input    `json:",omitempty"`
 	Entry    *Entry    `json:",omitempty"`
 	Piece    *Piece    `json:",omitempty"`
 	Length   *Length   `json:",omitempty"`
@@ -53,6 +55,10 @@ func (e envelope) open() Message {
 		return *e.Fetch
 	case e.Prune != nil:
 		return *e.Prune
+	case e.Shell != nil:
+		return *e.Shell
+	case e.Input != nil:
+		return *e.Input
 	case e.Entry != nil:
 		return *e.Entry
 	case e.Piece != nil:

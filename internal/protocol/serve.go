@@ -18,6 +18,7 @@ type Runner interface {
 	BootPart(ctx context.Context, request BootPart, out io.Writer) error
 	Fetch(ctx context.Context, request Fetch, pieces Pieces, out io.Writer) error
 	Prune(ctx context.Context, request Prune, out io.Writer) error
+	Shell(ctx context.Context, request Shell, in io.Reader, out io.Writer) (code int, err error)
 }
 
 // Serve answers one request of the host with what the runner did.
@@ -48,6 +49,8 @@ func (c *Conn) Serve(runner Runner) error {
 		return c.serveBootPart(runner, request)
 	case Run:
 		return c.serveRun(runner, request)
+	case Shell:
+		return c.serveShell(runner, request)
 	default:
 		return c.Send(Failed{Reason: fmt.Sprintf("%T is not a request", message)})
 	}
@@ -112,6 +115,45 @@ func (c *Conn) serveRun(runner Runner, request Run) error {
 	defer cancel()
 
 	code, err := runner.Run(ctx, request, outputs{c})
+	if err == nil && code != 0 {
+		return c.Send(Exited{Code: code})
+	}
+
+	return c.answer(err)
+}
+
+// serveShell has the runner run a shell on what the host types. Unlike
+// every other request, the host keeps sending, so the read is its input.
+func (c *Conn) serveShell(runner Runner, request Shell) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	in, typed := io.Pipe()
+	// a runner that ends first must not leave the read below stuck on a write
+	defer func() { _ = in.Close() }()
+
+	go func() {
+		defer cancel()
+		defer func() { _ = typed.Close() }()
+
+		for {
+			message, err := c.Receive()
+			if err != nil {
+				return
+			}
+
+			input, ok := message.(Input)
+			if !ok {
+				return
+			}
+
+			if _, err := typed.Write(input.Bytes); err != nil {
+				return
+			}
+		}
+	}()
+
+	code, err := runner.Shell(ctx, request, in, outputs{c})
 	if err == nil && code != 0 {
 		return c.Send(Exited{Code: code})
 	}
