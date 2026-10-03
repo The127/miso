@@ -71,6 +71,16 @@ func (r runner) Fetch(_ context.Context, _ protocol.Fetch, pieces protocol.Piece
 	return pieces.Piece(protocol.Piece{Size: size}, strings.NewReader(r.disk))
 }
 
+func (r runner) Cached(_ context.Context, _ protocol.Cached, out io.Writer) error {
+	if r.err != nil || r.writes == "" {
+		return r.err
+	}
+
+	_, err := io.WriteString(out, r.writes)
+
+	return err
+}
+
 func (r runner) Prune(_ context.Context, _ protocol.Prune, out io.Writer) error {
 	if r.err != nil || r.writes == "" {
 		return r.err
@@ -186,6 +196,26 @@ func TestAPruneSendsWhatItSaysAndIsDone(t *testing.T) {
 	done, err := host.Receive()
 	require.NoError(t, err)
 	assert.Equal(t, protocol.Output{Bytes: []byte("removed 2 layers\n")}, output)
+	assert.Equal(t, protocol.Done{}, done)
+}
+
+func TestACachedSendsWhatItSaysAndIsDone(t *testing.T) {
+	// arrange
+	var requests, replies bytes.Buffer
+	host := protocol.New("miso 1.2.0", &replies, &requests)
+	require.NoError(t, host.Send(protocol.Cached{Keys: []string{"a", "b"}}))
+	agent := protocol.New("miso 1.2.0", &requests, &replies)
+
+	// act
+	err := agent.Serve(runner{writes: "a\n"})
+
+	// assert
+	require.NoError(t, err)
+	output, err := host.Receive()
+	require.NoError(t, err)
+	done, err := host.Receive()
+	require.NoError(t, err)
+	assert.Equal(t, protocol.Output{Bytes: []byte("a\n")}, output)
 	assert.Equal(t, protocol.Done{}, done)
 }
 
