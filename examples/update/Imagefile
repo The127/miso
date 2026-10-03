@@ -1,0 +1,43 @@
+# The files of an update for systemd-sysupdate, from the partitions of a disk.
+#
+#   miso build -o out examples/update
+#
+# leaves out/updates/ with root_1.0.raw (the partition that has a SplitName),
+# uki_1.0.efi (the UKI of the disk) and SHA256SUMS. Serve the directory, or
+# point a transfer at it as a file URL. Two transfer files that installed this
+# update into plain files, tested with systemd 259:
+#
+#   10-root.transfer
+#     [Source]
+#     Type=url-file
+#     Path=file:///path/to/out/updates
+#     MatchPattern=root_@v.raw
+#     [Target]
+#     Type=regular-file
+#     Path=/path/to/target
+#     MatchPattern=root_@v.raw
+#
+#   20-uki.transfer
+#     [Source]
+#     Type=url-file
+#     Path=file:///path/to/out/updates
+#     MatchPattern=uki_@v.efi
+#     [Target]
+#     Type=regular-file
+#     Path=/path/to/target/EFI/Linux
+#     MatchPattern=uki_@v.efi
+#
+# A target that is a partition (Type=partition) needs a root machine and was
+# not tried. --version is the version sysupdate sees. The file names are the
+# SplitName of a partition, an underscore and the version.
+
+FROM debian:sid
+RUN apt-get update && apt-get install -y --no-install-recommends systemd-boot-efi htop
+RUN : > /etc/fstab
+
+CMDLINE rw console=ttyS0
+
+PARTITION esp Type=esp Format=vfat CopyFiles=/efi:/ SizeMinBytes=256M SizeMaxBytes=256M
+PARTITION root Type=root Format=ext4 CopyFiles=/:/ SizeMinBytes=3G SplitName=root
+
+OUTPUT update --version=1.0 updates
