@@ -85,7 +85,14 @@ func (a *Agent) Disk(ctx context.Context, request protocol.Disk, out io.Writer) 
 			split:    request.Split,
 		}
 
-		return func(root string) (int, error) { return runTools(ctx, root, in, out) }, nil
+		return func(root string) (int, error) {
+			code, err := runTools(ctx, root, in, out)
+			if err != nil || code != 0 || !request.Split {
+				return code, err
+			}
+
+			return 0, keepUKI(boot, dir.output)
+		}, nil
 	})
 }
 

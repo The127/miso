@@ -471,6 +471,71 @@ echo "$@" > "$last"`
 	assert.Equal(t, "--dry-run=no --root=/run/miso/image --offline=yes --sector-size=512 --empty=create --size=auto --el-torito=yes /run/miso/out/disk.raw\n", string(written))
 }
 
+func TestASplitDiskKeepsTheUKIAsAFileNextToThePartitions(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 && touch /usr/lib/modules/99.0/vmlinuz /usr/lib/modules/99.0/initrd"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, writesDisk), Split: true}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	kept, err := os.ReadFile(filepath.Join(layers, "disk", "uki.efi"))
+	require.NoError(t, err)
+	assert.Contains(t, string(kept), "--output=/run/miso/esp/EFI/Linux/99.0.efi")
+}
+
+func TestASplitDiskWhoseUKIIsNoRegularFileFailsSayingSo(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 && touch /usr/lib/modules/99.0/vmlinuz /usr/lib/modules/99.0/initrd"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	tools := fakeTools(t, worker, writesDisk)
+	aDirectory := "cat > /usr/local/bin/ukify <<'EOF'\n#!/bin/sh\nfor arg; do case $arg in --output=*) mkdir \"${arg#--output=}\" ;; esac; done\nEOF\n"
+	override := protocol.Run{Key: "ukify", Layers: tools, Command: aDirectory}
+	code, err = worker.Run(context.Background(), override, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: append(tools, "ukify"), Split: true}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	assert.ErrorContains(t, err, "the UKI of 99.0 is no regular file")
+	assert.NoDirExists(t, filepath.Join(layers, "disk"))
+}
+
+func TestADiskThatIsNotSplitKeepsNoUKIFile(t *testing.T) {
+	// arrange
+	layers := t.TempDir()
+	worker := mountedBase(t, layers)
+	kernel := "mkdir -p /usr/lib/modules/99.0 && touch /usr/lib/modules/99.0/vmlinuz /usr/lib/modules/99.0/initrd"
+	image := protocol.Run{Key: "image", Layers: bootable(t, worker), Command: kernel}
+	code, err := worker.Run(context.Background(), image, io.Discard)
+	require.NoError(t, err)
+	require.Equal(t, 0, code)
+	disk := protocol.Disk{Key: "disk", Layers: []string{"base", "boot", "image"}, Tools: fakeTools(t, worker, writesDisk)}
+
+	// act
+	err = worker.Disk(context.Background(), disk, io.Discard)
+
+	// assert
+	require.NoError(t, err)
+	assert.NoFileExists(t, filepath.Join(layers, "disk", "uki.efi"))
+}
+
 func TestASplitDiskHasRepartWriteEachPartitionToAFileOfItsOwn(t *testing.T) {
 	// arrange
 	layers := t.TempDir()
