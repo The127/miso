@@ -24,10 +24,8 @@ func Shell(ctx context.Context, root, scratch string, shell protocol.Shell, term
 
 	defer func() { _ = master.Close() }()
 
-	if shell.Rows != 0 || shell.Cols != 0 {
-		if err := resize(master, shell.Rows, shell.Cols); err != nil {
-			return 0, err
-		}
+	if err := resize(master, shell.Rows, shell.Cols); err != nil {
+		return 0, err
 	}
 
 	go func() { _, _ = io.Copy(master, term.In) }()
@@ -75,7 +73,13 @@ func envOf(shell protocol.Shell) []string {
 	return append(slices.Clone(shell.Env), "TERM="+shell.Term)
 }
 
-// resize sets the size of the terminal the master belongs to.
+// resize sets the size of the terminal the master belongs to. A size of
+// nothing is what a terminal that does not know its size reports, and is
+// no size.
 func resize(master *os.File, rows, cols uint16) error {
+	if rows == 0 && cols == 0 {
+		return nil
+	}
+
 	return unix.IoctlSetWinsize(int(master.Fd()), unix.TIOCSWINSZ, &unix.Winsize{Row: rows, Col: cols})
 }

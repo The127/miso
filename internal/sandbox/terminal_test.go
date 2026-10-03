@@ -82,3 +82,22 @@ func TestAShellSeesTheSizeTheTerminalOfTheUserChangesTo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out.String(), "done\r\n")
 }
+
+func TestASizeOfNothingLeavesTheSizeOfTheShellAlone(t *testing.T) {
+	// arrange
+	root := onBase(t)
+	resized := make(chan protocol.Resize, 1)
+	resized <- protocol.Resize{}
+	// the size has time to arrive while the shell waits
+	in := strings.NewReader("sleep 1; stty size\nexit\n")
+	var out bytes.Buffer
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// act
+	_, err := sandbox.Shell(ctx, root, t.TempDir(), protocol.Shell{Rows: 24, Cols: 80}, protocol.Terminal{In: in, Resized: resized}, &out)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "24 80\r\n")
+}
