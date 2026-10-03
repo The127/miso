@@ -1,0 +1,19 @@
+# A portable service: a root file system with one program and its unit, in a
+# disk image of one root partition. It does not boot.
+#
+#   miso build -o out examples/portable
+#
+# leaves out/hello.raw. On a machine with systemd:
+#
+#   portablectl attach ./out/hello.raw
+#   systemctl start hello
+#
+# --format=erofs after portable makes an erofs image.
+
+FROM debian:sid
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends busybox
+
+RUN printf '[Unit]\nDescription=Hello\n\n[Service]\nExecStart=/bin/busybox sh -c "echo hello; sleep 3600"\n' > /usr/lib/systemd/system/hello.service
+
+OUTPUT portable hello.raw
