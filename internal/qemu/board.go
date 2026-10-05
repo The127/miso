@@ -20,6 +20,9 @@ type board struct {
 
 	// The board boots a UEFI firmware from its disks.
 	bootsFirmware bool
+
+	// The board has no IDE bus, so a CD goes on a virtio SCSI controller.
+	scsiCD bool
 }
 
 var (
@@ -35,7 +38,7 @@ var (
 
 	// virt is the board of arm64. It has virtio devices on a PCI bus and boots
 	// a firmware or a kernel.
-	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", bootsFirmware: true}
+	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", bootsFirmware: true, scsiCD: true}
 )
 
 const arm64 = "arm64"

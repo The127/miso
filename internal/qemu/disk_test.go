@@ -107,6 +107,18 @@ func TestACDIsInAnOpticalDriveAndNeverWritten(t *testing.T) {
 	assert.Equal(t, "ide-cd,drive=disk0", valueOf(t, args, "-device"))
 }
 
+func TestACDOfAnArm64MachineIsOnAVirtioSCSIController(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Arch: "arm64", Disks: []qemu.Disk{{Path: "/o/os.iso", Format: "raw", Access: qemu.Snapshot, CD: true}}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"virtio-scsi-pci,id=scsi", "scsi-cd,bus=scsi.0,drive=disk0"}, valuesOf(args, "-device"))
+}
+
 func TestADiskOfAMicrovmIsAVirtioDeviceWithoutPCI(t *testing.T) {
 	// arrange
 	machine := qemu.Machine{
