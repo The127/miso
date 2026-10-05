@@ -28,6 +28,9 @@ type Build struct {
 
 	// the card its runs reach out through
 	Card qemu.Card
+
+	// the host's architecture, which the builder VM always runs. Empty is amd64.
+	Arch string
 }
 
 // Machine is the builder VM of the build.
@@ -40,12 +43,18 @@ func (b Build) Machine() (qemu.Machine, error) {
 	// the cache disk is an ext4 image as it is, which QEMU must never guess
 	cache := qemu.Disk{Path: b.Cache, Format: "raw", Serial: protocol.CacheSerial}
 
+	// the virt board has a PL011 instead of a 16550 UART, and Linux calls it ttyAMA0
+	console := "ttyS0"
+	if b.Arch == "arm64" {
+		console = "ttyAMA0"
+	}
+
 	return qemu.Machine{
 		Boot: qemu.Kernel{
 			Image:     b.Boot.Kernel,
 			Initramfs: b.Boot.Initramfs,
 			// the kernel hands init what follows --, and init is miso
-			CommandLine: "console=ttyS0 panic=-1 -- agent",
+			CommandLine: "console=" + console + " panic=-1 -- agent",
 		},
 		// room for a package manager's run, the proof of concept built with it
 		MemoryMiB: 4096,
@@ -53,6 +62,7 @@ func (b Build) Machine() (qemu.Machine, error) {
 		CPUs:  min(runtime.NumCPU(), 8),
 		Disks: append([]qemu.Disk{cache}, bases...),
 		Card:  &b.Card,
+		Arch:  b.Arch,
 	}, nil
 }
 
