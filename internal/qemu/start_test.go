@@ -39,6 +39,24 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3, qemu.Machine{})), strings.Split(string(written), "\n"))
 }
 
+func TestAnArm64MachineRunsOnQEMUsAarch64Binary(t *testing.T) {
+	// arrange
+	driver, recorded := fakeDriver(t)
+	path := t.TempDir()
+	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-aarch64")))
+	t.Setenv("PATH", path)
+	driver.Binary = ""
+	machine := qemu.Machine{Arch: "arm64", Boot: qemu.Kernel{Image: "/k/Image"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
+}
+
 func TestACancelledMachineIsStopped(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)
