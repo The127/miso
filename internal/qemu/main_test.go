@@ -178,6 +178,19 @@ func fakeDriver(t *testing.T) (qemu.Driver, string) {
 	return qemu.Driver{Binary: self}, recorded
 }
 
+// fakeQEMUOnPath puts the fake QEMU on PATH under the name a board gives its
+// binary, and nowhere else.
+func fakeQEMUOnPath(t *testing.T, name string) string {
+	t.Helper()
+
+	driver, recorded := fakeDriver(t)
+	path := t.TempDir()
+	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, name)))
+	t.Setenv("PATH", path)
+
+	return recorded
+}
+
 func fakeQEMU(recorded string) {
 	//nolint:gosec // the test that started this binary names the file
 	if err := os.WriteFile(recorded, []byte(strings.Join(os.Args[1:], "\n")), 0o600); err != nil {

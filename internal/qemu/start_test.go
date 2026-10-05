@@ -36,7 +36,49 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	written, err := os.ReadFile(recorded)
 	require.NoError(t, err)
 	accelerated, _ := qemu.Accel("/dev/kvm")
-	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3, false)), strings.Split(string(written), "\n"))
+	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3, qemu.Machine{})), strings.Split(string(written), "\n"))
+}
+
+func TestAnArm64MachineRunsOnQEMUsAarch64Binary(t *testing.T) {
+	// arrange
+	recorded := fakeQEMUOnPath(t, "qemu-system-aarch64")
+	machine := qemu.Machine{Arch: "arm64", Boot: qemu.Kernel{Image: "/k/Image"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
+}
+
+func TestAnAmd64MachineRunsOnQEMUsX8664Binary(t *testing.T) {
+	// arrange
+	recorded := fakeQEMUOnPath(t, "qemu-system-x86_64")
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
+}
+
+func TestAMicrovmRunsOnQEMUsX8664Binary(t *testing.T) {
+	// arrange
+	recorded := fakeQEMUOnPath(t, "qemu-system-x86_64")
+	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/k/vmlinux"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
 }
 
 func TestACancelledMachineIsStopped(t *testing.T) {

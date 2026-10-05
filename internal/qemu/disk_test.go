@@ -123,6 +123,21 @@ func TestADiskOfAMicrovmIsAVirtioDeviceWithoutPCI(t *testing.T) {
 	assert.Contains(t, args, "virtio-blk-device,drive=disk0,serial=image")
 }
 
+func TestADiskOfAnArm64MachineIsAVirtioDeviceOnPCI(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{
+		Arch:  "arm64",
+		Disks: []qemu.Disk{{Path: "/os.raw", Format: "raw", Serial: "image"}},
+	}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Contains(t, args, "virtio-blk-pci,drive=disk0,serial=image")
+}
+
 func TestACDOnAMicrovmIsRefusedBecauseTheBoardHasNoOpticalDrive(t *testing.T) {
 	// arrange
 	machine := qemu.Machine{

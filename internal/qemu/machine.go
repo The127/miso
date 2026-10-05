@@ -12,6 +12,9 @@ type Machine struct {
 	Console     io.Writer
 	Credentials []Credential
 
+	// empty is amd64, so a machine that names none stays as it always was
+	Arch string
+
 	// the machine is QEMU's microvm board, with virtio devices on a bus
 	// that has no PCI, like a microVM of another VMM has
 	Microvm bool

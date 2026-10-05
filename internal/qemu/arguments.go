@@ -4,6 +4,10 @@ import "slices"
 
 // arguments is how QEMU is told to run the machine.
 func arguments(machine Machine) ([]string, error) {
+	if err := boardless(machine); err != nil {
+		return nil, err
+	}
+
 	disks, err := drives(machine)
 	if err != nil {
 		return nil, err
