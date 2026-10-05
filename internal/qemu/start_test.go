@@ -57,6 +57,42 @@ func TestAnArm64MachineRunsOnQEMUsAarch64Binary(t *testing.T) {
 	assert.FileExists(t, recorded)
 }
 
+func TestAnAmd64MachineRunsOnQEMUsX8664Binary(t *testing.T) {
+	// arrange
+	driver, recorded := fakeDriver(t)
+	path := t.TempDir()
+	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-x86_64")))
+	t.Setenv("PATH", path)
+	driver.Binary = ""
+	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
+}
+
+func TestAMicrovmRunsOnQEMUsX8664Binary(t *testing.T) {
+	// arrange
+	driver, recorded := fakeDriver(t)
+	path := t.TempDir()
+	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-x86_64")))
+	t.Setenv("PATH", path)
+	driver.Binary = ""
+	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/k/vmlinux"}, MemoryMiB: 512, CPUs: 1}
+
+	// act
+	vm, err := driver.Start(t.Context(), machine)
+	require.NoError(t, err)
+	<-vm.Done()
+
+	// assert
+	assert.FileExists(t, recorded)
+}
+
 func TestACancelledMachineIsStopped(t *testing.T) {
 	// arrange
 	driver, _ := fakeDriver(t)

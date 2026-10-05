@@ -5,6 +5,9 @@ package qemu
 type board struct {
 	name string
 
+	// The QEMU binary that runs this board.
+	binary string
+
 	// The end of the name of a virtio device of this board.
 	bus string
 
@@ -16,18 +19,18 @@ type board struct {
 
 var (
 	// q35 has virtio devices on a PCI bus.
-	q35 = board{name: "q35", bus: "-pci", firmware: true}
+	q35 = board{name: "q35", binary: "qemu-system-x86_64", bus: "-pci", firmware: true}
 
 	// microvm has no PCI bus, so its devices and its power off go through
 	// ACPI. Whatever the host's QEMU defaults to, ACPI is on. Linux boots it
 	// with null_legacy_pic, so the i8259 stays at QEMU's reset state, vector 0
 	// and unmasked. A timer interrupt pending at the first sti then dies as a
 	// divide error. The PIC is always off, because the race hits only some boots.
-	microvm = board{name: "microvm,acpi=on,pic=off", bus: "-device"}
+	microvm = board{name: "microvm,acpi=on,pic=off", binary: "qemu-system-x86_64", bus: "-device"}
 
 	// virt is the board of arm64. It has virtio devices on a PCI bus and boots
 	// a firmware or a kernel.
-	virt = board{name: "virt", bus: "-pci", firmware: true}
+	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", firmware: true}
 )
 
 // boardOf is the board the machine runs on.

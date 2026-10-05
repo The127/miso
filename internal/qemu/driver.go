@@ -19,7 +19,7 @@ const deviceFD = 3
 
 // Driver starts builder VMs on QEMU.
 type Driver struct {
-	// Binary overrides the QEMU the machine's architecture picks.
+	// Binary overrides the QEMU the machine's board picks.
 	Binary string
 
 	// OpenVsock opens the vsock device the machine runs on, a virtio port
@@ -69,11 +69,11 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 	}
 
 	binary := d.Binary
-	if binary == "" && machine.Arch == "arm64" {
-		binary = "qemu-system-aarch64"
+	if binary == "" {
+		binary = boardOf(machine).binary
 	}
 
-	//nolint:gosec // running the QEMU the caller names with the machine it describes is the job
+	//nolint:gosec // running QEMU with the machine the caller describes is the job
 	command := exec.CommandContext(ctx, binary, slices.Concat(args, accelerated, reach.args)...)
 	command.ExtraFiles = []*os.File{reach.machine}
 	command.Stdout = machine.Console
