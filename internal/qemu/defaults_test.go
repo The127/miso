@@ -58,6 +58,17 @@ func TestAnArm64MachineIsTheVirtBoard(t *testing.T) {
 	assert.Equal(t, "virt", valueOf(t, args, "-machine"))
 }
 
+func TestAnArm64MachineIsNeverAMicrovm(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Arch: "arm64", Microvm: true}
+
+	// act
+	_, err := qemu.Arguments(machine)
+
+	// assert
+	assert.ErrorContains(t, err, "microvm")
+}
+
 func TestAMicrovmHasNoLegacyInterruptController(t *testing.T) {
 	// arrange
 	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/vmlinux", Initramfs: "/initrd.img"}}
