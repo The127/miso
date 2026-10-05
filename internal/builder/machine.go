@@ -28,6 +28,9 @@ type Build struct {
 
 	// the card its runs reach out through
 	Card qemu.Card
+
+	// the host's architecture, which the builder VM always runs. Empty is amd64.
+	Arch string
 }
 
 // Machine is the builder VM of the build.
@@ -53,6 +56,7 @@ func (b Build) Machine() (qemu.Machine, error) {
 		CPUs:  min(runtime.NumCPU(), 8),
 		Disks: append([]qemu.Disk{cache}, bases...),
 		Card:  &b.Card,
+		Arch:  b.Arch,
 	}, nil
 }
 

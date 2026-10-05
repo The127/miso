@@ -111,3 +111,12 @@ func TestTheBuilderHasTheHostsCPUsUpToEight(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, min(runtime.NumCPU(), 8), machine.CPUs)
 }
+
+func TestTheBuilderOfAnArm64BuildIsAnArm64Machine(t *testing.T) {
+	// act
+	machine, err := builder.Build{Arch: "arm64"}.Machine()
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "arm64", machine.Arch)
+}
