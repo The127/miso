@@ -81,3 +81,15 @@ func TestTheCardOfAMicrovmIsAVirtioDeviceWithoutPCI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "virtio-net-device,netdev=card,mac=52:54:00:6d:69:73", valueOf(t, args, "-device"))
 }
+
+func TestTheCardOfAnArm64MachineIsAVirtioDeviceOnPCI(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{Arch: "arm64", Card: &qemu.Card{MAC: "52:54:00:6d:69:73"}}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "virtio-net-pci,netdev=card,mac=52:54:00:6d:69:73", valueOf(t, args, "-device"))
+}

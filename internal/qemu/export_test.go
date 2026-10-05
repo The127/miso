@@ -23,3 +23,13 @@ func Vsock(cid uint32, fd int, onMicrovm bool) []string {
 func Port(fd int, onMicrovm bool) []string {
 	return port(fd, boardOf(Machine{Microvm: onMicrovm}))
 }
+
+// VsockOf is the vsock device of whatever board the machine runs on.
+func VsockOf(cid uint32, fd int, machine Machine) []string {
+	return vsock(cid, fd, boardOf(machine))
+}
+
+// PortOf is the virtio port of whatever board the machine runs on.
+func PortOf(fd int, machine Machine) []string {
+	return port(fd, boardOf(machine))
+}

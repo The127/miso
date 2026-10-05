@@ -25,8 +25,9 @@ var (
 	// divide error. The PIC is always off, because the race hits only some boots.
 	microvm = board{name: "microvm,acpi=on,pic=off", bus: "-device"}
 
-	// virt is the board of arm64, it boots a firmware or a kernel.
-	virt = board{name: "virt", firmware: true}
+	// virt is the board of arm64. It has virtio devices on a PCI bus and boots
+	// a firmware or a kernel.
+	virt = board{name: "virt", bus: "-pci", firmware: true}
 )
 
 // boardOf is the board the machine runs on.
