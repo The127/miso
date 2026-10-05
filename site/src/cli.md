@@ -66,7 +66,7 @@ example `Imagefile:4: COPY needs an absolute destination`.
 ## miso build
 
 ```
-miso build [-f <file>] [-o <directory>] [context]
+miso build [-f <file>] [-o <directory>] [--arch <arch>] [context]
 ```
 
 Builds the Imagefile in the builder VM. The steps are run one by one and
@@ -77,6 +77,7 @@ run again.
 | --- | --- |
 | `-f`, `--file` | The build file. `Imagefile` in the context if not given. |
 | `-o`, `--output` | The directory the outputs are written to. It is created if it is missing. |
+| `--arch` | The architecture the image is built for. The default is the architecture miso runs on. Only `amd64` is accepted, so miso builds only on amd64 machines. |
 
 Without `-o` no output is written. Disks with a `CHECK` are still built and
 booted, so the checks run.
