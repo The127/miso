@@ -41,15 +41,11 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 
 func TestAnArm64MachineRunsOnQEMUsAarch64Binary(t *testing.T) {
 	// arrange
-	driver, recorded := fakeDriver(t)
-	path := t.TempDir()
-	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-aarch64")))
-	t.Setenv("PATH", path)
-	driver.Binary = ""
+	recorded := fakeQEMUOnPath(t, "qemu-system-aarch64")
 	machine := qemu.Machine{Arch: "arm64", Boot: qemu.Kernel{Image: "/k/Image"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
-	vm, err := driver.Start(t.Context(), machine)
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	<-vm.Done()
 
@@ -59,15 +55,11 @@ func TestAnArm64MachineRunsOnQEMUsAarch64Binary(t *testing.T) {
 
 func TestAnAmd64MachineRunsOnQEMUsX8664Binary(t *testing.T) {
 	// arrange
-	driver, recorded := fakeDriver(t)
-	path := t.TempDir()
-	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-x86_64")))
-	t.Setenv("PATH", path)
-	driver.Binary = ""
+	recorded := fakeQEMUOnPath(t, "qemu-system-x86_64")
 	machine := qemu.Machine{Boot: qemu.Kernel{Image: "/k/vmlinuz"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
-	vm, err := driver.Start(t.Context(), machine)
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	<-vm.Done()
 
@@ -77,15 +69,11 @@ func TestAnAmd64MachineRunsOnQEMUsX8664Binary(t *testing.T) {
 
 func TestAMicrovmRunsOnQEMUsX8664Binary(t *testing.T) {
 	// arrange
-	driver, recorded := fakeDriver(t)
-	path := t.TempDir()
-	require.NoError(t, os.Symlink(driver.Binary, filepath.Join(path, "qemu-system-x86_64")))
-	t.Setenv("PATH", path)
-	driver.Binary = ""
+	recorded := fakeQEMUOnPath(t, "qemu-system-x86_64")
 	machine := qemu.Machine{Microvm: true, Boot: qemu.Kernel{Image: "/k/vmlinux"}, MemoryMiB: 512, CPUs: 1}
 
 	// act
-	vm, err := driver.Start(t.Context(), machine)
+	vm, err := qemu.Driver{}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	<-vm.Done()
 
