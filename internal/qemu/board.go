@@ -1,5 +1,7 @@
 package qemu
 
+import "errors"
+
 // board is the kind of machine QEMU runs. What its virtio devices are called
 // depends on the bus the board has for them.
 type board struct {
@@ -33,9 +35,11 @@ var (
 	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", firmware: true}
 )
 
+const arm64 = "arm64"
+
 // boardOf is the board the machine runs on.
 func boardOf(machine Machine) board {
-	if machine.Arch == "arm64" {
+	if machine.Arch == arm64 {
 		return virt
 	}
 
@@ -49,4 +53,13 @@ func boardOf(machine Machine) board {
 // device is the name of a virtio device of a kind on this board.
 func (b board) device(kind string) string {
 	return kind + b.bus
+}
+
+// boardless refuses a machine that no board fits.
+func boardless(machine Machine) error {
+	if machine.Arch == arm64 && machine.Microvm {
+		return errors.New("an arm64 machine cannot be a microvm, QEMU has that board only for x86")
+	}
+
+	return nil
 }
