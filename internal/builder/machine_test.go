@@ -120,3 +120,15 @@ func TestTheBuilderOfAnArm64BuildIsAnArm64Machine(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "arm64", machine.Arch)
 }
+
+func TestTheKernelOfAnArm64BuilderWritesToTheSerialPortOfTheVirtBoard(t *testing.T) {
+	// arrange
+	boot := builder.Boot{Kernel: "/boot/vmlinuz", Initramfs: "/boot/initramfs"}
+
+	// act
+	machine, err := builder.Build{Boot: boot, Arch: "arm64"}.Machine()
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, qemu.Kernel{Image: "/boot/vmlinuz", Initramfs: "/boot/initramfs", CommandLine: "console=ttyAMA0 panic=-1 -- agent"}, machine.Boot)
+}
