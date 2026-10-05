@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.0](https://github.com/The127/miso/compare/v1.0.0-rc.4...v1.0.0) (2026-10-05)
+
+
+### Features
+
+* show in the plan which steps are cached ([#22](https://github.com/The127/miso/issues/22)) ([a09241e](https://github.com/The127/miso/commit/a09241e80c8bf494f3a343175346baa98aa6b928))
+
+
+### Bug Fixes
+
+* give a rootfs the mount points of a kernel ([#23](https://github.com/The127/miso/issues/23)) ([9a071a8](https://github.com/The127/miso/commit/9a071a81efbb568bf93cb72c989b87658c94dd8f)), closes [#19](https://github.com/The127/miso/issues/19)
+* turn the legacy PIC off on the microvm board ([#20](https://github.com/The127/miso/issues/20)) ([52e87e7](https://github.com/The127/miso/commit/52e87e75cf715dd6a96f59f1f7772ffe31a670d4)), closes [#14](https://github.com/The127/miso/issues/14)
+
 ## [1.0.0-rc.4](https://github.com/The127/miso/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2026-10-03)
 
 
