@@ -22,9 +22,9 @@ func boot(machine Machine) ([]string, error) {
 		return nil, nil
 	}
 
-	// the credentials of a machine whose firmware brings no SMBIOS are on the
-	// command line of its kernel
-	if !boardOf(machine).firmware {
+	// the credentials of a machine with no SMBIOS table are on the command
+	// line of its kernel
+	if !smbios(machine) {
 		words, err := commandLineCredentials(machine)
 		if err != nil {
 			return nil, err

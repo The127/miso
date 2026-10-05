@@ -15,7 +15,7 @@ type Credential struct {
 // credentials are always in base64, so no byte of a value can end the
 // SMBIOS string or start the next option.
 func credentials(machine Machine) []string {
-	if !boardOf(machine).firmware {
+	if !smbios(machine) {
 		return nil
 	}
 
@@ -49,3 +49,11 @@ func commandLineCredentials(machine Machine) ([]string, error) {
 
 // credentialName is what a name of a credential on the command line is made of.
 var credentialName = regexp.MustCompile(`^[A-Za-z0-9._@-]+$`)
+
+// smbios says whether the machine has a firmware that hands systemd an SMBIOS
+// table, its board's own or the one it boots.
+func smbios(machine Machine) bool {
+	_, bootsFirmware := machine.Boot.(Firmware)
+
+	return boardOf(machine).firmware || bootsFirmware
+}
