@@ -24,10 +24,17 @@ var (
 	// and unmasked. A timer interrupt pending at the first sti then dies as a
 	// divide error. The PIC is always off, because the race hits only some boots.
 	microvm = board{name: "microvm,acpi=on,pic=off", bus: "-device"}
+
+	// virt is the board of arm64, it boots a firmware or a kernel.
+	virt = board{name: "virt", firmware: true}
 )
 
 // boardOf is the board the machine runs on.
 func boardOf(machine Machine) board {
+	if machine.Arch == "arm64" {
+		return virt
+	}
+
 	if machine.Microvm {
 		return microvm
 	}
