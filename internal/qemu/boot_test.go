@@ -32,7 +32,7 @@ func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 	machine.Console = &console
 
 	// act
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: hostVsock}.Start(t.Context(), machine)
+	vm, err := qemu.Driver{OpenVsock: hostVsock}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		// QEMU writes to the console until it is gone
@@ -59,7 +59,7 @@ func TestAMachineWithoutVsockBootsTheBuilderKernelAndAnswersOverItsVirtioPort(t 
 	withoutVsock := func() (*os.File, error) { return nil, fs.ErrNotExist }
 
 	// act
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: withoutVsock}.Start(t.Context(), machine)
+	vm, err := qemu.Driver{OpenVsock: withoutVsock}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		// QEMU writes to the console until it is gone

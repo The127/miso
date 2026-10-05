@@ -46,7 +46,6 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 		defer func() { _ = os.RemoveAll(scratch) }()
 
 		boot := check.Boot{
-			Driver:    qemu.Driver{Binary: "qemu-system-x86_64"},
 			Namespace: namespace,
 			// what the boot writes must not reach the disk that is delivered
 			Image:    qemu.Disk{Path: disk, Format: "raw", Serial: "image", Access: qemu.Snapshot, CD: request.CD},

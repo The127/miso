@@ -33,7 +33,7 @@ func guestIn(t *testing.T, namespace *vsockns.Namespace, cmdline string) *qemu.V
 	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1 "+cmdline)
 	var console bytes.Buffer
 	machine.Console = &console
-	vm, err := qemu.Driver{Binary: "qemu-system-x86_64", OpenVsock: namespace.Device}.Start(t.Context(), machine)
+	vm, err := qemu.Driver{OpenVsock: namespace.Device}.Start(t.Context(), machine)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		// QEMU writes to the console until it is gone
