@@ -50,6 +50,23 @@ func TestAMicrovmHandsItsCredentialsToSystemdOnTheKernelCommandLine(t *testing.T
 	assert.NotContains(t, args, "-smbios")
 }
 
+func TestAnArm64KernelGetsItsCredentialsOnTheCommandLine(t *testing.T) {
+	// arrange
+	machine := qemu.Machine{
+		Arch:        "arm64",
+		Boot:        qemu.Kernel{Image: "/Image", Initramfs: "/initrd.img", CommandLine: "root=/dev/vda rw"},
+		Credentials: []qemu.Credential{{Name: "vmm.notify_socket", Value: []byte("vsock-stream:2:12345")}},
+	}
+
+	// act
+	args, err := qemu.Arguments(machine)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "root=/dev/vda rw systemd.set_credential_binary=vmm.notify_socket:dnNvY2stc3RyZWFtOjI6MTIzNDU=", valueOf(t, args, "-append"))
+	assert.NotContains(t, args, "-smbios")
+}
+
 func TestAMicrovmThatDoesNotBootAKernelIsRefused(t *testing.T) {
 	// arrange
 	machine := qemu.Machine{Microvm: true, Boot: qemu.Firmware{Code: "code.fd", Vars: "vars.fd"}}
