@@ -57,7 +57,7 @@ func TestAnInitThatIsNoProgramIsRefused(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, []byte("the init"), nil)
+	err := initramfs.Write(&archive, "amd64", []byte("the init"), nil)
 
 	// assert
 	assert.ErrorContains(t, err, "the init is no program")
@@ -68,7 +68,7 @@ func TestAnInitThatNeedsADynamicLoaderIsRefusedNamingCgo(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, program(t, elf.PT_LOAD, elf.PT_INTERP), nil)
+	err := initramfs.Write(&archive, "amd64", program(t, elf.PT_LOAD, elf.PT_INTERP), nil)
 
 	// assert
 	assert.ErrorContains(t, err, "CGO_ENABLED=0")
@@ -79,8 +79,19 @@ func TestAnInitForAnotherMachineIsRefusedNamingIt(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, programFor(t, elf.EM_AARCH64, elf.PT_LOAD), nil)
+	err := initramfs.Write(&archive, "amd64", programFor(t, elf.EM_AARCH64, elf.PT_LOAD), nil)
 
 	// assert
 	assert.ErrorContains(t, err, "EM_AARCH64")
+}
+
+func TestAnArm64BuilderTakesAnInitForAArch64(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, "arm64", programFor(t, elf.EM_AARCH64, elf.PT_LOAD), nil)
+
+	// assert
+	assert.NoError(t, err)
 }

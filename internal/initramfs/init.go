@@ -7,15 +7,18 @@ import (
 	"fmt"
 )
 
+// machines maps an architecture to the ELF machine its builder VM runs.
+var machines = map[string]elf.Machine{"amd64": elf.EM_X86_64, "arm64": elf.EM_AARCH64}
+
 // checkInit refuses a program that cannot be the init of the builder VM.
-func checkInit(init []byte) error {
+func checkInit(arch string, init []byte) error {
 	program, err := elf.NewFile(bytes.NewReader(init))
 	if err != nil {
 		return fmt.Errorf("the init is no program: %w", err)
 	}
 
-	if program.Machine != elf.EM_X86_64 {
-		return fmt.Errorf("the init is a program for %s, the builder VM runs %s", program.Machine, elf.EM_X86_64)
+	if program.Machine != machines[arch] {
+		return fmt.Errorf("the init is a program for %s, the builder VM runs %s", program.Machine, machines[arch])
 	}
 
 	for _, segment := range program.Progs {

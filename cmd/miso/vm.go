@@ -37,7 +37,7 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 		return builder.Boot{}, err
 	}
 
-	boot, err := builder.WriteBoot(dir, kernel, init)
+	boot, err := builder.WriteBoot(dir, "amd64", kernel, init)
 	if err != nil {
 		return builder.Boot{}, errors.Join(err, os.RemoveAll(dir))
 	}

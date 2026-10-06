@@ -15,12 +15,12 @@ type Boot struct {
 	Initramfs string
 }
 
-// WriteBoot writes the files the builder VM boots from into a directory:
-// the kernel, and an initramfs with init as its init and the kernel's
-// modules.
-func WriteBoot(dir string, kernel builderkernel.Kernel, init []byte) (Boot, error) {
+// WriteBoot writes the files the builder VM of an architecture boots from
+// into a directory: the kernel, and an initramfs with init as its init and
+// the kernel's modules.
+func WriteBoot(dir, arch string, kernel builderkernel.Kernel, init []byte) (Boot, error) {
 	var initrd bytes.Buffer
-	if err := initramfs.Write(&initrd, init, kernel.Modules); err != nil {
+	if err := initramfs.Write(&initrd, arch, init, kernel.Modules); err != nil {
 		return Boot{}, err
 	}
 

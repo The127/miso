@@ -7,10 +7,10 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
-// Write writes an initial ramfs whose init is the program given, with the
-// modules in the order to load them.
-func Write(w io.Writer, init []byte, modules []Module) error {
-	if err := checkInit(init); err != nil {
+// Write writes an initial ramfs for a builder VM of an architecture, whose
+// init is the program given, with the modules in the order to load them.
+func Write(w io.Writer, arch string, init []byte, modules []Module) error {
+	if err := checkInit(arch, init); err != nil {
 		return err
 	}
 
