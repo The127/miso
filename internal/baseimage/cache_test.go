@@ -13,6 +13,7 @@ import (
 
 	"github.com/The127/miso/internal/baseimage"
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/download/downloadtest"
 )
 
 func TestANameNobodyKnowsCannotBeFetched(t *testing.T) {
@@ -53,4 +54,23 @@ func TestANameWhoseImageIsGoneHasNoDigest(t *testing.T) {
 	// assert
 	require.NoError(t, err)
 	assert.Empty(t, digest)
+}
+
+func TestAnArm64CacheKeepsItsNamesApartFromTheAmd64Ones(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	digest := downloadtest.Kept(t, dir, []byte("the amd64 image"))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "names"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "names", "debian:sid"), []byte(digest), 0o600))
+	blobs := download.Open(dir, http.DefaultClient)
+
+	// act
+	amd64, err := baseimage.OpenFor(dir, "amd64", blobs).Digest("debian:sid")
+	require.NoError(t, err)
+	arm64, err := baseimage.OpenFor(dir, "arm64", blobs).Digest("debian:sid")
+	require.NoError(t, err)
+
+	// assert
+	assert.Equal(t, digest, amd64)
+	assert.Empty(t, arm64)
 }

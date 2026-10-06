@@ -18,7 +18,7 @@ func Image(t *testing.T, name string) qemu.Disk {
 
 	dir := basesDir(t)
 	blobs := download.Open(dir, http.DefaultClient)
-	bases := baseimage.Open(dir, blobs, baseimage.Known)
+	bases := baseimage.OpenFor(dir, hostArch, blobs)
 
 	digest, err := bases.Digest(name)
 	require.NoError(t, err)

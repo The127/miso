@@ -33,6 +33,18 @@ func Open(dir string, blobs *download.Store, sources map[string]Source) *Cache {
 	return &Cache{dir: dir, blobs: blobs, sources: sources}
 }
 
+// OpenFor opens the images miso knows for an architecture. amd64 keeps the
+// directory it always had, so a cache from before other architectures is
+// still found, and each other one keeps its names and formats in a directory
+// of its own.
+func OpenFor(dir, arch string, blobs *download.Store) *Cache {
+	if arch != "amd64" {
+		dir = filepath.Join(dir, arch)
+	}
+
+	return Open(dir, blobs, Known[arch])
+}
+
 // Digest is that of the image a name stands for, or empty for one that is
 // known but not fetched yet.
 func (c *Cache) Digest(name string) (string, error) {
