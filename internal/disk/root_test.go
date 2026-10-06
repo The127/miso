@@ -16,11 +16,24 @@ import (
 const (
 	esp       = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
 	rootx8664 = "4f68bce3-e8cd-4db1-96e7-fbcaf984b709"
+	rootarm64 = "b921b045-1df0-41c3-af44-4c6f280d3fae"
 )
 
 func TestTheRootPartitionIsFoundByItsType(t *testing.T) {
 	// arrange
 	image := gpt(t, entry{kind: esp, first: 34, last: 99}, entry{kind: rootx8664, first: 100, last: 199})
+
+	// act
+	root, err := disk.Root(bytes.NewReader(image))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, disk.Partition{Number: 2, Offset: 100 * 512, Size: 100 * 512}, root)
+}
+
+func TestTheRootPartitionOfAnArm64DiskIsFoundByItsType(t *testing.T) {
+	// arrange
+	image := gpt(t, entry{kind: esp, first: 34, last: 99}, entry{kind: rootarm64, first: 100, last: 199})
 
 	// act
 	root, err := disk.Root(bytes.NewReader(image))

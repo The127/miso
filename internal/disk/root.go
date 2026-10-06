@@ -19,13 +19,27 @@ var ErrNoTable = errors.New("no GPT")
 // ErrNoRoot is a disk without a root partition.
 var ErrNoRoot = errors.New("no root partition")
 
-// rootx8664 is the partition type of an x86-64 root file system in the
-// order its bytes are on disk.
-var rootx8664 = []byte{
-	0xe3, 0xbc, 0x68, 0x4f,
-	0xcd, 0xe8,
-	0xb1, 0x4d,
-	0x96, 0xe7, 0xfb, 0xca, 0xf9, 0x84, 0xb7, 0x09,
+// rootx8664 and rootarm64 are the partition types of a root file system, in
+// the order their bytes are on disk.
+var (
+	rootx8664 = []byte{
+		0xe3, 0xbc, 0x68, 0x4f,
+		0xcd, 0xe8,
+		0xb1, 0x4d,
+		0x96, 0xe7, 0xfb, 0xca, 0xf9, 0x84, 0xb7, 0x09,
+	}
+	rootarm64 = []byte{
+		0x45, 0xb0, 0x21, 0xb9,
+		0xf0, 0x1d,
+		0xc3, 0x41,
+		0xaf, 0x44, 0x4c, 0x6f, 0x28, 0x0d, 0x3f, 0xae,
+	}
+)
+
+// isRoot says whether a partition type is a root. A disk has the root of one
+// architecture, so either is its root, the first one found.
+func isRoot(kind []byte) bool {
+	return bytes.Equal(kind, rootx8664) || bytes.Equal(kind, rootarm64)
 }
 
 // Partition is where a partition lies on its disk, in bytes, and the number
@@ -64,7 +78,7 @@ func Root(r io.ReaderAt) (Partition, error) {
 			return Partition{}, err
 		}
 
-		if bytes.Equal(entry[:16], rootx8664) {
+		if isRoot(entry[:16]) {
 			first, err := lba(entry[32:])
 			if err != nil {
 				return Partition{}, err
