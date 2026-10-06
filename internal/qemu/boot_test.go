@@ -27,7 +27,7 @@ func TestAMachineBootsTheBuilderKernelAndAnswersOverVsock(t *testing.T) {
 	require.NoError(t, err)
 	init, err := os.ReadFile(self)
 	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1")
+	machine := kvmtest.Machine(t, init, "panic=-1 MISO_GUEST=1")
 	var console bytes.Buffer
 	machine.Console = &console
 
@@ -53,7 +53,7 @@ func TestAMachineWithoutVsockBootsTheBuilderKernelAndAnswersOverItsVirtioPort(t 
 	require.NoError(t, err)
 	init, err := os.ReadFile(self)
 	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 MISO_GUEST=1")
+	machine := kvmtest.Machine(t, init, "panic=-1 MISO_GUEST=1")
 	var console bytes.Buffer
 	machine.Console = &console
 	withoutVsock := func() (*os.File, error) { return nil, fs.ErrNotExist }
