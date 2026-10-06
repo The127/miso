@@ -30,7 +30,7 @@ func cacheDir() (string, error) {
 func baseImages(cache string) (*download.Store, *baseimage.Cache) {
 	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
 
-	return blobs, baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known)
+	return blobs, baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known["amd64"])
 }
 
 // cacheDiskSize is how large the cache disk may grow. The file is sparse,
