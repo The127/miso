@@ -15,7 +15,7 @@ import (
 func Firmware(t *testing.T) firmware.Firmware {
 	t.Helper()
 
-	found, err := firmware.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient))
+	found, err := firmware.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient), hostArch)
 	require.NoError(t, err)
 
 	return found
