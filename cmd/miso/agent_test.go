@@ -28,7 +28,7 @@ func TestAnAgentBootedByTheBuilderKernelWithoutVsockAnswersOverItsVirtioPort(t *
 	// arrange
 	init, err := os.ReadFile(miso(t))
 	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
+	machine := kvmtest.Machine(t, init, "panic=-1 -- agent")
 	var console bytes.Buffer
 	machine.Console = &console
 	driver := qemu.Driver{OpenVsock: func() (*os.File, error) { return nil, fs.ErrNotExist }}
@@ -57,7 +57,7 @@ func TestAnAgentBootedByTheBuilderKernelInAVsockNamespaceIsReachedThroughIt(t *t
 	namespace := vsocknstest.Private(t)
 	init, err := os.ReadFile(miso(t))
 	require.NoError(t, err)
-	machine := kvmtest.Machine(t, init, "console=ttyS0 panic=-1 -- agent")
+	machine := kvmtest.Machine(t, init, "panic=-1 -- agent")
 	var console bytes.Buffer
 	machine.Console = &console
 	vm, err := qemu.Driver{OpenVsock: namespace.Device}.Start(t.Context(), machine)

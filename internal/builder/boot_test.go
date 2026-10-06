@@ -20,7 +20,7 @@ func TestTheBootFilesHoldTheKernelsImage(t *testing.T) {
 	kernel := builderkernel.Kernel{Image: []byte("the kernel")}
 
 	// act
-	boot, err := builder.WriteBoot(t.TempDir(), kernel, static(t))
+	boot, err := builder.WriteBoot(t.TempDir(), "amd64", kernel, static(t))
 
 	// assert
 	require.NoError(t, err)
@@ -35,10 +35,10 @@ func TestTheBootFilesHoldTheInitAndTheKernelsModules(t *testing.T) {
 	kernel := builderkernel.Kernel{Image: []byte("the kernel"), Modules: modules}
 	init := static(t)
 	var want bytes.Buffer
-	require.NoError(t, initramfs.Write(&want, init, modules))
+	require.NoError(t, initramfs.Write(&want, "amd64", init, modules))
 
 	// act
-	boot, err := builder.WriteBoot(t.TempDir(), kernel, init)
+	boot, err := builder.WriteBoot(t.TempDir(), "amd64", kernel, init)
 
 	// assert
 	require.NoError(t, err)

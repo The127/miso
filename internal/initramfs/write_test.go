@@ -33,7 +33,7 @@ func TestAnInitramfsHoldsItsInitAsAnExecutableInit(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, static(t), nil)
+	err := initramfs.Write(&archive, "amd64", static(t), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestAnInitramfsHoldsTheConsole(t *testing.T) {
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, static(t), nil)
+	err := initramfs.Write(&archive, "amd64", static(t), nil)
 
 	// assert
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestAnInitramfsHoldsItsModulesInTheOrderToLoadThem(t *testing.T) {
 	}
 
 	// act
-	err := initramfs.Write(&archive, static(t), modules)
+	err := initramfs.Write(&archive, "amd64", static(t), modules)
 
 	// assert
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestAnInitramfsCarriesNothingOfTheMachineThatWroteIt(t *testing.T) {
 	modules := []initramfs.Module{{Name: "virtio_blk", Content: []byte("first")}}
 
 	// act
-	err := initramfs.Write(&archive, static(t), modules)
+	err := initramfs.Write(&archive, "amd64", static(t), modules)
 
 	// assert
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestAnInitramfsForAKernelWithoutModulesStillHoldsTheirDirectory(t *testing.
 	var archive bytes.Buffer
 
 	// act
-	err := initramfs.Write(&archive, static(t), nil)
+	err := initramfs.Write(&archive, "amd64", static(t), nil)
 
 	// assert
 	require.NoError(t, err)

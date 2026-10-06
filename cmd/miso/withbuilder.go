@@ -94,6 +94,7 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 			Blob:     blobs.Path,
 			Format:   bases.Format,
 			Card:     card,
+			Arch:     builderArch,
 		}.Machine()
 		if err != nil {
 			return err

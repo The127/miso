@@ -81,7 +81,7 @@ func askBuilder(ctx context.Context, command *cli.Command, dir cachedisk.Dir, bl
 
 	defer func() { _ = os.RemoveAll(filepath.Dir(boot.Kernel)) }()
 
-	machine, err := builder.Build{Boot: boot, Cache: dir.Disk()}.Machine()
+	machine, err := builder.Build{Boot: boot, Cache: dir.Disk(), Arch: builderArch}.Machine()
 	if err != nil {
 		return err
 	}

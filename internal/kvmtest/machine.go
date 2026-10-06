@@ -2,6 +2,7 @@ package kvmtest
 
 import (
 	"net/http"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,21 +13,24 @@ import (
 	"github.com/The127/miso/internal/qemu"
 )
 
-// Machine boots miso's pinned builder kernel with init as its init and the
-// command line given. The kernel package is kept in miso's own cache,
-// fetched once.
+// Machine boots miso's pinned builder kernel for the host's architecture
+// with init as its init. The command line given follows its console= word.
+// The kernel package is kept in miso's own cache, fetched once.
 func Machine(t *testing.T, init []byte, commandLine string) qemu.Machine {
 	t.Helper()
 
-	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient))
+	arch := runtime.GOARCH
+
+	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient), arch)
 	require.NoError(t, err)
 
-	boot, err := builder.WriteBoot(t.TempDir(), kernel, init)
+	boot, err := builder.WriteBoot(t.TempDir(), arch, kernel, init)
 	require.NoError(t, err)
 
 	return qemu.Machine{
-		Boot:      qemu.Kernel{Image: boot.Kernel, Initramfs: boot.Initramfs, CommandLine: commandLine},
+		Boot:      qemu.Kernel{Image: boot.Kernel, Initramfs: boot.Initramfs, CommandLine: "console=" + qemu.SerialConsole(arch) + " " + commandLine},
 		MemoryMiB: 512,
 		CPUs:      1,
+		Arch:      arch,
 	}
 }
