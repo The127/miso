@@ -12,13 +12,18 @@ var machines = map[string]elf.Machine{"amd64": elf.EM_X86_64, "arm64": elf.EM_AA
 
 // checkInit refuses a program that cannot be the init of the builder VM.
 func checkInit(arch string, init []byte) error {
+	machine, ok := machines[arch]
+	if !ok {
+		return fmt.Errorf("miso has no builder VM for %s", arch)
+	}
+
 	program, err := elf.NewFile(bytes.NewReader(init))
 	if err != nil {
 		return fmt.Errorf("the init is no program: %w", err)
 	}
 
-	if program.Machine != machines[arch] {
-		return fmt.Errorf("the init is a program for %s, the builder VM runs %s", program.Machine, machines[arch])
+	if program.Machine != machine {
+		return fmt.Errorf("the init is a program for %s, the builder VM runs %s", program.Machine, machine)
 	}
 
 	for _, segment := range program.Progs {

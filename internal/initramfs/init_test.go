@@ -95,3 +95,14 @@ func TestAnArm64BuilderTakesAnInitForAArch64(t *testing.T) {
 	// assert
 	assert.NoError(t, err)
 }
+
+func TestAnInitForABuilderOfAnArchMisoDoesNotKnowIsRefusedNamingIt(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, "sparc", static(t), nil)
+
+	// assert
+	assert.ErrorContains(t, err, "sparc")
+}
