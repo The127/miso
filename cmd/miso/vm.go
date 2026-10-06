@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
@@ -14,10 +15,14 @@ import (
 	"github.com/The127/miso/internal/reach"
 )
 
+// builderArch is the architecture of the builder VM, always the host's, so
+// it runs on KVM.
+const builderArch = runtime.GOARCH
+
 // bootFiles writes the builder kernel and an initramfs with this very miso
 // as its init into a directory of their own.
 func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error) {
-	kernel, err := builderkernel.Ready(ctx, blobs, "amd64")
+	kernel, err := builderkernel.Ready(ctx, blobs, builderArch)
 	if err != nil {
 		return builder.Boot{}, err
 	}
@@ -37,7 +42,7 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 		return builder.Boot{}, err
 	}
 
-	boot, err := builder.WriteBoot(dir, "amd64", kernel, init)
+	boot, err := builder.WriteBoot(dir, builderArch, kernel, init)
 	if err != nil {
 		return builder.Boot{}, errors.Join(err, os.RemoveAll(dir))
 	}
