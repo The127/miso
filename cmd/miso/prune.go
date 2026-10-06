@@ -41,7 +41,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, _ := baseImages(cache)
+	blobs, _ := baseImages(cache, builderArch)
 
 	dir := builderDir(cache)
 	held, err := lockedCache(dir, command.Root().ErrWriter)

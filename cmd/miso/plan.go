@@ -29,7 +29,7 @@ func listPlan(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, bases := baseImages(cache)
+	blobs, bases := baseImages(cache, builderArch)
 
 	dir, _ := located(command)
 	files, err := buildcontext.Open(dir)
