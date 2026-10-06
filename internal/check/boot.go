@@ -98,14 +98,14 @@ func (b Boot) start(ctx context.Context, method qemu.Boot, notifyPort uint32) (v
 	return vm, onPort, err
 }
 
-// machine is the VM the image boots in. An amd64 image booted from a kernel
-// and its initrd is booted as Firecracker boots a microVM, on the microvm
-// board, which QEMU has only for x86.
+// machine is the VM the image boots in. An image booted from a kernel and its
+// initrd is booted as Firecracker boots a microVM, on the microvm board where
+// QEMU has one.
 func (b Boot) machine(method qemu.Boot, notifyPort uint32) qemu.Machine {
 	return qemu.Machine{
 		Arch:        b.Arch,
 		Boot:        method,
-		Microvm:     b.Kernel != nil && b.Arch != "arm64",
+		Microvm:     b.Kernel != nil && qemu.HasMicrovm(b.Arch),
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},

@@ -63,9 +63,15 @@ func (b board) device(kind string) string {
 
 // boardless refuses a machine that no board fits.
 func boardless(machine Machine) error {
-	if machine.Arch == arm64 && machine.Microvm {
+	if machine.Microvm && !HasMicrovm(machine.Arch) {
 		return errors.New("an arm64 machine cannot be a microvm, QEMU has that board only for x86")
 	}
 
 	return nil
+}
+
+// HasMicrovm says whether QEMU has the microvm board for an architecture.
+// It has it only for x86.
+func HasMicrovm(arch string) bool {
+	return arch != arm64
 }
