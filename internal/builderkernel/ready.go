@@ -2,6 +2,7 @@ package builderkernel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/The127/miso/internal/download"
 	"github.com/The127/miso/internal/initramfs"
@@ -15,9 +16,14 @@ type Kernel struct {
 	Modules []initramfs.Module
 }
 
-// Ready fetches miso's pinned kernel package, through the store, and takes
-// it apart into what the builder VM boots.
-func Ready(ctx context.Context, store *download.Store) (Kernel, error) {
+// Ready fetches miso's pinned kernel package of the architecture, through
+// the store, and takes it apart into what the builder VM boots.
+func Ready(ctx context.Context, store *download.Store, arch string) (Kernel, error) {
+	pin, ok := pins[arch]
+	if !ok {
+		return Kernel{}, fmt.Errorf("miso has no builder kernel for %s", arch)
+	}
+
 	return ready(ctx, store, pin, needs...)
 }
 

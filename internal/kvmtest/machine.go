@@ -18,7 +18,7 @@ import (
 func Machine(t *testing.T, init []byte, commandLine string) qemu.Machine {
 	t.Helper()
 
-	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient))
+	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient), "amd64")
 	require.NoError(t, err)
 
 	boot, err := builder.WriteBoot(t.TempDir(), kernel, init)

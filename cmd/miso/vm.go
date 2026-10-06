@@ -17,7 +17,7 @@ import (
 // bootFiles writes the builder kernel and an initramfs with this very miso
 // as its init into a directory of their own.
 func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error) {
-	kernel, err := builderkernel.Ready(ctx, blobs)
+	kernel, err := builderkernel.Ready(ctx, blobs, "amd64")
 	if err != nil {
 		return builder.Boot{}, err
 	}
