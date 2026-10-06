@@ -73,7 +73,7 @@ func copyParts(image fs.FS, found kernel.Kernel, dir string) error {
 	parts := []part{
 		{name: "linux", path: found.Linux},
 		{name: "initrd", path: found.Initrd},
-		{name: "stub", path: stub},
+		{name: "stub", path: imageEFI.Stub},
 		{name: "os-release", path: "etc/os-release"},
 		{name: "cmdline", path: "etc/kernel/cmdline", optional: true},
 	}
@@ -83,7 +83,7 @@ func copyParts(image fs.FS, found kernel.Kernel, dir string) error {
 		case p.optional && errors.Is(err, fs.ErrNotExist):
 			continue
 		case p.name == "stub" && errors.Is(err, fs.ErrNotExist):
-			return fmt.Errorf("the image has no UKI stub at /%s", stub)
+			return fmt.Errorf("the image has no UKI stub at /%s", imageEFI.Stub)
 		case err != nil:
 			return err
 		}

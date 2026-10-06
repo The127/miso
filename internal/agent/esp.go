@@ -38,9 +38,9 @@ func makeESP(image fs.FS, root, esp string) error {
 		return err
 	}
 
-	err = copyPart(image, systemdBoot, filepath.Join(fallback, "BOOTX64.EFI"))
+	err = copyPart(image, imageEFI.Loader, filepath.Join(fallback, imageEFI.Fallback))
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("the image has no systemd-boot at /%s", systemdBoot)
+		return fmt.Errorf("the image has no systemd-boot at /%s", imageEFI.Loader)
 	}
 
 	return err
