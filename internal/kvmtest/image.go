@@ -2,6 +2,7 @@ package kvmtest
 
 import (
 	"net/http"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func Image(t *testing.T, name string) qemu.Disk {
 
 	dir := basesDir(t)
 	blobs := download.Open(dir, http.DefaultClient)
-	bases := baseimage.Open(dir, blobs, baseimage.Known["amd64"])
+	bases := baseimage.OpenFor(dir, runtime.GOARCH, blobs)
 
 	digest, err := bases.Digest(name)
 	require.NoError(t, err)

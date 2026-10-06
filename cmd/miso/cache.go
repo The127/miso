@@ -25,12 +25,12 @@ func cacheDir() (string, error) {
 	return filepath.Join(dir, "miso"), nil
 }
 
-// baseImages are the base images miso keeps in its cache, and the store
-// their bytes live in.
+// baseImages are the base images miso keeps in its cache for the builder
+// VM's architecture, and the store their bytes live in.
 func baseImages(cache string) (*download.Store, *baseimage.Cache) {
 	blobs := download.Open(filepath.Join(cache, "bases"), http.DefaultClient)
 
-	return blobs, baseimage.Open(filepath.Join(cache, "bases"), blobs, baseimage.Known["amd64"])
+	return blobs, baseimage.OpenFor(filepath.Join(cache, "bases"), builderArch, blobs)
 }
 
 // cacheDiskSize is how large the cache disk may grow. The file is sparse,

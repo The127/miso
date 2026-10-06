@@ -61,10 +61,10 @@ Starts a stage from a base. The base is one of:
 - `scratch`, an empty root file system.
 - The name of an earlier stage. The new stage starts where that stage ends,
   including its `ENV` values.
-- `debian:sid`, `debian:13` or `debian:trixie`. These are the Debian amd64
-  cloud images. `debian:13` and `debian:trixie` are the same image. A name
-  means whatever image is current at its address when it is first fetched.
-  After that the fetched image is cached.
+- `debian:sid`, `debian:13` or `debian:trixie`. These are the Debian cloud
+  images for the architecture miso runs on. `debian:13` and `debian:trixie`
+  are the same image. A name means whatever image is current at its address
+  when it is first fetched. After that the fetched image is cached.
 
 Any other name is an error. Paths, URLs and container images are not yet
 supported.
