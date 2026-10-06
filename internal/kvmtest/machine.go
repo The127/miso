@@ -19,16 +19,18 @@ import (
 func Machine(t *testing.T, init []byte, commandLine string) qemu.Machine {
 	t.Helper()
 
-	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient), runtime.GOARCH)
+	arch := runtime.GOARCH
+
+	kernel, err := builderkernel.Ready(t.Context(), download.Open(basesDir(t), http.DefaultClient), arch)
 	require.NoError(t, err)
 
-	boot, err := builder.WriteBoot(t.TempDir(), runtime.GOARCH, kernel, init)
+	boot, err := builder.WriteBoot(t.TempDir(), arch, kernel, init)
 	require.NoError(t, err)
 
 	return qemu.Machine{
-		Boot:      qemu.Kernel{Image: boot.Kernel, Initramfs: boot.Initramfs, CommandLine: "console=" + builder.Console(runtime.GOARCH) + " " + commandLine},
+		Boot:      qemu.Kernel{Image: boot.Kernel, Initramfs: boot.Initramfs, CommandLine: "console=" + qemu.SerialConsole(arch) + " " + commandLine},
 		MemoryMiB: 512,
 		CPUs:      1,
-		Arch:      runtime.GOARCH,
+		Arch:      arch,
 	}
 }

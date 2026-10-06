@@ -48,7 +48,7 @@ func (b Build) Machine() (qemu.Machine, error) {
 			Image:     b.Boot.Kernel,
 			Initramfs: b.Boot.Initramfs,
 			// the kernel hands init what follows --, and init is miso
-			CommandLine: "console=" + Console(b.Arch) + " panic=-1 -- agent",
+			CommandLine: "console=" + qemu.SerialConsole(b.Arch) + " panic=-1 -- agent",
 		},
 		// room for a package manager's run, the proof of concept built with it
 		MemoryMiB: 4096,
@@ -78,15 +78,4 @@ func (b Build) bases() ([]qemu.Disk, error) {
 	}
 
 	return disks, nil
-}
-
-// Console is the serial port the kernel of a builder VM of an architecture
-// writes to. The virt board has a PL011 instead of a 16550 UART, and Linux
-// calls it ttyAMA0.
-func Console(arch string) string {
-	if arch == "arm64" {
-		return "ttyAMA0"
-	}
-
-	return "ttyS0"
 }
