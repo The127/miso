@@ -44,14 +44,18 @@ func drives(machine Machine) ([]string, error) {
 	var args []string
 	for i, disk := range machine.Disks {
 		id := fmt.Sprintf("disk%d", i)
-		if disk.CD && !boardOf(machine).firmware {
+		if disk.CD && !boardOf(machine).bootsFirmware {
 			return nil, errors.New("a microvm has no optical drive to put a CD in")
 		}
 
 		if disk.CD {
-			args = append(args,
-				"-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,media=cdrom,readonly=on", escaped(disk.Path), disk.Format, id),
-				"-device", "ide-cd,drive="+id)
+			drive := []string{"-device", "ide-cd,drive=" + id}
+			if boardOf(machine).scsiCD {
+				drive = []string{"-device", "virtio-scsi-pci,id=scsi", "-device", "scsi-cd,bus=scsi.0,drive=" + id}
+			}
+
+			args = append(args, "-drive", fmt.Sprintf("file=%s,format=%s,if=none,id=%s,media=cdrom,readonly=on", escaped(disk.Path), disk.Format, id))
+			args = append(args, drive...)
 
 			continue
 		}

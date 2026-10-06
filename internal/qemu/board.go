@@ -13,15 +13,21 @@ type board struct {
 	// The end of the name of a virtio device of this board.
 	bus string
 
-	// The board has a firmware, which brings the SMBIOS table that
-	// systemd reads its credentials from, and a drive for a CD. One without
-	// boots a kernel, and its credentials go on the kernel command line.
+	// The board has a firmware even when it boots a kernel, which brings the
+	// SMBIOS table that systemd reads its credentials from. One without hands
+	// them over on the kernel command line.
 	firmware bool
+
+	// The board boots a UEFI firmware from its disks.
+	bootsFirmware bool
+
+	// The board has no IDE bus, so a CD goes on a virtio SCSI controller.
+	scsiCD bool
 }
 
 var (
 	// q35 has virtio devices on a PCI bus.
-	q35 = board{name: "q35", binary: "qemu-system-x86_64", bus: "-pci", firmware: true}
+	q35 = board{name: "q35", binary: "qemu-system-x86_64", bus: "-pci", firmware: true, bootsFirmware: true}
 
 	// microvm has no PCI bus, so its devices and its power off go through
 	// ACPI. Whatever the host's QEMU defaults to, ACPI is on. Linux boots it
@@ -32,7 +38,7 @@ var (
 
 	// virt is the board of arm64. It has virtio devices on a PCI bus and boots
 	// a firmware or a kernel.
-	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", firmware: true}
+	virt = board{name: "virt", binary: "qemu-system-aarch64", bus: "-pci", bootsFirmware: true, scsiCD: true}
 )
 
 const arm64 = "arm64"
