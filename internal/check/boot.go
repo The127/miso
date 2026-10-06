@@ -24,8 +24,12 @@ type Boot struct {
 	Image    qemu.Disk
 
 	// a kernel and initrd that boot the image as the root of its disk,
-	// without a firmware, on the microvm board
+	// without a firmware. amd64 boots them on the microvm board, arm64 on
+	// the virt board.
 	Kernel *qemu.Kernel
+
+	// the architecture of the image, amd64 when empty
+	Arch string
 
 	// holds what the firmware and the boot write, a boot's own
 	Dir     string
@@ -94,12 +98,14 @@ func (b Boot) start(ctx context.Context, method qemu.Boot, notifyPort uint32) (v
 	return vm, onPort, err
 }
 
-// machine is the VM the image boots in. An image booted from a kernel and
-// its initrd is booted as Firecracker boots a microVM, on the microvm board.
+// machine is the VM the image boots in. An amd64 image booted from a kernel
+// and its initrd is booted as Firecracker boots a microVM, on the microvm
+// board, which QEMU has only for x86.
 func (b Boot) machine(method qemu.Boot, notifyPort uint32) qemu.Machine {
 	return qemu.Machine{
+		Arch:        b.Arch,
 		Boot:        method,
-		Microvm:     b.Kernel != nil,
+		Microvm:     b.Kernel != nil && b.Arch != "arm64",
 		MemoryMiB:   2048,
 		CPUs:        2,
 		Disks:       []qemu.Disk{b.Image},

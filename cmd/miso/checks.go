@@ -52,6 +52,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			Dir:      scratch,
 			Console:  console,
 			Patience: bootPatience,
+			Arch:     buildArch,
 		}
 
 		if err := bootsFrom(ctx, blobs, disk, request, &boot); err != nil {
