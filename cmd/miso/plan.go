@@ -29,6 +29,10 @@ func listPlan(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
+	if err := hostRefusal(builderArch); err != nil {
+		return err
+	}
+
 	blobs, bases := baseImages(cache, builderArch)
 
 	dir, _ := located(command)

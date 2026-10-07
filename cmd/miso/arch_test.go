@@ -9,9 +9,9 @@ import (
 	main "github.com/The127/miso/cmd/miso"
 )
 
-func TestABuildOnAHostMisoDoesNotBuildOnIsRefusedNamingTheHostAndWhereMisoBuilds(t *testing.T) {
+func TestAHostMisoDoesNotBuildOnIsRefusedNamingItAndWhereMisoBuilds(t *testing.T) {
 	// act
-	err := main.ArchRefusal("riscv64", "riscv64")
+	err := main.HostRefusal("riscv64")
 
 	// assert
 	require.Error(t, err)

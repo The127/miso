@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 
 	"github.com/urfave/cli/v3"
 
@@ -28,26 +27,9 @@ var buildCommand = &cli.Command{
 	Action: runBuild,
 }
 
-// hostArches are the hosts miso has a builder kernel, a firmware and base
-// images for.
-var hostArches = []string{"amd64", "arm64"}
-
-// archRefusal is why miso cannot build for arch on host, or nil when it can.
-func archRefusal(arch, host string) error {
-	if !slices.Contains(hostArches, host) {
-		return fmt.Errorf("miso builds on amd64 and arm64, not on %s", host)
-	}
-
-	if arch != host {
-		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, host)
-	}
-
-	return nil
-}
-
 func runBuild(ctx context.Context, command *cli.Command) error {
-	if err := archRefusal(command.String("arch"), builderArch); err != nil {
-		return err
+	if arch := command.String("arch"); arch != builderArch {
+		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, builderArch)
 	}
 
 	return withBuilder(ctx, command, build.Requests, func(have prepared, boot booter) error {

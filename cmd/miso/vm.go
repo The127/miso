@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"slices"
 
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
@@ -18,6 +19,19 @@ import (
 // builderArch is the architecture of the builder VM, always the host's, so
 // it runs on KVM. Until cross builds, images are built only for it.
 const builderArch = runtime.GOARCH
+
+// hostArches are the hosts miso has a builder kernel, a firmware and base
+// images for.
+var hostArches = []string{"amd64", "arm64"}
+
+// hostRefusal is why miso cannot run a builder on host, or nil when it can.
+func hostRefusal(host string) error {
+	if !slices.Contains(hostArches, host) {
+		return fmt.Errorf("miso builds on amd64 and arm64, not on %s", host)
+	}
+
+	return nil
+}
 
 // bootFiles writes the builder kernel and an initramfs with this very miso
 // as its init into a directory of their own.
