@@ -62,7 +62,7 @@ func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (pl
 		return plan.Plan{}, err
 	}
 
-	planned, err := plan.New(stages, agentName(), files, bases)
+	planned, err := plan.New(stages, agentName(), buildArch, files, bases)
 	if err != nil {
 		return plan.Plan{}, imagefile.InFile(file, err)
 	}

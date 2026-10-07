@@ -85,7 +85,7 @@ func TestAnUnknownBaseIsRejectedAtItsLine(t *testing.T) {
 	stages := parse(t, "FROM scratch\nFROM nope\n")
 
 	// act
-	_, err := plan.New(stages, anyAgent, noFiles, noImages)
+	_, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
 
 	// assert
 	var planErr *imagefile.Error
@@ -100,7 +100,7 @@ func TestAStageOnABaseNotFetchedYetGetsNoKeys(t *testing.T) {
 	stages := parse(t, "FROM debian:sid\nRUN debootstrap sid /rootfs\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestAStageOnAnImageStartsOnTheKeyItsFirstStepIsBuiltOn(t *testing.T) {
 	stages := parse(t, "FROM debian:sid\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, debianImages)
 
 	// assert
 	require.NoError(t, err)

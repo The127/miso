@@ -15,7 +15,7 @@ const anyAgent = "agent"
 func keys(t *testing.T, stages []imagefile.Stage, agent string, context plan.Context, bases plan.Bases) [][]string {
 	t.Helper()
 
-	planned, err := plan.New(stages, agent, context, bases)
+	planned, err := plan.New(stages, agent, "amd64", context, bases)
 	require.NoError(t, err)
 
 	var found [][]string
@@ -41,12 +41,25 @@ func lastKey(t *testing.T, found [][]string) string {
 	return stage[len(stage)-1]
 }
 
+func TestAPlanIsForTheArchItIsMadeFor(t *testing.T) {
+	// arrange
+	stages, err := imagefile.Parse("FROM scratch\n")
+	require.NoError(t, err)
+
+	// act
+	planned, err := plan.New(stages, anyAgent, "arm64", noFiles, noImages)
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "arm64", planned.Arch)
+}
+
 func TestAnInvalidBuildFileGetsNoPlan(t *testing.T) {
 	// arrange
 	stages := parse(t, "FROM scratch\nCOPY --from=nope a /b\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
 
 	// assert
 	assert.ErrorIs(t, err, plan.ErrUnknownStage)
@@ -58,7 +71,7 @@ func TestAPlanKeepsTheBaseDigestItWasKeyedWith(t *testing.T) {
 	stages := parse(t, "FROM debian:sid\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": "sha256:old"})
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, images{"debian:sid": "sha256:old"})
 
 	// assert
 	require.NoError(t, err)
@@ -71,7 +84,7 @@ func TestAPlannedStepKnowsItsInstruction(t *testing.T) {
 	stages := parse(t, "FROM scratch\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
 
 	// assert
 	require.NoError(t, err)
@@ -86,7 +99,7 @@ func TestAPlannedCopyKeepsTheDigestsOfItsFiles(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY motd issue /etc/\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, files{"motd": "hello", "issue": "welcome"}, noImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", files{"motd": "hello", "issue": "welcome"}, noImages)
 
 	// assert
 	require.NoError(t, err)
@@ -100,7 +113,7 @@ func TestAPlannedRunAfterAnOutputWasBuiltOnTheRunBeforeIt(t *testing.T) {
 	stages := parse(t, "FROM scratch\nRUN make\nOUTPUT disk os.img\nRUN make install\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -115,7 +128,7 @@ func TestAPlannedCheckWasBuiltOnTheOutputsBeforeIt(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\nOUTPUT iso app.iso\nCHECK true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -130,7 +143,7 @@ func TestAPlannedStageKeepsItsNameAndItsBase(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS build\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, debianImages)
 
 	// assert
 	require.NoError(t, err)
@@ -144,7 +157,7 @@ func TestAPlannedStageKeepsTheLineOfItsFrom(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS build\nRUN make\n\nFROM build\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, debianImages)
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, debianImages)
 
 	// assert
 	require.NoError(t, err)
@@ -157,7 +170,7 @@ func TestAPlanKeepsTheAgentItWasKeyedWith(t *testing.T) {
 	stages := parse(t, "FROM scratch\n")
 
 	// act
-	planned, err := plan.New(stages, "miso v0.3.1", noFiles, noImages)
+	planned, err := plan.New(stages, "miso v0.3.1", "amd64", noFiles, noImages)
 
 	// assert
 	require.NoError(t, err)
@@ -169,7 +182,7 @@ func TestAPlanNamesTheBasesABuildDownloadsFirst(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM scratch\nCOPY --from=bootstrap /rootfs/ /\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)
@@ -181,7 +194,7 @@ func TestAStageOnAnUnfetchedStageIsNoDownload(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM bootstrap\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)
@@ -193,7 +206,7 @@ func TestABaseIsDownloadedOnceHoweverManyStagesStartOnIt(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS one\nFROM debian:sid AS two\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)

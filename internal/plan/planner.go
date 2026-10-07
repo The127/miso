@@ -9,6 +9,7 @@ import (
 // planner is one planning run. Nothing else talks to the outside.
 type planner struct {
 	agent   string
+	arch    string
 	context Context
 	bases   Bases
 	ends    map[string]string
@@ -16,7 +17,7 @@ type planner struct {
 }
 
 func (p *planner) plan(stages []imagefile.Stage) (Plan, error) {
-	planned := Plan{Agent: p.agent}
+	planned := Plan{Agent: p.agent, Arch: p.arch}
 	stages = withTools(stages)
 
 	for _, stage := range stages {
