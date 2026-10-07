@@ -101,7 +101,8 @@ The kernel and the initrd of the image, copied as they are.
 
 `--elf` unpacks an x86 bzImage to the ELF file it contains, which
 Firecracker needs on x86. An arm64 kernel is an `Image` that is unpacked
-already, and Firecracker takes it as it is, so write it without `--elf`.
+already, and Firecracker takes it as it is, so an arm64 build refuses
+`--elf`.
 
 `--path` names the file in the image, for a kernel or an initrd that a `RUN`
 built somewhere else. It must be an absolute path. It works together with
@@ -215,6 +216,8 @@ It also gives the reason. These are the ones from the `OUTPUT` line itself:
 - `unknown kind of output`
 - `--x: unknown option`
 - `--elf: option takes no value`
+- `--elf: needs an x86 bzImage, other kernels are unpacked already`, on an
+  arm64 image
 - `--path=x: path is not absolute`
 - `--format=x: unknown file system`
 - `not a plain file name`, when the name has a `/` in it

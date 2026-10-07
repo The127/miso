@@ -6,6 +6,9 @@ import "github.com/The127/miso/internal/imagefile"
 type Plan struct {
 	Agent string
 
+	// the architecture the image is built for, empty is amd64
+	Arch string
+
 	// the bases a build fetches before it plans again, in FROM order
 	Downloads []string
 	Stages    []Stage

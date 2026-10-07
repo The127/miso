@@ -76,6 +76,20 @@ func TestAnElfOptionWithAValueFailsAtItsLineNamingIt(t *testing.T) {
 	assert.ErrorContains(t, err, "--elf")
 }
 
+func TestAnElfOptionForAnArm64ImageFailsAtItsLine(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT kernel --elf vmlinux\n")
+	source.Arch = "arm64"
+
+	// act
+	_, err := build.Requests(source, network)
+
+	// assert
+	require.ErrorIs(t, err, build.ErrELFNeedsBzImage)
+	assert.ErrorContains(t, err, "line 2")
+	assert.ErrorContains(t, err, "--elf")
+}
+
 func TestAKernelOutputWithAPathAsksForThatFileOfTheImage(t *testing.T) {
 	// arrange
 	source := planned(t, "FROM debian:13\nOUTPUT kernel --path=/src/linux/arch/x86/boot/bzImage vmlinuz\n")
