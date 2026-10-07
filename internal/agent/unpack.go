@@ -102,10 +102,6 @@ func keepStream(image fs.FS, path, scratch string) (dir string, unpacked uint32,
 	}
 
 	found, err := kernel.PayloadOf(file, info.Size())
-	if errors.Is(err, kernel.ErrNotBzImage) {
-		return "", 0, fmt.Errorf("--elf needs an x86 bzImage, and an arm64 Image is unpacked already, so leave out --elf: %w", err)
-	}
-
 	if err != nil {
 		return "", 0, err
 	}
