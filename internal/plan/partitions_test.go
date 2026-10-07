@@ -14,7 +14,7 @@ func TestAPartitionLeavesTheLayersOfTheStepsAfterItAlone(t *testing.T) {
 	stages := parse(t, "FROM scratch\nPARTITION root Format=ext4\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, noImages)
 
 	// assert
 	require.NoError(t, err)

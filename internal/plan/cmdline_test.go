@@ -14,7 +14,7 @@ func TestACmdlineLeavesTheLayersOfTheStepsAfterItAlone(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCMDLINE rw\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, noImages)
 
 	// assert
 	require.NoError(t, err)

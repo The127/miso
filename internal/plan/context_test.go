@@ -42,7 +42,7 @@ func TestACopyOfAMissingFileIsRejectedAtItsLine(t *testing.T) {
 	stages := parse(t, "FROM scratch\nCOPY nope /etc/\n")
 
 	// act
-	_, err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
+	_, err := plan.New(stages, anyAgent, anyArch, noFiles, noImages)
 
 	// assert
 	var planErr *imagefile.Error
@@ -57,7 +57,7 @@ func TestACopyOnAnUnfetchedBaseStillListsItsFiles(t *testing.T) {
 	stages := parse(t, "FROM debian:sid\nCOPY motd /etc/\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, "amd64", files{"motd": "hello"}, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, anyArch, files{"motd": "hello"}, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)
