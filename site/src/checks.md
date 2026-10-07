@@ -90,7 +90,11 @@ A passing check prints nothing.
 If the system does not boot, the build fails with `the image did not boot`,
 and with `within 5m0s` when it did not reach a booted state in five minutes.
 The error names a log file in the cache directory. It holds the console
-output of the boot, which shows where the boot stopped.
+output of the boot, which shows where the boot stopped. On amd64 the kernel
+writes it only when the command line names the serial console,
+`console=ttyS0`. On arm64 the kernel finds the serial console itself, but a
+`console=` that names another one, such as `ttyS0`, hides it. Leave it out
+there, or write `console=ttyAMA0`.
 
 ## What the machine needs
 

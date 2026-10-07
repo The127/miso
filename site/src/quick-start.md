@@ -39,6 +39,10 @@ This is `examples/htop/Imagefile` from the repository without its comments.
 | `OUTPUT disk os.raw` | Write the disk to a file named `os.raw`. |
 | `CHECK` | Boot the disk and run this command in it. |
 
+On arm64 the serial console is `ttyAMA0`, so write
+`CMDLINE rw console=ttyAMA0` there. With `ttyS0` the disk still boots, but a
+failed check has no boot log to show.
+
 ## Plan
 
 `miso plan` lists the steps without building anything. Run it in the
