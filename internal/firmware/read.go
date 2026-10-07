@@ -7,16 +7,10 @@ import (
 	"github.com/The127/miso/internal/deb"
 )
 
-// the code and vars of one build, both for a 4 MiB flash
-const (
-	codeFile = "usr/share/OVMF/OVMF_CODE_4M.fd"
-	varsFile = "usr/share/OVMF/OVMF_VARS_4M.fd"
-)
-
-// read takes the firmware out of a package.
-func read(pkg io.Reader) (Firmware, error) {
+// read takes the firmware out of the package of a source.
+func read(pkg io.Reader, from source) (Firmware, error) {
 	var found Firmware
-	wanted := map[string]*[]byte{codeFile: &found.Code, varsFile: &found.Vars}
+	wanted := map[string]*[]byte{from.code: &found.Code, from.vars: &found.Vars}
 
 	files, failed := deb.Files(pkg)
 	for name, file := range files {
@@ -39,11 +33,11 @@ func read(pkg io.Reader) (Firmware, error) {
 
 	// a link in a package reads as an empty file, and would boot nothing
 	if len(found.Code) == 0 {
-		return Firmware{}, fmt.Errorf("the package holds no usable %s", codeFile)
+		return Firmware{}, fmt.Errorf("the package holds no usable %s", from.code)
 	}
 
 	if len(found.Vars) == 0 {
-		return Firmware{}, fmt.Errorf("the package holds no usable %s", varsFile)
+		return Firmware{}, fmt.Errorf("the package holds no usable %s", from.vars)
 	}
 
 	return found, nil

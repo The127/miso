@@ -59,6 +59,19 @@ func TestAKernelBootsOnTheMicrovmBoard(t *testing.T) {
 	assert.Equal(t, kernel, machine.Boot)
 }
 
+func TestAKernelOfAnArm64ImageBootsOnAnArm64MachineThatIsNoMicrovm(t *testing.T) {
+	// arrange
+	kernel := qemu.Kernel{Image: "/out/vmlinuz", Initramfs: "/out/initrd.img", CommandLine: "root=/dev/vda rw"}
+	boot := check.Boot{Kernel: &kernel, Arch: "arm64"}
+
+	// act
+	machine := boot.Machine(kernel, 12345)
+
+	// assert
+	assert.Equal(t, "arm64", machine.Arch)
+	assert.False(t, machine.Microvm)
+}
+
 func TestAFirmwareBootsOnTheDefaultBoard(t *testing.T) {
 	// arrange
 	boot := check.Boot{}

@@ -128,8 +128,8 @@ func (a *Agent) wrapped(ctx context.Context, request protocol.Rootfs, out io.Wri
 
 // wrappedPartition is the one partition of a wrapped image, which holds the
 // whole image. Without Minimize repart sizes an ext4 too small, and best
-// is refused for ext4. Type=root names the root of x86-64 only, which is
-// the one architecture miso builds for.
+// is refused for ext4. Type=root names the root of the architecture repart
+// runs on, which is the image's.
 func wrappedPartition(format string) protocol.Partition {
 	return protocol.Partition{Name: "root", Settings: []protocol.Setting{
 		{Key: "Type", Value: "root"},

@@ -20,7 +20,7 @@ checkout of the tag is enough, there are no ldflags.
 
 ## What the packages hold
 
-Only the `miso` binary and the license. The builder kernel and the OVMF
+Only the `miso` binary and the license. The builder kernel and the UEFI
 firmware are not shipped. The first build fetches each by its pinned
 digest. The packages depend on qemu (`qemu-system-x86` for deb,
 `qemu-system-x86-core` for rpm).

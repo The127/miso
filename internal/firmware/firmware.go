@@ -1,6 +1,7 @@
 package firmware
 
-// Firmware is OVMF without Secure Boot, which needs no SMM in QEMU.
+// Firmware is a UEFI firmware without Secure Boot, which needs no SMM in
+// QEMU.
 type Firmware struct {
 	Code []byte
 

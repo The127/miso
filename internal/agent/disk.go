@@ -4,17 +4,41 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"runtime"
 
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
 	"github.com/The127/miso/internal/sandbox"
 )
 
-// systemdBoot is where an image brings systemd-boot.
-const systemdBoot = "usr/lib/systemd/boot/efi/systemd-bootx64.efi"
+// efi is where an image of an architecture brings systemd-boot and the stub
+// a UKI is built on, and the name of the fallback loader of its ESP.
+type efi struct {
+	Loader   string
+	Stub     string
+	Fallback string
+}
 
-// stub is where an image brings the stub a UKI is built on.
-const stub = "usr/lib/systemd/boot/efi/linuxx64.efi.stub"
+// imageEFI is the efi of the image. The image is of the builder VM's
+// architecture, which is what the agent runs on.
+var imageEFI = efiOf(runtime.GOARCH)
+
+// efiOf is the efi of an architecture.
+func efiOf(arch string) efi {
+	if arch == "arm64" {
+		return efi{
+			Loader:   "usr/lib/systemd/boot/efi/systemd-bootaa64.efi",
+			Stub:     "usr/lib/systemd/boot/efi/linuxaa64.efi.stub",
+			Fallback: "BOOTAA64.EFI",
+		}
+	}
+
+	return efi{
+		Loader:   "usr/lib/systemd/boot/efi/systemd-bootx64.efi",
+		Stub:     "usr/lib/systemd/boot/efi/linuxx64.efi.stub",
+		Fallback: "BOOTX64.EFI",
+	}
+}
 
 // repart makes the disk of the image from the definitions the image ships,
 // with a boot catalog for optical drives when asked. Without --dry-run=no

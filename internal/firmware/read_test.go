@@ -22,7 +22,7 @@ func TestTheFirmwareOfAPackageIsItsCodeAndVarsWithoutSecureBoot(t *testing.T) {
 	})
 
 	// act
-	found, err := firmware.Read(bytes.NewReader(pkg))
+	found, err := firmware.Read(bytes.NewReader(pkg), "amd64")
 
 	// assert
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestAPackageWithoutTheVarsIsRefusedNamingThem(t *testing.T) {
 	})
 
 	// act
-	_, err := firmware.Read(bytes.NewReader(pkg))
+	_, err := firmware.Read(bytes.NewReader(pkg), "amd64")
 
 	// assert
 	assert.ErrorContains(t, err, "usr/share/OVMF/OVMF_VARS_4M.fd")
@@ -51,8 +51,25 @@ func TestAPackageWithoutTheCodeIsRefusedNamingIt(t *testing.T) {
 	})
 
 	// act
-	_, err := firmware.Read(bytes.NewReader(pkg))
+	_, err := firmware.Read(bytes.NewReader(pkg), "amd64")
 
 	// assert
 	assert.ErrorContains(t, err, "usr/share/OVMF/OVMF_CODE_4M.fd")
+}
+
+func TestTheArm64FirmwareOfAPackageIsAAVMFWithoutSecureBoot(t *testing.T) {
+	// arrange
+	pkg := debtest.Package(t, map[string]string{
+		"./usr/share/AAVMF/AAVMF_CODE.no-secboot.fd": "the code",
+		"./usr/share/AAVMF/AAVMF_CODE.secboot.fd":    "the secure boot code",
+		"./usr/share/AAVMF/AAVMF_VARS.fd":            "the vars",
+		"./usr/share/AAVMF/AAVMF_VARS.ms.fd":         "the vars with microsoft keys",
+	})
+
+	// act
+	found, err := firmware.Read(bytes.NewReader(pkg), "arm64")
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, firmware.Firmware{Code: []byte("the code"), Vars: []byte("the vars")}, found)
 }
