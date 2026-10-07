@@ -16,7 +16,7 @@ import (
 )
 
 // builderArch is the architecture of the builder VM, always the host's, so
-// it runs on KVM.
+// it runs on KVM. Until cross builds, images are built only for it.
 const builderArch = runtime.GOARCH
 
 // bootFiles writes the builder kernel and an initramfs with this very miso

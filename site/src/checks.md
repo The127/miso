@@ -96,7 +96,8 @@ output of the boot, which shows where the boot stopped.
 
 Checks run on the machine that runs miso, not in the builder VM. They need:
 
-- `qemu-system-x86_64` and access to `/dev/kvm`
+- `qemu-system-x86_64` on amd64 or `qemu-system-aarch64` on arm64, and
+  access to `/dev/kvm`
 - the firmware, which miso downloads and keeps in the cache
 - a vsock device. miso uses it to talk to the booted system. If there is
   none, the build stops with `CHECK needs a vsock of its own`.

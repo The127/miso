@@ -14,7 +14,7 @@ own_arch() {
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'--arch "sparc"'* ]]
-    [[ "$output" == *"amd64"* ]]
+    [[ "$output" == *"$(own_arch)"* ]]
 }
 
 @test "a build for an empty arch fails and names the flag and the arch it builds for" {
@@ -22,7 +22,18 @@ own_arch() {
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'--arch ""'* ]]
-    [[ "$output" == *"amd64"* ]]
+    [[ "$output" == *"$(own_arch)"* ]]
+}
+
+@test "a build for the arch miso runs on is not refused for its arch" {
+    # the cache of the test, which is not the user's
+    export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
+    cd "$BATS_TEST_TMPDIR"
+
+    run "$MISO" build --arch "$(own_arch)"
+
+    # it fails later, on the missing Imagefile
+    [[ "$output" != *"--arch"* ]]
 }
 
 # only a host that is not amd64 tells the two runs apart, see the arm64 job

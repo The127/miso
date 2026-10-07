@@ -2,7 +2,8 @@
 
 This page builds a Debian disk image with htop in it.
 
-You need Linux on amd64, `qemu-system-x86_64` and access to `/dev/kvm`.
+You need Linux on amd64 or arm64, `qemu-system-x86_64` on amd64 or
+`qemu-system-aarch64` on arm64, and access to `/dev/kvm`.
 The first build downloads the builder kernel, the firmware and the Debian
 base image.
 
