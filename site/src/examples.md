@@ -46,7 +46,7 @@ boot it. The initrd is made again with the driver of the virtual disk. The
 Result: `out/os.ext4`, `out/vmlinuz` and `out/initrd.img`
 
 The `Imagefile` has a `qemu-system-x86_64` command that boots them. Firecracker
-needs the kernel as an ELF file, so write `OUTPUT kernel vmlinux --elf`
+on x86 needs the kernel as an ELF file, so write `OUTPUT kernel vmlinux --elf`
 instead of `OUTPUT kernel vmlinuz`. The `Imagefile` also has a Firecracker
 configuration that boots the result to a login prompt.
 

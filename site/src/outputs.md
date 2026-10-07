@@ -99,8 +99,9 @@ OUTPUT initrd initrd.img --path=/src/initrd.img
 
 The kernel and the initrd of the image, copied as they are.
 
-`--elf` unpacks the kernel to the ELF file it contains. Firecracker needs
-that form.
+`--elf` unpacks an x86 bzImage to the ELF file it contains, which
+Firecracker needs on x86. An arm64 kernel is an `Image` that is unpacked
+already, and Firecracker takes it as it is, so write it without `--elf`.
 
 `--path` names the file in the image, for a kernel or an initrd that a `RUN`
 built somewhere else. It must be an absolute path. It works together with
