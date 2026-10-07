@@ -29,8 +29,7 @@ archives:
 
 # the kernel and the firmware are not shipped, a build fetches them by digest
 nfpms:
-  - &package
-    id: amd64
+  - id: amd64
     ids: [amd64]
     package_name: miso
     formats:
@@ -50,9 +49,19 @@ nfpms:
       rpm:
         dependencies:
           - qemu-system-x86-core
-  - <<: *package
-    id: arm64
+  - id: arm64
     ids: [arm64]
+    package_name: miso
+    formats:
+      - deb
+      - rpm
+    maintainer: karo <karolinkostial@gmail.com>
+    description: Dockerfile-style builder for systemd-based operating systems.
+    homepage: https://github.com/The127/miso
+    license: AGPL-3.0-or-later
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/miso/LICENSE
     overrides:
       deb:
         dependencies:
