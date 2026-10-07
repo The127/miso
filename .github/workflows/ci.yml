@@ -54,9 +54,8 @@ jobs:
           files: ./coverage.out
           flags: unit
 
-  # the built miso must also behave on arm64 hosts, which the amd64 runner
-  # cannot show
-  cli-arm64:
+  # miso must also behave on arm64 hosts, which the amd64 runner cannot show
+  arm64:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -72,4 +71,9 @@ jobs:
           assert-install: false
           detik-install: false
           file-install: false
-      - run: just test-cli
+      # the qemu tests claim a CID on the host's real vsock device
+      - name: open the vsock device
+        run: |
+          sudo modprobe vhost_vsock
+          sudo chmod o+rw /dev/vhost-vsock
+      - run: just test test-cli

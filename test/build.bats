@@ -25,7 +25,7 @@ own_arch() {
     [[ "$output" == *"amd64"* ]]
 }
 
-# only a host that is not amd64 tells the two runs apart, see the cli-arm64 job
+# only a host that is not amd64 tells the two runs apart, see the arm64 job
 @test "a build without --arch is a build for the arch miso runs on" {
     # the cache of the test, which is not the user's
     export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
