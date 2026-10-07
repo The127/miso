@@ -50,7 +50,7 @@ func refusal(instruction imagefile.Output, arch string) error {
 		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case instruction.Options[plan.OptionELF] != "":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
-	case plan.Unpacks(instruction) && arch != "" && arch != "amd64":
+	case plan.Unpacks(instruction) && arch != "amd64":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrELFNeedsBzImage)
 	case pathGiven(instruction.Options) && !path.IsAbs(instruction.Options[plan.OptionPath]):
 		return fmt.Errorf("--%s=%s: %w", plan.OptionPath, instruction.Options[plan.OptionPath], ErrPathNotAbsolute)
