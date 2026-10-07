@@ -9,8 +9,9 @@ Releases are made from the commit messages on `main`. Nobody tags by hand.
    Before 1.0.0, a breaking change also bumps only the minor version.
 2. Merging that pull request makes the tag and the GitHub release.
 3. In the same workflow, goreleaser builds `miso` for linux amd64 and
-   uploads a `tar.gz`, a `deb`, an `rpm` and `checksums.txt` to that
-   release. Tags with a suffix such as `-rc.1` are marked as pre-releases.
+   arm64 and uploads a `tar.gz`, a `deb` and an `rpm` for each, and
+   `checksums.txt`, to that release. Tags with a suffix such as `-rc.1`
+   are marked as pre-releases.
 4. Also in that workflow, cosign signs `checksums.txt` without a key. The
    workflow's own identity signs it, so there is no key or secret to keep.
    The signature is uploaded as `checksums.txt.sigstore.json`.
@@ -22,8 +23,12 @@ checkout of the tag is enough, there are no ldflags.
 
 Only the `miso` binary and the license. The builder kernel and the UEFI
 firmware are not shipped. The first build fetches each by its pinned
-digest. The packages depend on qemu (`qemu-system-x86` for deb,
-`qemu-system-x86-core` for rpm).
+digest. The packages depend on the qemu of their arch:
+
+| Arch | deb | rpm |
+|---|---|---|
+| amd64 | `qemu-system-x86` | `qemu-system-x86-core` |
+| arm64 | `qemu-system-arm` | `qemu-system-aarch64-core` |
 
 ## One-time setup
 
