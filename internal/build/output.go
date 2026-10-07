@@ -16,8 +16,8 @@ import (
 // A disk, an ISO or a rootfs takes the tools from where their stage ends, the
 // kernel and the initrd are taken from the image, and an unpacked kernel
 // takes the tools too.
-func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs) (protocol.Message, error) {
-	refused := refusal(instruction)
+func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, tools rootfs, inputs diskInputs, arch string) (protocol.Message, error) {
+	refused := refusal(instruction, arch)
 	if refused == nil && instruction.Kind == plan.KindUpdate {
 		refused = updateRefusal(instruction, inputs.partitions)
 	}
@@ -39,8 +39,9 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Split: instruction.Kind == plan.KindUpdate, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
 }
 
-// refusal is why miso cannot make an output, or nil when it can.
-func refusal(instruction imagefile.Output) error {
+// refusal is why miso cannot make an output for an image of arch, or nil
+// when it can.
+func refusal(instruction imagefile.Output, arch string) error {
 	unknown, hasUnknown := unknownOption(instruction.Options, plan.Options(instruction.Kind))
 	switch {
 	case !plan.Known(instruction.Kind):
@@ -49,6 +50,8 @@ func refusal(instruction imagefile.Output) error {
 		return fmt.Errorf("--%s: %w", unknown, ErrUnknownOption)
 	case instruction.Options[plan.OptionELF] != "":
 		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrOptionTakesNoValue)
+	case plan.Unpacks(instruction) && arch != "" && arch != "amd64":
+		return fmt.Errorf("--%s: %w", plan.OptionELF, ErrELFNeedsBzImage)
 	case pathGiven(instruction.Options) && !path.IsAbs(instruction.Options[plan.OptionPath]):
 		return fmt.Errorf("--%s=%s: %w", plan.OptionPath, instruction.Options[plan.OptionPath], ErrPathNotAbsolute)
 	case plan.TakesFormat(instruction.Kind) && !slices.Contains(formats, formatOf(instruction.Options)):

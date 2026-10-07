@@ -30,6 +30,10 @@ var ErrPathNotAbsolute = errors.New("path is not absolute")
 // ErrOptionTakesNoValue is an option that only says yes, given a value.
 var ErrOptionTakesNoValue = errors.New("option takes no value")
 
+// ErrELFNeedsBzImage is --elf on an image for an architecture whose kernel
+// is no bzImage.
+var ErrELFNeedsBzImage = errors.New("needs an x86 bzImage, other kernels are unpacked already")
+
 // ErrUnknownFormat is a file system a rootfs cannot be.
 var ErrUnknownFormat = errors.New("unknown file system")
 
@@ -126,7 +130,7 @@ func requestsUntil(planned plan.Plan, network protocol.Network, shell shellAt) (
 
 			inputs.add(step.Instruction)
 
-			message, err := messageOf(step, under, ends, network, inputs)
+			message, err := messageOf(step, under, ends, network, inputs, planned.Arch)
 			if err != nil {
 				return nil, false, err
 			}
@@ -174,14 +178,14 @@ func importOf(stage plan.Stage) Request {
 
 // messageOf is what the agent is asked for a step on the root file system
 // under it, or nothing for a step the agent has no part in.
-func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs) (protocol.Message, error) {
+func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs, arch string) (protocol.Message, error) {
 	switch instruction := step.Instruction.(type) {
 	case imagefile.Run:
 		return protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command, Network: networkFor(instruction, network)}, nil
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
-		return outputRequest(step, instruction, under, ends[plan.BuiltinTools], inputs)
+		return outputRequest(step, instruction, under, ends[plan.BuiltinTools], inputs, arch)
 	}
 
 	return nil, nil
