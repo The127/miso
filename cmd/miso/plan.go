@@ -29,7 +29,7 @@ func listPlan(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, bases, err := baseImages(cache)
+	blobs, bases, err := baseImages(cache, targetArch(command))
 	if err != nil {
 		return err
 	}
@@ -65,12 +65,22 @@ func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (pl
 		return plan.Plan{}, err
 	}
 
-	planned, err := plan.New(stages, agentName(), builderArch, files, bases)
+	planned, err := plan.New(stages, agentName(), targetArch(command), files, bases)
 	if err != nil {
 		return plan.Plan{}, imagefile.InFile(file, err)
 	}
 
 	return planned, nil
+}
+
+// targetArch is the architecture the command builds for, the builder's when
+// the command has no --arch.
+func targetArch(command *cli.Command) string {
+	if arch := command.String("arch"); arch != "" {
+		return arch
+	}
+
+	return builderArch
 }
 
 // fileFlagName is the flag that names the build file.

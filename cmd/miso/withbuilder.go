@@ -49,7 +49,7 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 		return err
 	}
 
-	blobs, bases, err := baseImages(cache)
+	blobs, bases, err := baseImages(cache, targetArch(command))
 	if err != nil {
 		return err
 	}

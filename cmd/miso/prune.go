@@ -41,7 +41,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, _, err := baseImages(cache)
+	blobs, _, err := baseImages(cache, builderArch)
 	if err != nil {
 		return err
 	}

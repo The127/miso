@@ -49,7 +49,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 		defer func() { _ = os.RemoveAll(scratch) }()
 
-		outputs, err := outputsOf(command, checker(ctx, have.blobs, string(have.dir), console), scratch)
+		outputs, err := outputsOf(command, checker(ctx, have.blobs, string(have.dir), console, targetArch(command)), scratch)
 		if err != nil {
 			return err
 		}

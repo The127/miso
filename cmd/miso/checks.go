@@ -24,8 +24,9 @@ const bootPatience = 5 * time.Minute
 
 // checker boots each checked output on a vsock of its own and runs its checks:
 // a rootfs with its kernel and initrd, any other output under UEFI. The boots
-// write their scratch into dir and their console to console.
-func checker(ctx context.Context, blobs *download.Store, dir string, console io.Writer) builder.Check {
+// write their scratch into dir and their console to console. The outputs are
+// of arch.
+func checker(ctx context.Context, blobs *download.Store, dir string, console io.Writer, arch string) builder.Check {
 	return func(disk string, request build.Request) error {
 		namespace, err := vsockns.Open()
 		if errors.Is(err, vsockns.ErrNotPrivate) {
@@ -52,7 +53,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			Dir:      scratch,
 			Console:  console,
 			Patience: bootPatience,
-			Arch:     builderArch,
+			Arch:     arch,
 		}
 
 		if err := bootsFrom(ctx, blobs, disk, request, &boot); err != nil {
@@ -78,7 +79,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 // a rootfs, the firmware for any other output.
 func bootsFrom(ctx context.Context, blobs *download.Store, disk string, request build.Request, boot *check.Boot) error {
 	if request.Boot == nil {
-		found, err := firmware.Ready(ctx, blobs, builderArch)
+		found, err := firmware.Ready(ctx, blobs, boot.Arch)
 		if err != nil {
 			return err
 		}
