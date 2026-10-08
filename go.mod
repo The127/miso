@@ -3,7 +3,7 @@ module github.com/The127/miso
 go 1.27
 
 require (
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
 	github.com/hashicorp/yamux v0.1.2
 	github.com/mdlayher/socket v0.7.0
