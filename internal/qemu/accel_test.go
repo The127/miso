@@ -62,3 +62,14 @@ func TestAMachineOfAnotherArchitectureThanTheHostsRunsOnTCG(t *testing.T) {
 	assert.ErrorIs(t, why, qemu.ErrOtherArch)
 	assert.Equal(t, "tcg", valueOf(t, args, "-accel"))
 }
+
+func TestAMachineThatNamesNoArchitectureRunsOnAnAmd64HostsKVM(t *testing.T) {
+	// arrange
+	missing := filepath.Join(t.TempDir(), "kvm")
+
+	// act
+	_, why := qemu.Accel(missing, "", "amd64")
+
+	// assert
+	assert.ErrorIs(t, why, fs.ErrNotExist)
+}

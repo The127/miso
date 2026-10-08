@@ -24,6 +24,10 @@ const kvmGetAPIVersion = 0xAE00
 // its most capable model comes closest.
 func accel(device, arch, host string) ([]string, error) {
 	tcg := []string{"-accel", "tcg", "-cpu", "max"}
+	if arch == "" {
+		arch = "amd64"
+	}
+
 	if arch != host {
 		return tcg, ErrOtherArch
 	}
