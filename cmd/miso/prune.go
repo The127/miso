@@ -41,11 +41,10 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	if err := hostRefusal(builderArch); err != nil {
+	blobs, _, err := baseImages(cache)
+	if err != nil {
 		return err
 	}
-
-	blobs, _ := baseImages(cache, builderArch)
 
 	dir := builderDir(cache)
 	held, err := lockedCache(dir, command.Root().ErrWriter)
