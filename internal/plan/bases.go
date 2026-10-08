@@ -30,8 +30,9 @@ func baseDigest(stage imagefile.Stage, bases Bases) (string, error) {
 }
 
 // baseKey holds the agent too, because a changed agent may build the same
-// step differently. The name stays out, so that two names for one image
-// share its layers.
-func baseKey(agent string, digest string) string {
-	return hashed([]string{agent, digest})
+// step differently, and the architecture, because a scratch stage has no
+// digest to tell two apart. The name stays out, so that two names for one
+// image share its layers.
+func baseKey(agent, arch, digest string) string {
+	return hashed([]string{agent, arch, digest})
 }

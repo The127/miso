@@ -36,6 +36,20 @@ func TestADifferentAgentChangesTheKeys(t *testing.T) {
 	assert.NotEqual(t, lastKey(t, oldKeys), lastKey(t, newKeys))
 }
 
+func TestADifferentArchitectureChangesTheKeys(t *testing.T) {
+	// arrange
+	stages := parse(t, "FROM scratch\nRUN true\n")
+
+	// act
+	amd64, amd64Err := plan.New(stages, anyAgent, "amd64", noFiles, noImages)
+	arm64, arm64Err := plan.New(stages, anyAgent, "arm64", noFiles, noImages)
+
+	// assert
+	require.NoError(t, amd64Err)
+	require.NoError(t, arm64Err)
+	assert.NotEqual(t, amd64.Stages[0].Steps[0].Key, arm64.Stages[0].Steps[0].Key)
+}
+
 // images are base images in memory, by what a FROM calls them. An empty
 // digest is an image that is known but not fetched yet.
 type images map[string]string
