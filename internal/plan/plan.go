@@ -6,7 +6,7 @@ import "github.com/The127/miso/internal/imagefile"
 type Plan struct {
 	Agent string
 
-	// the architecture the image is built for, empty is amd64
+	// the architecture the image is built for
 	Arch string
 
 	// the bases a build fetches before it plans again, in FROM order
@@ -48,13 +48,14 @@ type File struct {
 }
 
 // New plans a build. Nothing is looked up again after it.
-func New(stages []imagefile.Stage, agent string, context Context, bases Bases) (Plan, error) {
+func New(stages []imagefile.Stage, agent, arch string, context Context, bases Bases) (Plan, error) {
 	if err := Validate(stages); err != nil {
 		return Plan{}, err
 	}
 
 	p := &planner{
 		agent:   agent,
+		arch:    arch,
 		context: context,
 		bases:   bases,
 		ends:    map[string]string{},

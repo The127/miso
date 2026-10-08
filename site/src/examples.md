@@ -35,13 +35,16 @@ A Debian ISO that boots from a CD. The root is a read-only erofs file system
 with an overlay in memory on top. The initrd is made again with `dracut`, so
 that it can find a root on a CD. The `CHECK` boots the ISO as a CD.
 
+It installs `linux-image-amd64` and writes `console=ttyS0`, so it is for
+amd64. On arm64 install `linux-image-arm64` and write `console=ttyAMA0`.
+
 Result: `out/os.iso`
 
 ## microvm
 
 A Debian root file system for a microVM, with the kernel and the initrd to
 boot it. The initrd is made again with the driver of the virtual disk. The
-`CHECK` boots the three files together.
+`CHECK` boots the three files together. Like `iso`, it is for amd64.
 
 Result: `out/os.ext4`, `out/vmlinuz` and `out/initrd.img`
 

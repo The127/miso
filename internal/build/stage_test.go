@@ -26,7 +26,7 @@ func planned(t *testing.T, source string) plan.Plan {
 
 	stages, err := imagefile.Parse(source)
 	require.NoError(t, err)
-	planned, err := plan.New(stages, "agent", noContext{}, fetched{})
+	planned, err := plan.New(stages, "agent", "amd64", noContext{}, fetched{})
 	require.NoError(t, err)
 
 	return planned

@@ -44,9 +44,9 @@ directory.
 ## Installing
 
 Each [release](https://github.com/The127/miso/releases) has a `tar.gz`,
-a `deb` and an `rpm` for linux amd64, with `checksums.txt`. The packages
-depend on qemu. They do not hold the builder kernel or the firmware, so
-the first build downloads them and checks their digests.
+a `deb` and an `rpm` for linux amd64 and arm64, with `checksums.txt`.
+The packages depend on qemu. They do not hold the builder kernel or the
+firmware, so the first build downloads them and checks their digests.
 
 miso needs access to `/dev/kvm`.
 

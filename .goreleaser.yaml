@@ -1,7 +1,9 @@
 version: 2
 
+# one build per arch, so each package can depend on the qemu of its arch
 builds:
-  - main: ./cmd/miso
+  - id: amd64
+    main: ./cmd/miso
     binary: miso
     env:
       - CGO_ENABLED=0
@@ -9,6 +11,15 @@ builds:
       - linux
     goarch:
       - amd64
+  - id: arm64
+    main: ./cmd/miso
+    binary: miso
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
 
 archives:
   - formats: [tar.gz]
@@ -18,7 +29,9 @@ archives:
 
 # the kernel and the firmware are not shipped, a build fetches them by digest
 nfpms:
-  - package_name: miso
+  - id: amd64
+    ids: [amd64]
+    package_name: miso
     formats:
       - deb
       - rpm
@@ -36,6 +49,26 @@ nfpms:
       rpm:
         dependencies:
           - qemu-system-x86-core
+  - id: arm64
+    ids: [arm64]
+    package_name: miso
+    formats:
+      - deb
+      - rpm
+    maintainer: karo <karolinkostial@gmail.com>
+    description: Dockerfile-style builder for systemd-based operating systems.
+    homepage: https://github.com/The127/miso
+    license: AGPL-3.0-or-later
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/miso/LICENSE
+    overrides:
+      deb:
+        dependencies:
+          - qemu-system-arm
+      rpm:
+        dependencies:
+          - qemu-system-aarch64-core
 
 checksum:
   name_template: checksums.txt

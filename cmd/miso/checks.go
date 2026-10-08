@@ -52,7 +52,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 			Dir:      scratch,
 			Console:  console,
 			Patience: bootPatience,
-			Arch:     buildArch,
+			Arch:     builderArch,
 		}
 
 		if err := bootsFrom(ctx, blobs, disk, request, &boot); err != nil {
@@ -78,7 +78,7 @@ func checker(ctx context.Context, blobs *download.Store, dir string, console io.
 // a rootfs, the firmware for any other output.
 func bootsFrom(ctx context.Context, blobs *download.Store, disk string, request build.Request, boot *check.Boot) error {
 	if request.Boot == nil {
-		found, err := firmware.Ready(ctx, blobs, buildArch)
+		found, err := firmware.Ready(ctx, blobs, builderArch)
 		if err != nil {
 			return err
 		}

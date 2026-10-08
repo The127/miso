@@ -15,7 +15,7 @@ func TestADiskWithoutToolsGetsAToolsStageOnDebianBeforeItsOwn(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func TestAPortableWithoutToolsGetsTheToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT portable app.raw\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestASysextWithoutToolsGetsTheToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT sysext app.raw\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestAConfextWithoutToolsGetsTheToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT confext app.raw\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestAnUpdateWithoutToolsGetsTheToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT update --version=1 app\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestADiskInALaterStageGetsTheToolsStageBeforeAllStages(t *testing.T) {
 	stages := parse(t, "FROM scratch AS base\nRUN true\nFROM base\nOUTPUT disk os.img\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestAnIsoWithoutToolsGetsTheToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT iso os.iso\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestTheToolsStageInstallsTheTools(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestABuildFileWithoutADiskOrIsoGetsNoToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT kernel vmlinuz\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, noImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, noImages)
 
 	// assert
 	require.NoError(t, err)
@@ -149,7 +149,7 @@ func TestTheToolsStageInstallsWhatAnIsoNeeds(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT iso os.iso\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestTheToolsStageInstallsEveryUnpackerOfAKernel(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT kernel --elf vmlinux\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestTheToolsComeFromAFixedDayOfTheDebianArchive(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT disk os.img\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -193,7 +193,7 @@ func TestTheToolsStageIsOnTheLineOfTheOutputThatNeedsIt(t *testing.T) {
 	stages := parse(t, "FROM scratch\nRUN true\nOUTPUT disk os.img\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestAnUnpackedKernelGetsAToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT kernel --elf vmlinux\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestAKernelThatIsCopiedAsItIsGetsNoToolsStage(t *testing.T) {
 	stages := parse(t, "FROM scratch\nOUTPUT kernel vmlinuz\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, toolsImages)
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, toolsImages)
 
 	// assert
 	require.NoError(t, err)

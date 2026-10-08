@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 
 	"github.com/urfave/cli/v3"
 
@@ -16,8 +15,6 @@ import (
 	"github.com/The127/miso/internal/qemu"
 )
 
-const buildArch = "amd64"
-
 var buildCommand = &cli.Command{
 	Name:      "build",
 	Usage:     "build what the build file describes, in the builder VM",
@@ -25,14 +22,14 @@ var buildCommand = &cli.Command{
 	Flags: []cli.Flag{
 		fileFlag(),
 		outputFlag(),
-		&cli.StringFlag{Name: "arch", Usage: "the architecture the image is built for", Value: runtime.GOARCH},
+		&cli.StringFlag{Name: "arch", Usage: "the architecture the image is built for", Value: builderArch},
 	},
 	Action: runBuild,
 }
 
 func runBuild(ctx context.Context, command *cli.Command) error {
-	if arch := command.String("arch"); arch != buildArch {
-		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, buildArch)
+	if arch := command.String("arch"); arch != builderArch {
+		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, builderArch)
 	}
 
 	return withBuilder(ctx, command, build.Requests, func(have prepared, boot booter) error {

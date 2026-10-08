@@ -29,7 +29,10 @@ func listPlan(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, bases := baseImages(cache, builderArch)
+	blobs, bases, err := baseImages(cache)
+	if err != nil {
+		return err
+	}
 
 	dir, _ := located(command)
 	files, err := buildcontext.Open(dir)
@@ -62,7 +65,7 @@ func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (pl
 		return plan.Plan{}, err
 	}
 
-	planned, err := plan.New(stages, agentName(), files, bases)
+	planned, err := plan.New(stages, agentName(), builderArch, files, bases)
 	if err != nil {
 		return plan.Plan{}, imagefile.InFile(file, err)
 	}

@@ -254,7 +254,7 @@ func TestAStageOnAnUnfetchedStageGetsNoKeys(t *testing.T) {
 	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM bootstrap\nRUN true\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestACopyFromAnUnfetchedStageGetsNoKeyWhileTheStepsBeforeItKeepTheirs(t *te
 	stages := parse(t, "FROM debian:sid AS bootstrap\nFROM scratch\nRUN true\nCOPY --from=bootstrap /rootfs/ /\n")
 
 	// act
-	planned, err := plan.New(stages, anyAgent, noFiles, images{"debian:sid": ""})
+	planned, err := plan.New(stages, anyAgent, anyArch, noFiles, images{"debian:sid": ""})
 
 	// assert
 	require.NoError(t, err)

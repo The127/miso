@@ -90,13 +90,18 @@ A passing check prints nothing.
 If the system does not boot, the build fails with `the image did not boot`,
 and with `within 5m0s` when it did not reach a booted state in five minutes.
 The error names a log file in the cache directory. It holds the console
-output of the boot, which shows where the boot stopped.
+output of the boot, which shows where the boot stopped. On amd64 the kernel
+writes it only when the command line names the serial console,
+`console=ttyS0`. On arm64 the kernel finds the serial console itself, but a
+`console=` that names another one, such as `ttyS0`, hides it. Leave it out
+there, or write `console=ttyAMA0`.
 
 ## What the machine needs
 
 Checks run on the machine that runs miso, not in the builder VM. They need:
 
-- `qemu-system-x86_64` and access to `/dev/kvm`
+- `qemu-system-x86_64` on amd64 or `qemu-system-aarch64` on arm64, and
+  access to `/dev/kvm`
 - the firmware, which miso downloads and keeps in the cache
 - a vsock device. miso uses it to talk to the booted system. If there is
   none, the build stops with `CHECK needs a vsock of its own`.

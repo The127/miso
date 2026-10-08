@@ -49,7 +49,10 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 		return err
 	}
 
-	blobs, bases := baseImages(cache, builderArch)
+	blobs, bases, err := baseImages(cache)
+	if err != nil {
+		return err
+	}
 
 	card, network, err := hostNetwork()
 	if err != nil {

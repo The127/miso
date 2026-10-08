@@ -2,7 +2,8 @@
 
 This page builds a Debian disk image with htop in it.
 
-You need Linux on amd64, `qemu-system-x86_64` and access to `/dev/kvm`.
+You need Linux on amd64 or arm64, `qemu-system-x86_64` on amd64 or
+`qemu-system-aarch64` on arm64, and access to `/dev/kvm`.
 The first build downloads the builder kernel, the firmware and the Debian
 base image.
 
@@ -37,6 +38,10 @@ This is `examples/htop/Imagefile` from the repository without its comments.
 | `PARTITION` | A partition of the disk, written as `systemd-repart` settings. |
 | `OUTPUT disk os.raw` | Write the disk to a file named `os.raw`. |
 | `CHECK` | Boot the disk and run this command in it. |
+
+On arm64 the serial console is `ttyAMA0`, so write
+`CMDLINE rw console=ttyAMA0` there. With `ttyS0` the disk still boots, but a
+failed check has no boot log to show.
 
 ## Plan
 
