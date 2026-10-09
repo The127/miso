@@ -21,3 +21,10 @@ func withVariable(env []string, variable imagefile.Env) []string {
 
 	return set
 }
+
+// envOf is the environment of a run or a shell on a root file system for an
+// image of arch. TARGETARCH comes first, so that a variable of the build file
+// of the same name wins.
+func envOf(under rootfs, arch string) []string {
+	return append([]string{"TARGETARCH=" + arch}, under.env...)
+}
