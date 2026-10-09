@@ -30,7 +30,7 @@ func prepareBoot(imageFS fs.FS, image, scratch string, request protocol.Disk) (b
 	}
 
 	esp := filepath.Join(scratch, "esp")
-	if err := makeESP(imageFS, image, esp); err != nil {
+	if err := makeESP(imageFS, image, esp, request.Arch); err != nil {
 		return boot{}, err
 	}
 
@@ -39,7 +39,7 @@ func prepareBoot(imageFS fs.FS, image, scratch string, request protocol.Disk) (b
 		return boot{}, err
 	}
 
-	if err := copyParts(imageFS, found, parts); err != nil {
+	if err := copyParts(imageFS, found, parts, request.Arch); err != nil {
 		return boot{}, err
 	}
 
@@ -68,8 +68,9 @@ type part struct {
 
 // copyParts copies what a UKI of the kernel is built from out of the image
 // into a directory, so the tools read the image's files and nothing that a
-// link of the image would reach in their own root.
-func copyParts(image fs.FS, found kernel.Kernel, dir string) error {
+// link of the image would reach in their own root. The stub is that of arch.
+func copyParts(image fs.FS, found kernel.Kernel, dir, arch string) error {
+	imageEFI := efiOf(arch)
 	parts := []part{
 		{name: "linux", path: found.Linux},
 		{name: "initrd", path: found.Initrd},

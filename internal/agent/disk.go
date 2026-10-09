@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"path/filepath"
-	"runtime"
 
 	"github.com/The127/miso/internal/place"
 	"github.com/The127/miso/internal/protocol"
@@ -18,10 +17,6 @@ type efi struct {
 	Stub     string
 	Fallback string
 }
-
-// imageEFI is the efi of the image. The image is of the builder VM's
-// architecture, which is what the agent runs on.
-var imageEFI = efiOf(runtime.GOARCH)
 
 // efiOf is the efi of an architecture.
 func efiOf(arch string) efi {
