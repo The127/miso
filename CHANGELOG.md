@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0](https://github.com/The127/miso/compare/v1.0.0...v1.1.0) (2026-10-09)
+
+
+### Features
+
+* add miso build --arch ([#32](https://github.com/The127/miso/issues/32)) ([d0ca43f](https://github.com/The127/miso/commit/d0ca43fab082c9b1449c1b01b4c839f66da26549))
+* boot arm64 machines with or without a firmware ([#36](https://github.com/The127/miso/issues/36)) ([84b0633](https://github.com/The127/miso/commit/84b0633af0c0509712feb3a1105e571ac614e5dd))
+* boot the builder VM on the host's architecture ([#37](https://github.com/The127/miso/issues/37)) ([7c8243b](https://github.com/The127/miso/commit/7c8243bd19d62cde494dbdc29bfdc3acf6bbf00a))
+* build and check arm64 disks and ISOs ([#39](https://github.com/The127/miso/issues/39)) ([0ebfd6a](https://github.com/The127/miso/commit/0ebfd6a05b10ca547764ecea74b653dcfc3c2929))
+* build arm64 images on arm64 hosts ([#41](https://github.com/The127/miso/issues/41)) ([20ce24c](https://github.com/The127/miso/commit/20ce24c349f9cb73615f1f2de1aba795246f7eb2))
+* give an arm64 builder VM the virt board's console ([#35](https://github.com/The127/miso/issues/35)) ([79b52b8](https://github.com/The127/miso/commit/79b52b8005b633bed169cfdef6fb148dc7f3cb72))
+* run arm64 machines on QEMU's virt board ([#34](https://github.com/The127/miso/issues/34)) ([ce0c9a8](https://github.com/The127/miso/commit/ce0c9a83497a756763c47c71995bd1911b655d64))
+* use arm64 base images on arm64 hosts ([#38](https://github.com/The127/miso/issues/38)) ([091034f](https://github.com/The127/miso/commit/091034fe98ca76286a798cfe41f688d914c0c810))
+
+
+### Bug Fixes
+
+* refuse --elf when building for arm64 ([#40](https://github.com/The127/miso/issues/40)) ([6d2cdbc](https://github.com/The127/miso/commit/6d2cdbcfed98e95d8c04f2dbaa6f108e20bd167e))
+
 ## [1.0.0](https://github.com/The127/miso/compare/v1.0.0-rc.4...v1.0.0) (2026-10-05)
 
 
