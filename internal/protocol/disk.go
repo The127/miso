@@ -24,6 +24,9 @@ type Disk struct {
 
 	// the kernel command line of the disk, empty for the image's own
 	Cmdline string
+
+	// the architecture of the image, which names its loader and its stub
+	Arch string
 }
 
 // Partition is a definition for systemd-repart, named as its file is.
