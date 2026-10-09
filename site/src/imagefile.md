@@ -85,8 +85,17 @@ the command, exactly as written.
 
 Every `RUN` runs as root in the builder VM, in its own process, mount and
 network namespaces, with `/` as the working directory. The environment is
-`PATH`, `HOME=/root` and the values set by `ENV`. The environment of the
-host is not passed on.
+`PATH`, `HOME=/root`, `TARGETARCH` and the values set by `ENV`. The
+environment of the host is not passed on.
+
+`TARGETARCH` is the architecture the image is built for, `amd64` or `arm64`,
+so one Imagefile can install the kernel of either:
+
+```
+RUN apt-get install -y linux-image-$TARGETARCH
+```
+
+An `ENV` that sets `TARGETARCH` replaces it.
 
 A command that exits with a code other than 0 fails the build.
 

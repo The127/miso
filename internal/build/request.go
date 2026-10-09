@@ -181,7 +181,10 @@ func importOf(stage plan.Stage) Request {
 func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs, arch string) (protocol.Message, error) {
 	switch instruction := step.Instruction.(type) {
 	case imagefile.Run:
-		return protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command, Network: networkFor(instruction, network)}, nil
+		// first, so that a variable of the build file of the same name wins
+		env := append([]string{"TARGETARCH=" + arch}, under.env...)
+
+		return protocol.Run{Key: step.Key, Layers: under.layers, Env: env, Command: instruction.Command, Network: networkFor(instruction, network)}, nil
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:
