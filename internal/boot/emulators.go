@@ -66,7 +66,10 @@ func register(dir string, write func(entry string) error) error {
 
 	for _, emulator := range found {
 		arch := emulator.Name()
-		magic := magics[arch]
+		magic, known := magics[arch]
+		if !known {
+			return fmt.Errorf("no binfmt_misc entry for an emulator of %s", arch)
+		}
 
 		link := filepath.Join(dir, arch+"-binfmt-P")
 		if err := os.Symlink(arch, link); err != nil {

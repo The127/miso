@@ -50,3 +50,15 @@ func TestAnAmd64EmulatorIsRegisteredAsDebianRegistersQEMUForX86_64(t *testing.T)
 		`:amd64:M::\x7f\x45\x4c\x46\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00:\xff\xff\xff\xff\xff\xfe\xfe\xfc\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:` + filepath.Join(dir, "amd64-binfmt-P") + `:OPF`,
 	}, written)
 }
+
+func TestAnEmulatorOfAnArchitectureWithoutAnEntryIsRefusedNamingIt(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "sparc"), []byte("qemu"), 0o600))
+
+	// act
+	err := boot.Register(dir, func(string) error { return nil })
+
+	// assert
+	assert.ErrorContains(t, err, "sparc")
+}
