@@ -10,5 +10,9 @@ func Boot() error {
 		return err
 	}
 
-	return loadModules()
+	if err := loadModules(); err != nil {
+		return err
+	}
+
+	return registerEmulators()
 }

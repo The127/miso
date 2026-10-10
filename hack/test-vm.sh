@@ -194,6 +194,9 @@ for pkg in $packages; do
     dir=$work/vm/$pkg
     mkdir -p "$dir/root"
     cp -r "$work/root/modules" "$dir/root/"
+    # as the builder's initramfs, which has emulators only for another
+    # architecture
+    mkdir "$dir/root/emulators"
     CGO_ENABLED=0 go test -c -tags vmtest -o "$dir/root/init" "./$pkg"
     # a cache disk made the way a build makes it, and a disk with no file
     # system, which must never be taken for one. Each VM writes its own,
@@ -201,7 +204,7 @@ for pkg in $packages; do
     # imported base, and sparse, so it takes only what the tests write
     go run ./hack/cachedisk "$dir/cache.img" $((4 << 30))
     truncate -s 16M "$dir/blank.img"
-    (cd "$dir/root" && find init modules | cpio --quiet -o -H newc) > "$dir/initrd"
+    (cd "$dir/root" && find init modules emulators | cpio --quiet -o -H newc) > "$dir/initrd"
 done
 
 # one package shows its VM as it runs, several would mix their lines
