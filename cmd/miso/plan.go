@@ -96,14 +96,9 @@ func archRefusal(command *cli.Command) error {
 	return nil
 }
 
-// targetArch is the architecture the command builds for, the builder's when
-// the command has no --arch.
+// targetArch is the architecture the command builds for.
 func targetArch(command *cli.Command) string {
-	if arch := command.String("arch"); arch != "" {
-		return arch
-	}
-
-	return builderArch
+	return command.String("arch")
 }
 
 // fileFlagName is the flag that names the build file.
