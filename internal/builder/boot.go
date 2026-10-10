@@ -16,11 +16,11 @@ type Boot struct {
 }
 
 // WriteBoot writes the files the builder VM of an architecture boots from
-// into a directory: the kernel, and an initramfs with init as its init and
-// the kernel's modules.
-func WriteBoot(dir, arch string, kernel builderkernel.Kernel, init []byte) (Boot, error) {
+// into a directory: the kernel, and an initramfs with init as its init, the
+// kernel's modules and the emulators of the architectures it builds for.
+func WriteBoot(dir, arch string, kernel builderkernel.Kernel, init []byte, emulators ...initramfs.Emulator) (Boot, error) {
 	var initrd bytes.Buffer
-	if err := initramfs.Write(&initrd, arch, init, kernel.Modules); err != nil {
+	if err := initramfs.Write(&initrd, arch, init, kernel.Modules, emulators...); err != nil {
 		return Boot{}, err
 	}
 

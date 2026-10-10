@@ -47,6 +47,24 @@ func TestTheBootFilesHoldTheInitAndTheKernelsModules(t *testing.T) {
 	assert.Equal(t, want.Bytes(), written)
 }
 
+func TestTheBootFilesHoldTheEmulatorOfTheArchitectureTheBuildIsFor(t *testing.T) {
+	// arrange
+	kernel := builderkernel.Kernel{Image: []byte("the kernel")}
+	init := static(t)
+	emulator := initramfs.Emulator{Arch: "arm64", Program: []byte("qemu")}
+	var want bytes.Buffer
+	require.NoError(t, initramfs.Write(&want, "amd64", init, nil, emulator))
+
+	// act
+	boot, err := builder.WriteBoot(t.TempDir(), "amd64", kernel, init, emulator)
+
+	// assert
+	require.NoError(t, err)
+	written, err := os.ReadFile(boot.Initramfs)
+	require.NoError(t, err)
+	assert.Equal(t, want.Bytes(), written)
+}
+
 // static is the start of a static program for x86-64, as much as an init
 // must be.
 func static(t *testing.T) []byte {
