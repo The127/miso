@@ -452,6 +452,20 @@ dependenciesRules:
         - os/exec
         - net
         - syscall
+  # the emulator takes miso's pinned qemu-user package apart into what runs
+  # the programs of an image of another architecture. It has the download
+  # fetch the package, and never starts a process, opens a connection or
+  # touches the kernel
+  - package: '**.internal.emulator$'
+    shouldOnlyDependsOn:
+      internal:
+        - '**.internal.deb$'
+        - '**.internal.download$'
+    shouldNotDependsOn:
+      standard:
+        - os/exec
+        - net
+        - syscall
   # the builder kernel takes miso's pinned Debian package apart into the
   # kernel the builder VM boots and the modules its agent loads. It has the
   # download fetch the package, and never starts a process, opens a
