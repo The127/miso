@@ -23,8 +23,11 @@ func withVariable(env []string, variable imagefile.Env) []string {
 }
 
 // envOf is the environment of a run or a shell on a root file system for an
-// image of arch. TARGETARCH comes first, so that a variable of the build file
-// of the same name wins.
+// image of arch. A TARGETARCH of the build file replaces miso's.
 func envOf(under rootfs, arch string) []string {
+	if slices.ContainsFunc(under.env, func(set string) bool { return strings.HasPrefix(set, "TARGETARCH=") }) {
+		return slices.Clone(under.env)
+	}
+
 	return append([]string{"TARGETARCH=" + arch}, under.env...)
 }
