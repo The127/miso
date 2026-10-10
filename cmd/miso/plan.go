@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 
@@ -90,7 +91,7 @@ func archFlag() *cli.StringFlag {
 // names, or nil when it can.
 func archRefusal(command *cli.Command) error {
 	if arch := command.String("arch"); !slices.Contains(arches, arch) {
-		return fmt.Errorf("--arch %q is not an architecture miso builds for, only amd64 and arm64", arch)
+		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, strings.Join(arches, " and "))
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strings"
 
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
@@ -29,7 +30,7 @@ var arches = []string{"amd64", "arm64"}
 // hostRefusal is why miso cannot run a builder on host, or nil when it can.
 func hostRefusal(host string) error {
 	if !slices.Contains(arches, host) {
-		return fmt.Errorf("miso builds on amd64 and arm64, not on %s", host)
+		return fmt.Errorf("miso builds on %s, not on %s", strings.Join(arches, " and "), host)
 	}
 
 	return nil
