@@ -22,12 +22,17 @@ var shellCommand = &cli.Command{
 	Metadata:  map[string]any{takesWords: true},
 	Flags: []cli.Flag{
 		fileFlag(),
+		archFlag(),
 		&cli.IntFlag{Name: "before", Usage: "the line of the build file whose step the shell stands before, the end of the build if not given"},
 	},
 	Action: runShell,
 }
 
 func runShell(ctx context.Context, command *cli.Command) error {
+	if err := archRefusal(command); err != nil {
+		return err
+	}
+
 	shellOn := func(planned plan.Plan, network protocol.Network) ([]build.Request, error) {
 		if !command.IsSet("before") {
 			return build.After(planned, network)

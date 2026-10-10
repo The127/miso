@@ -98,7 +98,7 @@ The builder VM needs access to `/dev/kvm`.
 ## miso shell
 
 ```
-miso shell [-f <file>] [--before <line>] [context] [-- <command>...]
+miso shell [-f <file>] [--arch <arch>] [--before <line>] [context] [-- <command>...]
 ```
 
 Opens an interactive shell in the root file system as it is at some point of
@@ -107,6 +107,7 @@ the build. Layers that are not built yet are built first.
 | Option | Meaning |
 | --- | --- |
 | `-f`, `--file` | The build file. `Imagefile` in the context if not given. |
+| `--arch` | The architecture of the layers, as for [`miso build`](#miso-build). |
 | `--before` | The line of the Imagefile whose step the shell stands before. |
 
 Without `--before` the shell stands at the end of the last stage. With
