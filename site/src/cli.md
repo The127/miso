@@ -40,10 +40,12 @@ context. `COPY` always reads from the context.
 ## miso plan
 
 ```
-miso plan [-f <file>] [context]
+miso plan [-f <file>] [--arch <arch>] [context]
 ```
 
 Reads the Imagefile and lists what a build would do, without building.
+`--arch` plans the build for an architecture, as it does for
+[`miso build`](#miso-build).
 
 The first line names the version of miso. A base image that is not in the
 cache yet is listed as `download <name>`. Then every stage is listed with its
