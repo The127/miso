@@ -51,6 +51,35 @@ func TestAnArm64BuilderRunsAnAmd64ImageWithQEMUOfItsOwnArchitecture(t *testing.T
 	assert.Contains(t, asked, "/qemu-user_10.0.13%2Bds-0%2Bdeb13u1_arm64.deb")
 }
 
+func TestAnEmulatorForABuilderMisoHasNoQEMUForIsRefusedNamingIt(t *testing.T) {
+	// arrange
+	store := download.Open(t.TempDir(), http.DefaultClient)
+
+	// act
+	_, err := emulator.Ready(context.Background(), store, "sparc", "amd64")
+
+	// assert
+	assert.ErrorContains(t, err, "sparc")
+}
+
+func TestAnEmulatorForAnImageMisoHasNoQEMUForIsRefusedNamingItBeforeAnyFetch(t *testing.T) {
+	// arrange
+	var asked string
+	refuse := roundTrip(func(request *http.Request) (*http.Response, error) {
+		asked = request.URL.String()
+
+		return nil, errors.New("offline")
+	})
+	store := download.Open(t.TempDir(), &http.Client{Transport: refuse})
+
+	// act
+	_, err := emulator.Ready(context.Background(), store, "amd64", "sparc")
+
+	// assert
+	assert.ErrorContains(t, err, "sparc")
+	assert.Empty(t, asked)
+}
+
 // roundTrip is an HTTP transport that is a function.
 type roundTrip func(*http.Request) (*http.Response, error)
 

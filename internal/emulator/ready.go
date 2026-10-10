@@ -21,7 +21,16 @@ var programs = map[string]string{
 // architecture, through the store, and takes the program out of it that
 // runs the programs of target.
 func Ready(ctx context.Context, store *download.Store, builder, target string) ([]byte, error) {
-	return ready(ctx, store, pins[builder], target)
+	pin, ok := pins[builder]
+	if !ok {
+		return nil, fmt.Errorf("miso has no QEMU for a builder on %s", builder)
+	}
+
+	if _, ok := programs[target]; !ok {
+		return nil, fmt.Errorf("miso has no QEMU that runs programs of %s", target)
+	}
+
+	return ready(ctx, store, pin, target)
 }
 
 // ready takes the program that runs the programs of target out of the
