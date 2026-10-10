@@ -46,16 +46,9 @@ func ready(ctx context.Context, store *download.Store, pin download.Pin, target 
 	wanted := programs[target]
 	files, failed := deb.Files(pkg)
 	for name, file := range files {
-		if name != wanted {
-			continue
+		if name == wanted {
+			return io.ReadAll(file)
 		}
-
-		program, err := io.ReadAll(file)
-		if err != nil {
-			return nil, err
-		}
-
-		return program, nil
 	}
 
 	if err := failed(); err != nil {
