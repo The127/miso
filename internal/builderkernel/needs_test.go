@@ -18,3 +18,14 @@ func TestTheBuilderVMLoadsTheDriverOfItsAgentsVirtioPort(t *testing.T) {
 	// assert
 	assert.Contains(t, loads, driver)
 }
+
+func TestTheBuilderVMLoadsWhatRunsProgramsOfAnotherArchitecture(t *testing.T) {
+	// arrange
+	module := "binfmt_misc"
+
+	// act
+	loads := builderkernel.Needs
+
+	// assert
+	assert.Contains(t, loads, module)
+}

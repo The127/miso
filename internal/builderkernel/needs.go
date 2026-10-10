@@ -31,4 +31,6 @@ var needs = []string{
 	"sch_ingress",
 	"cls_flower",
 	"act_gact",
+	// what runs a RUN of an image of another architecture through QEMU
+	"binfmt_misc",
 }
