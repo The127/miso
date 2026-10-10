@@ -11,3 +11,12 @@ var EmulatorsFor = emulatorsFor
 
 // BuilderArch is builderArch for the tests.
 const BuilderArch = builderArch
+
+// WithShellHint is withShellHint for the tests.
+var WithShellHint = withShellHint
+
+// FileFlag is fileFlag for the tests.
+var FileFlag = fileFlag
+
+// ArchFlag is archFlag for the tests.
+var ArchFlag = archFlag

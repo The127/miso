@@ -22,6 +22,10 @@ func withShellHint(command *cli.Command, requests []build.Request, err error) er
 	}
 
 	words := []string{"miso", "shell", "--before", strconv.Itoa(located.Line)}
+	if arch := targetArch(command); arch != builderArch {
+		words = append(words, "--arch", arch)
+	}
+
 	if file := command.String(fileFlagName); strings.HasPrefix(file, "-") {
 		words = append(words, "--file="+file)
 	} else if file != "" {
