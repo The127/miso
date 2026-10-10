@@ -83,7 +83,7 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 	defer func() { _ = held.Close() }()
 
 	boot := func(work inVM) error {
-		bootable, err := bootFiles(ctx, blobs)
+		bootable, err := bootFiles(ctx, blobs, targetArch(command))
 		if err != nil {
 			return err
 		}
