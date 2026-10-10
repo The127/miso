@@ -22,6 +22,8 @@ func Write(w io.Writer, arch string, init []byte, modules []Module, emulators ..
 		// the agent copies it off the initial ramfs, also for a kernel that
 		// has every module built in
 		cpio.Directory("modules", 0o700),
+		// the agent copies it off too, also for a build of its own architecture
+		cpio.Directory("emulators", 0o700),
 	}
 
 	// the agent loads them in the order of their names

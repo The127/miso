@@ -130,3 +130,16 @@ func TestAnInitramfsHoldsTheEmulatorOfAnotherArchitectureAsAProgramNamedByIt(t *
 	require.NoError(t, err)
 	assert.Equal(t, "qemu", string(content))
 }
+
+func TestAnInitramfsWithoutEmulatorsStillHoldsTheirDirectory(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, "amd64", static(t), nil)
+
+	// assert
+	require.NoError(t, err)
+	emulators := record(t, archive.Bytes(), "emulators")
+	assert.Equal(t, uint64(cpio.S_IFDIR), emulators.Mode&cpio.S_IFMT)
+}
