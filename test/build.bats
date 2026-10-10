@@ -9,20 +9,27 @@ own_arch() {
     esac
 }
 
-@test "a build for an arch it does not build for fails and names the flag and the arch it builds for" {
+other_arch() {
+    case $(own_arch) in
+    amd64) echo arm64 ;;
+    *) echo amd64 ;;
+    esac
+}
+
+@test "a build for an arch it does not build for fails and names the flag and the arches it builds for" {
     run "$MISO" build --arch sparc
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'--arch "sparc"'* ]]
-    [[ "$output" == *"$(own_arch)"* ]]
+    [[ "$output" == *"amd64 and arm64"* ]]
 }
 
-@test "a build for an empty arch fails and names the flag and the arch it builds for" {
+@test "a build for an empty arch fails and names the flag and the arches it builds for" {
     run "$MISO" build --arch=
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'--arch ""'* ]]
-    [[ "$output" == *"$(own_arch)"* ]]
+    [[ "$output" == *"amd64 and arm64"* ]]
 }
 
 @test "a build for the arch miso runs on is not refused for its arch" {
@@ -31,6 +38,17 @@ own_arch() {
     cd "$BATS_TEST_TMPDIR"
 
     run "$MISO" build --arch "$(own_arch)"
+
+    # it fails later, on the missing Imagefile
+    [[ "$output" != *"--arch"* ]]
+}
+
+@test "a build for the other arch miso builds for is not refused for its arch" {
+    # the cache of the test, which is not the user's
+    export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
+    cd "$BATS_TEST_TMPDIR"
+
+    run "$MISO" build --arch "$(other_arch)"
 
     # it fails later, on the missing Imagefile
     [[ "$output" != *"--arch"* ]]

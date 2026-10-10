@@ -77,7 +77,12 @@ run again.
 | --- | --- |
 | `-f`, `--file` | The build file. `Imagefile` in the context if not given. |
 | `-o`, `--output` | The directory the outputs are written to. It is created if it is missing. |
-| `--arch` | The architecture the image is built for. The default is the architecture miso runs on, and it is the only one accepted. miso builds on `amd64` and `arm64`. |
+| `--arch` | The architecture the image is built for, `amd64` or `arm64`. The default is the architecture miso runs on. |
+
+An image for the other architecture is built in the same builder VM. Its
+`RUN` steps run through QEMU in user mode, which miso downloads and keeps in
+the cache, and its checks boot without KVM. Both are much slower than a
+build for the architecture miso runs on.
 
 Without `-o` no output is written. Disks with a `CHECK` are still built and
 booted, so the checks run.

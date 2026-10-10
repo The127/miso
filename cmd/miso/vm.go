@@ -19,16 +19,16 @@ import (
 )
 
 // builderArch is the architecture of the builder VM, always the host's, so
-// it runs on KVM. Until cross builds, images are built only for it.
+// it runs on KVM.
 const builderArch = runtime.GOARCH
 
-// hostArches are the hosts miso has a builder kernel, a firmware and base
-// images for.
-var hostArches = []string{"amd64", "arm64"}
+// arches are what miso has a builder kernel, a firmware, an emulator and
+// base images for. It builds on each, for each.
+var arches = []string{"amd64", "arm64"}
 
 // hostRefusal is why miso cannot run a builder on host, or nil when it can.
 func hostRefusal(host string) error {
-	if !slices.Contains(hostArches, host) {
+	if !slices.Contains(arches, host) {
 		return fmt.Errorf("miso builds on amd64 and arm64, not on %s", host)
 	}
 
