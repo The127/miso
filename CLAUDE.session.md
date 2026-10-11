@@ -23,8 +23,8 @@ A fresh container lacks some of the tooling:
 - `go install github.com/evilmartians/lefthook@latest`, then `just setup`
 - golangci-lint at the version `.github/workflows/ci.yml` pins, built
   with the Go version `go.mod` names (an older build refuses the module),
-  for example `GOTOOLCHAIN=go1.27.0 go install
-  github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2`
+  for example `GOTOOLCHAIN=go1.27.2 go install
+  github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`
 
 Without `/dev/vhost-vsock` the `internal/qemu` tests fail, and `just vuln`
 needs `vuln.go.dev`, which a restricted network blocks. Check that such a
