@@ -41,7 +41,7 @@ func runPrune(ctx context.Context, command *cli.Command) error {
 		return err
 	}
 
-	blobs, _, err := baseImages(cache)
+	blobs, _, err := baseImages(cache, builderArch)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func pruneLayers(ctx context.Context, command *cli.Command, dir cachedisk.Dir, b
 // askBuilder has the builder VM answer one request that reaches nothing
 // outside the VM, from the cache disk in dir, which the caller holds.
 func askBuilder(ctx context.Context, command *cli.Command, dir cachedisk.Dir, blobs *download.Store, request protocol.Message, out io.Writer) error {
-	boot, err := bootFiles(ctx, blobs)
+	boot, err := bootFiles(ctx, blobs, builderArch)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 
@@ -22,14 +21,14 @@ var buildCommand = &cli.Command{
 	Flags: []cli.Flag{
 		fileFlag(),
 		outputFlag(),
-		&cli.StringFlag{Name: "arch", Usage: "the architecture the image is built for", Value: builderArch},
+		archFlag(),
 	},
 	Action: runBuild,
 }
 
 func runBuild(ctx context.Context, command *cli.Command) error {
-	if arch := command.String("arch"); arch != builderArch {
-		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, builderArch)
+	if err := archRefusal(command); err != nil {
+		return err
 	}
 
 	return withBuilder(ctx, command, build.Requests, func(have prepared, boot booter) error {
@@ -49,7 +48,7 @@ func runBuild(ctx context.Context, command *cli.Command) error {
 
 		defer func() { _ = os.RemoveAll(scratch) }()
 
-		outputs, err := outputsOf(command, checker(ctx, have.blobs, string(have.dir), console), scratch)
+		outputs, err := outputsOf(command, checker(ctx, have.blobs, string(have.dir), console, targetArch(command)), scratch)
 		if err != nil {
 			return err
 		}

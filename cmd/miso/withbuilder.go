@@ -49,7 +49,8 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 		return err
 	}
 
-	blobs, bases, err := baseImages(cache)
+	arch := targetArch(command)
+	blobs, bases, err := baseImages(cache, arch)
 	if err != nil {
 		return err
 	}
@@ -83,7 +84,7 @@ func withBuilder(ctx context.Context, command *cli.Command, requests requestsOf,
 	defer func() { _ = held.Close() }()
 
 	boot := func(work inVM) error {
-		bootable, err := bootFiles(ctx, blobs)
+		bootable, err := bootFiles(ctx, blobs, arch)
 		if err != nil {
 			return err
 		}

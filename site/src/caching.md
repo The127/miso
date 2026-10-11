@@ -25,6 +25,7 @@ The key of a step is made from:
   of every file it copies. For `COPY --from` it is the key of the stage it
   copies from.
 - the version of miso
+- the architecture the image is built for
 
 A step whose key is in the cache is not run again. When a step changes, its
 key changes, and so do the keys of all the steps after it. The steps before it

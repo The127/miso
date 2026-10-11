@@ -49,7 +49,22 @@ func TestADiskOutputIsMadeOfTheLayersOfItsStageWithTheLayersOfTheToolsStageMisoA
 		Key:    image.Steps[1].Key,
 		Layers: []string{image.BaseKey, image.Steps[0].Key},
 		Tools:  []string{tools.BaseKey, tools.Steps[0].Key},
+		Arch:   source.Arch,
 	}, disksOf(requests)[0])
+}
+
+func TestADiskIsMadeForTheArchitectureOfItsPlan(t *testing.T) {
+	// arrange
+	source := planned(t, "FROM debian:13\nOUTPUT disk os.raw\n")
+	source.Arch = "arm64"
+
+	// act
+	requests, err := build.Requests(source, network)
+
+	// assert
+	require.NoError(t, err)
+	require.Len(t, disksOf(requests), 1)
+	assert.Equal(t, "arm64", disksOf(requests)[0].Arch)
 }
 
 func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
@@ -68,6 +83,7 @@ func TestAnISOOutputIsADiskThatBootsFromACD(t *testing.T) {
 		Layers:   []string{image.BaseKey, image.Steps[0].Key},
 		Tools:    []string{tools.BaseKey, tools.Steps[0].Key},
 		ElTorito: true,
+		Arch:     source.Arch,
 	}, disksOf(requests)[0])
 }
 

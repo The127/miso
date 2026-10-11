@@ -69,7 +69,7 @@ func (p *planner) start(stage imagefile.Stage) (key string, digest string, err e
 		return "", "", nil
 	}
 
-	return baseKey(p.agent, digest), digest, nil
+	return baseKey(p.agent, p.arch, digest), digest, nil
 }
 
 // steps also hands back where the stage's root file system ends, which for

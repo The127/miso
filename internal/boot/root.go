@@ -31,6 +31,10 @@ func switchRoot() error {
 		return err
 	}
 
+	if err := os.CopyFS("/vm/emulators", os.DirFS("/emulators")); err != nil {
+		return err
+	}
+
 	if err := os.Chdir("/vm"); err != nil {
 		return err
 	}

@@ -46,9 +46,13 @@ nfpms:
       deb:
         dependencies:
           - qemu-system-x86
+        recommends:
+          - qemu-system-arm
       rpm:
         dependencies:
           - qemu-system-x86-core
+        recommends:
+          - qemu-system-aarch64-core
   - id: arm64
     ids: [arm64]
     package_name: miso
@@ -66,9 +70,13 @@ nfpms:
       deb:
         dependencies:
           - qemu-system-arm
+        recommends:
+          - qemu-system-x86
       rpm:
         dependencies:
           - qemu-system-aarch64-core
+        recommends:
+          - qemu-system-x86-core
 
 checksum:
   name_template: checksums.txt

@@ -100,8 +100,9 @@ there, or write `console=ttyAMA0`.
 
 Checks run on the machine that runs miso, not in the builder VM. They need:
 
-- `qemu-system-x86_64` on amd64 or `qemu-system-aarch64` on arm64, and
-  access to `/dev/kvm`
+- `qemu-system-x86_64` for an amd64 image or `qemu-system-aarch64` for an
+  arm64 image, and access to `/dev/kvm`. An image for another architecture
+  than the machine's boots without KVM, which is much slower
 - the firmware, which miso downloads and keeps in the cache
 - a vsock device. miso uses it to talk to the booted system. If there is
   none, the build stops with `CHECK needs a vsock of its own`.

@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 
@@ -19,17 +22,22 @@ var planCommand = &cli.Command{
 	ArgsUsage: "[context]",
 	Flags: []cli.Flag{
 		fileFlag(),
+		archFlag(),
 	},
 	Action: listPlan,
 }
 
 func listPlan(ctx context.Context, command *cli.Command) error {
+	if err := archRefusal(command); err != nil {
+		return err
+	}
+
 	cache, err := cacheDir()
 	if err != nil {
 		return err
 	}
 
-	blobs, bases, err := baseImages(cache)
+	blobs, bases, err := baseImages(cache, targetArch(command))
 	if err != nil {
 		return err
 	}
@@ -65,12 +73,33 @@ func planOf(command *cli.Command, files *buildcontext.Dir, bases plan.Bases) (pl
 		return plan.Plan{}, err
 	}
 
-	planned, err := plan.New(stages, agentName(), builderArch, files, bases)
+	planned, err := plan.New(stages, agentName(), targetArch(command), files, bases)
 	if err != nil {
 		return plan.Plan{}, imagefile.InFile(file, err)
 	}
 
 	return planned, nil
+}
+
+// archFlag names the architecture a command builds for. Each command gets
+// its own, since a flag keeps what was parsed into it.
+func archFlag() *cli.StringFlag {
+	return &cli.StringFlag{Name: "arch", Usage: "the architecture the image is built for", Value: builderArch}
+}
+
+// archRefusal is why miso cannot build for the architecture the command
+// names, or nil when it can.
+func archRefusal(command *cli.Command) error {
+	if arch := command.String("arch"); !slices.Contains(arches, arch) {
+		return fmt.Errorf("--arch %q is not an architecture miso builds for, only %s", arch, strings.Join(arches, " and "))
+	}
+
+	return nil
+}
+
+// targetArch is the architecture the command builds for.
+func targetArch(command *cli.Command) string {
+	return command.String("arch")
 }
 
 // fileFlagName is the flag that names the build file.

@@ -62,7 +62,7 @@ Starts a stage from a base. The base is one of:
 - The name of an earlier stage. The new stage starts where that stage ends,
   including its `ENV` values.
 - `debian:sid`, `debian:13` or `debian:trixie`. These are the Debian cloud
-  images for the architecture miso runs on. `debian:13` and `debian:trixie`
+  images for the architecture the image is built for. `debian:13` and `debian:trixie`
   are the same image. A name means whatever image is current at its address
   when it is first fetched. After that the fetched image is cached.
 
@@ -85,8 +85,17 @@ the command, exactly as written.
 
 Every `RUN` runs as root in the builder VM, in its own process, mount and
 network namespaces, with `/` as the working directory. The environment is
-`PATH`, `HOME=/root` and the values set by `ENV`. The environment of the
-host is not passed on.
+`PATH`, `HOME=/root`, `TARGETARCH` and the values set by `ENV`. The
+environment of the host is not passed on.
+
+`TARGETARCH` is the architecture the image is built for, `amd64` or `arm64`,
+so one Imagefile can install the kernel of either:
+
+```
+RUN apt-get install -y linux-image-$TARGETARCH
+```
+
+An `ENV` that sets `TARGETARCH` replaces it.
 
 A command that exits with a code other than 0 fails the build.
 

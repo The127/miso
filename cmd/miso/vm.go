@@ -8,35 +8,59 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strings"
 
 	"github.com/The127/miso/internal/builder"
 	"github.com/The127/miso/internal/builderkernel"
 	"github.com/The127/miso/internal/download"
+	"github.com/The127/miso/internal/emulator"
+	"github.com/The127/miso/internal/initramfs"
 	"github.com/The127/miso/internal/qemu"
 	"github.com/The127/miso/internal/reach"
 )
 
 // builderArch is the architecture of the builder VM, always the host's, so
-// it runs on KVM. Until cross builds, images are built only for it.
+// it runs on KVM.
 const builderArch = runtime.GOARCH
 
-// hostArches are the hosts miso has a builder kernel, a firmware and base
-// images for.
-var hostArches = []string{"amd64", "arm64"}
+// arches are what miso has a builder kernel, a firmware, an emulator and
+// base images for. It builds on each, for each.
+var arches = []string{"amd64", "arm64"}
 
 // hostRefusal is why miso cannot run a builder on host, or nil when it can.
 func hostRefusal(host string) error {
-	if !slices.Contains(hostArches, host) {
-		return fmt.Errorf("miso builds on amd64 and arm64, not on %s", host)
+	if !slices.Contains(arches, host) {
+		return fmt.Errorf("miso builds on %s, not on %s", strings.Join(arches, " and "), host)
 	}
 
 	return nil
 }
 
+// emulatorsFor are what the builder VM needs to run the programs of a build
+// for target, nothing for a build of its own architecture.
+func emulatorsFor(ctx context.Context, blobs *download.Store, target string) ([]initramfs.Emulator, error) {
+	if target == builderArch {
+		return nil, nil
+	}
+
+	program, err := emulator.Ready(ctx, blobs, builderArch, target)
+	if err != nil {
+		return nil, err
+	}
+
+	return []initramfs.Emulator{{Arch: target, Program: program}}, nil
+}
+
 // bootFiles writes the builder kernel and an initramfs with this very miso
-// as its init into a directory of their own.
-func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error) {
+// as its init, and what runs the programs of a build for target, into a
+// directory of their own.
+func bootFiles(ctx context.Context, blobs *download.Store, target string) (builder.Boot, error) {
 	kernel, err := builderkernel.Ready(ctx, blobs, builderArch)
+	if err != nil {
+		return builder.Boot{}, err
+	}
+
+	emulators, err := emulatorsFor(ctx, blobs, target)
 	if err != nil {
 		return builder.Boot{}, err
 	}
@@ -56,7 +80,7 @@ func bootFiles(ctx context.Context, blobs *download.Store) (builder.Boot, error)
 		return builder.Boot{}, err
 	}
 
-	boot, err := builder.WriteBoot(dir, builderArch, kernel, init)
+	boot, err := builder.WriteBoot(dir, builderArch, kernel, init, emulators...)
 	if err != nil {
 		return builder.Boot{}, errors.Join(err, os.RemoveAll(dir))
 	}

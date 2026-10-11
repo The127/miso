@@ -112,3 +112,34 @@ func TestAnInitramfsForAKernelWithoutModulesStillHoldsTheirDirectory(t *testing.
 	modules := record(t, archive.Bytes(), "modules")
 	assert.Equal(t, uint64(cpio.S_IFDIR), modules.Mode&cpio.S_IFMT)
 }
+
+func TestAnInitramfsHoldsTheEmulatorOfAnotherArchitectureAsAProgramNamedByIt(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+	emulator := initramfs.Emulator{Arch: "arm64", Program: []byte("qemu")}
+
+	// act
+	err := initramfs.Write(&archive, "amd64", static(t), nil, emulator)
+
+	// assert
+	require.NoError(t, err)
+	program := record(t, archive.Bytes(), "emulators/arm64")
+	assert.Equal(t, uint64(cpio.S_IFREG|0o700), program.Mode)
+	content := make([]byte, program.FileSize)
+	_, err = program.ReadAt(content, 0)
+	require.NoError(t, err)
+	assert.Equal(t, "qemu", string(content))
+}
+
+func TestAnInitramfsWithoutEmulatorsStillHoldsTheirDirectory(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+
+	// act
+	err := initramfs.Write(&archive, "amd64", static(t), nil)
+
+	// assert
+	require.NoError(t, err)
+	emulators := record(t, archive.Bytes(), "emulators")
+	assert.Equal(t, uint64(cpio.S_IFDIR), emulators.Mode&cpio.S_IFMT)
+}

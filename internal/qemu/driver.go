@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 )
 
@@ -46,7 +47,7 @@ func (d Driver) start(ctx context.Context, machine Machine, kvm string) (*VM, er
 		return nil, err
 	}
 
-	accelerated, why := accel(kvm)
+	accelerated, why := accel(kvm, machine.Arch, runtime.GOARCH)
 	if why != nil {
 		d.withoutKVM(why)
 	}

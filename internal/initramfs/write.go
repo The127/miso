@@ -8,8 +8,9 @@ import (
 )
 
 // Write writes an initial ramfs for a builder VM of an architecture, whose
-// init is the program given, with the modules in the order to load them.
-func Write(w io.Writer, arch string, init []byte, modules []Module) error {
+// init is the program given, with the modules in the order to load them and
+// the emulators of the other architectures it builds for.
+func Write(w io.Writer, arch string, init []byte, modules []Module, emulators ...Emulator) error {
 	if err := checkInit(arch, init); err != nil {
 		return err
 	}
@@ -21,12 +22,18 @@ func Write(w io.Writer, arch string, init []byte, modules []Module) error {
 		// the agent copies it off the initial ramfs, also for a kernel that
 		// has every module built in
 		cpio.Directory("modules", 0o700),
+		// the agent copies it off too, also for a build of its own architecture
+		cpio.Directory("emulators", 0o700),
 	}
 
 	// the agent loads them in the order of their names
 	for i, module := range modules {
 		name := fmt.Sprintf("modules/%02d-%s.ko", i+1, module.Name)
 		records = append(records, cpio.StaticRecord(module.Content, cpio.Info{Name: name, Mode: cpio.S_IFREG | 0o600}))
+	}
+
+	for _, emulator := range emulators {
+		records = append(records, cpio.StaticRecord(emulator.Program, cpio.Info{Name: "emulators/" + emulator.Arch, Mode: cpio.S_IFREG | 0o700}))
 	}
 
 	archive := cpio.Newc.Writer(w)

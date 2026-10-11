@@ -118,7 +118,7 @@ func requestsUntil(planned plan.Plan, network protocol.Network, shell shellAt) (
 			under := roots[step.BuiltOn[0]]
 
 			if at, _ := imagefile.Written(step.Instruction); shell.line != 0 && at == shell.line {
-				return append(requests, shellOf(step, current, network)), true, nil
+				return append(requests, shellOf(step, current, network, planned.Arch)), true, nil
 			}
 
 			if shell.wanted() && buildsOutput(step.Instruction) {
@@ -165,7 +165,7 @@ func requestsUntil(planned plan.Plan, network protocol.Network, shell shellAt) (
 	if shell.end && len(planned.Stages) > 0 {
 		last := planned.Stages[len(planned.Stages)-1]
 
-		return append(requests, shellRequest(ends[last.Name], &network, 0, "")), true, nil
+		return append(requests, shellRequest(ends[last.Name], &network, 0, "", planned.Arch)), true, nil
 	}
 
 	return requests, false, nil
@@ -181,7 +181,7 @@ func importOf(stage plan.Stage) Request {
 func messageOf(step plan.Step, under rootfs, ends map[string]rootfs, network protocol.Network, inputs diskInputs, arch string) (protocol.Message, error) {
 	switch instruction := step.Instruction.(type) {
 	case imagefile.Run:
-		return protocol.Run{Key: step.Key, Layers: under.layers, Env: under.env, Command: instruction.Command, Network: networkFor(instruction, network)}, nil
+		return protocol.Run{Key: step.Key, Layers: under.layers, Env: envOf(under, arch), Command: instruction.Command, Network: networkFor(instruction, network)}, nil
 	case imagefile.Copy:
 		return copyRequest(step, instruction, under, ends[instruction.From])
 	case imagefile.Output:

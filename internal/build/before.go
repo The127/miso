@@ -48,16 +48,16 @@ func After(planned plan.Plan, network protocol.Network) ([]Request, error) {
 
 // shellOf is a shell on the layers and the environment a step would run on,
 // with the network the step would have.
-func shellOf(step plan.Step, under rootfs, network protocol.Network) Request {
+func shellOf(step plan.Step, under rootfs, network protocol.Network, arch string) Request {
 	line, written := imagefile.Written(step.Instruction)
 
-	return shellRequest(under, networkFor(step.Instruction, network), line, "shell before "+written)
+	return shellRequest(under, networkFor(step.Instruction, network), line, "shell before "+written, arch)
 }
 
 // shellRequest is a shell on a root file system. A shell at no line of the
 // build file has none to be named at.
-func shellRequest(under rootfs, network *protocol.Network, line int, written string) Request {
-	return Request{Line: line, Written: written, Message: protocol.Shell{Layers: under.layers, Env: under.env, Network: network}}
+func shellRequest(under rootfs, network *protocol.Network, line int, written, arch string) Request {
+	return Request{Line: line, Written: written, Message: protocol.Shell{Layers: under.layers, Env: envOf(under, arch), Network: network}}
 }
 
 // IsFrom tells whether the line of the build file is the FROM of a stage,

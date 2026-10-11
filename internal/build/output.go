@@ -36,7 +36,7 @@ func outputRequest(step plan.Step, instruction imagefile.Output, under rootfs, t
 		return protocol.Rootfs{Key: step.Key, Layers: under.layers, Tools: tools.layers, Format: formatOf(instruction.Options), Name: instruction.Name, Wrap: wrapOf(instruction.Kind)}, nil
 	}
 
-	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Split: instruction.Kind == plan.KindUpdate, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " ")}, nil
+	return protocol.Disk{Key: step.Key, Layers: under.layers, Tools: tools.layers, ElTorito: instruction.Kind == plan.KindISO, Split: instruction.Kind == plan.KindUpdate, Partitions: slices.Clone(inputs.partitions), Cmdline: strings.Join(inputs.cmdline, " "), Arch: arch}, nil
 }
 
 // refusal is why miso cannot make an output for an image of arch, or nil

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -35,7 +36,7 @@ func TestQEMURunsWithTheMachinesArgumentsAndItsVsockDevice(t *testing.T) {
 	require.NoError(t, err)
 	written, err := os.ReadFile(recorded)
 	require.NoError(t, err)
-	accelerated, _ := qemu.Accel("/dev/kvm")
+	accelerated, _ := qemu.Accel("/dev/kvm", "amd64", runtime.GOARCH)
 	assert.Equal(t, slices.Concat(want, accelerated, qemu.Vsock(vm.CID(), 3, qemu.Machine{})), strings.Split(string(written), "\n"))
 }
 
@@ -167,7 +168,7 @@ func TestAMachineQEMUStoppedWithoutAWordSaysOnlyHow(t *testing.T) {
 func startOn(t *testing.T, driver qemu.Driver, kvm string) {
 	t.Helper()
 
-	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{}, kvm)
+	vm, err := qemu.StartOn(t.Context(), driver, qemu.Machine{Arch: runtime.GOARCH}, kvm)
 	if err == nil {
 		t.Cleanup(func() { <-vm.Done() })
 	}

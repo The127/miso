@@ -3,6 +3,7 @@
 package qemu_test
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,7 @@ func TestAHostWithKVMRunsTheMachineOnKVMWithTheHostsCPU(t *testing.T) {
 	device := "/dev/kvm"
 
 	// act
-	args, why := qemu.Accel(device)
+	args, why := qemu.Accel(device, runtime.GOARCH, runtime.GOARCH)
 
 	// assert
 	require.NoError(t, why)

@@ -40,10 +40,12 @@ context. `COPY` always reads from the context.
 ## miso plan
 
 ```
-miso plan [-f <file>] [context]
+miso plan [-f <file>] [--arch <arch>] [context]
 ```
 
 Reads the Imagefile and lists what a build would do, without building.
+`--arch` plans the build for an architecture, as it does for
+[`miso build`](#miso-build).
 
 The first line names the version of miso. A base image that is not in the
 cache yet is listed as `download <name>`. Then every stage is listed with its
@@ -77,7 +79,12 @@ run again.
 | --- | --- |
 | `-f`, `--file` | The build file. `Imagefile` in the context if not given. |
 | `-o`, `--output` | The directory the outputs are written to. It is created if it is missing. |
-| `--arch` | The architecture the image is built for. The default is the architecture miso runs on, and it is the only one accepted. miso builds on `amd64` and `arm64`. |
+| `--arch` | The architecture the image is built for, `amd64` or `arm64`. The default is the architecture miso runs on. |
+
+An image for the other architecture is built in the same builder VM. Its
+`RUN` steps run through QEMU in user mode, which miso downloads and keeps in
+the cache, and its checks boot without KVM. Both are much slower than a
+build for the architecture miso runs on.
 
 Without `-o` no output is written. Disks with a `CHECK` are still built and
 booted, so the checks run.
@@ -91,7 +98,7 @@ The builder VM needs access to `/dev/kvm`.
 ## miso shell
 
 ```
-miso shell [-f <file>] [--before <line>] [context] [-- <command>...]
+miso shell [-f <file>] [--arch <arch>] [--before <line>] [context] [-- <command>...]
 ```
 
 Opens an interactive shell in the root file system as it is at some point of
@@ -100,6 +107,7 @@ the build. Layers that are not built yet are built first.
 | Option | Meaning |
 | --- | --- |
 | `-f`, `--file` | The build file. `Imagefile` in the context if not given. |
+| `--arch` | The architecture of the layers, as for [`miso build`](#miso-build). |
 | `--before` | The line of the Imagefile whose step the shell stands before. |
 
 Without `--before` the shell stands at the end of the last stage. With

@@ -18,7 +18,7 @@ func TestAHostWithoutKVMRunsTheMachineOnTCGWithTheMostCapableCPU(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "kvm")
 
 	// act
-	args, why := qemu.Accel(missing)
+	args, why := qemu.Accel(missing, "amd64", "amd64")
 
 	// assert
 	assert.ErrorIs(t, why, fs.ErrNotExist)
@@ -32,7 +32,7 @@ func TestAHostWhoseKVMDeviceIsNoKVMRunsTheMachineOnTCG(t *testing.T) {
 	require.NoError(t, os.WriteFile(device, nil, 0o600))
 
 	// act
-	args, why := qemu.Accel(device)
+	args, why := qemu.Accel(device, "amd64", "amd64")
 
 	// assert
 	assert.ErrorIs(t, why, unix.ENOTTY)
@@ -45,8 +45,31 @@ func TestAKVMDeviceThatIsNoKVMIsNamedInTheReason(t *testing.T) {
 	require.NoError(t, os.WriteFile(device, nil, 0o600))
 
 	// act
-	_, why := qemu.Accel(device)
+	_, why := qemu.Accel(device, "amd64", "amd64")
 
 	// assert
 	assert.ErrorContains(t, why, device)
+}
+
+func TestAMachineOfAnotherArchitectureThanTheHostsRunsOnTCG(t *testing.T) {
+	// arrange
+	missing := filepath.Join(t.TempDir(), "kvm")
+
+	// act
+	args, why := qemu.Accel(missing, "arm64", "amd64")
+
+	// assert
+	assert.ErrorIs(t, why, qemu.ErrOtherArch)
+	assert.Equal(t, "tcg", valueOf(t, args, "-accel"))
+}
+
+func TestAMachineThatNamesNoArchitectureRunsOnAnAmd64HostsKVM(t *testing.T) {
+	// arrange
+	missing := filepath.Join(t.TempDir(), "kvm")
+
+	// act
+	_, why := qemu.Accel(missing, "", "amd64")
+
+	// assert
+	assert.ErrorIs(t, why, fs.ErrNotExist)
 }

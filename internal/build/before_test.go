@@ -56,7 +56,7 @@ func TestALineWithNoStepHasNoShell(t *testing.T) {
 
 func TestAShellBeforeAStepHasTheEnvironmentItWouldRunIn(t *testing.T) {
 	// arrange
-	planned := plan.Plan{Stages: []plan.Stage{{
+	planned := plan.Plan{Arch: "amd64", Stages: []plan.Stage{{
 		Base:       "debian:13",
 		BaseDigest: "sha256:image",
 		BaseKey:    "base",
@@ -73,7 +73,28 @@ func TestAShellBeforeAStepHasTheEnvironmentItWouldRunIn(t *testing.T) {
 	require.NoError(t, err)
 	shell, isShell := requests[len(requests)-1].Message.(protocol.Shell)
 	require.True(t, isShell)
-	assert.Equal(t, []string{"MODE=debug"}, shell.Env)
+	assert.Equal(t, []string{"TARGETARCH=amd64", "MODE=debug"}, shell.Env)
+}
+
+func TestAShellSeesTheArchitectureItsStepBuildsFor(t *testing.T) {
+	// arrange
+	planned := plan.Plan{Arch: "arm64", Stages: []plan.Stage{{
+		Base:       "debian:13",
+		BaseDigest: "sha256:image",
+		BaseKey:    "base",
+		Steps: []plan.Step{
+			{Instruction: imagefile.Run{Line: 2, Command: "make"}, Key: "k1", BuiltOn: []string{"base"}},
+		},
+	}}}
+
+	// act
+	requests, err := build.Before(planned, network, 2)
+
+	// assert
+	require.NoError(t, err)
+	shell, isShell := requests[len(requests)-1].Message.(protocol.Shell)
+	require.True(t, isShell)
+	assert.Contains(t, shell.Env, "TARGETARCH=arm64")
 }
 
 func TestAShellBeforeAnOnlineStepHasTheNetworkOfTheHost(t *testing.T) {

@@ -11,8 +11,9 @@ import (
 
 // makeESP makes in a directory the layer that lies on the image, mounted at
 // root, with the ESP as its efi, where the image's repart definitions take
-// it from, and with the image's systemd-boot as the ESP's fallback loader.
-func makeESP(image fs.FS, root, esp string) error {
+// it from, and with the image's systemd-boot of arch as the ESP's fallback
+// loader.
+func makeESP(image fs.FS, root, esp, arch string) error {
 	fallback := filepath.Join(esp, "efi", "EFI", "BOOT")
 	if err := os.MkdirAll(fallback, 0o755); err != nil { //nolint:gosec // an image's directories are open to all
 		return err
@@ -38,6 +39,7 @@ func makeESP(image fs.FS, root, esp string) error {
 		return err
 	}
 
+	imageEFI := efiOf(arch)
 	err = copyPart(image, imageEFI.Loader, filepath.Join(fallback, imageEFI.Fallback))
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("the image has no systemd-boot at /%s", imageEFI.Loader)
