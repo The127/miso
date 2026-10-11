@@ -1,0 +1,29 @@
+name: pr title
+
+# a squash merge titles its commit after the pull request, and no hook
+# sees that commit, so the title must follow the rule lefthook checks
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions: {}
+
+jobs:
+  conventional-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check that the title follows Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|chore|docs|refactor|test|perf|build|ci|revert)!?: [^ ].*$'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::The pull request title does not follow Conventional Commits: $TITLE"
+            echo "Expected 'type: description' without a scope, for example 'fix: refuse a COPY outside the context'."
+            exit 1
+          fi
+          echo "The pull request title is valid."
