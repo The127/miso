@@ -33,10 +33,10 @@ func (s *Store) Path(digest string) string {
 	return filepath.Join(s.blobs(), strings.TrimPrefix(digest, "sha256:"))
 }
 
-// keep writes the bytes to a file that gets its name from their digest.
+// Keep writes the bytes to a file that gets its name from their digest.
 // Until the last byte is in, the file has a temporary name, so a file
 // named by a digest is always whole.
-func (s *Store) keep(body io.Reader) (string, error) {
+func (s *Store) Keep(body io.Reader) (string, error) {
 	if err := os.MkdirAll(s.blobs(), 0o750); err != nil {
 		return "", err
 	}
