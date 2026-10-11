@@ -1,6 +1,6 @@
 module github.com/The127/miso/hack/tools
 
-go 1.27
+go 1.27.2
 
 tool github.com/arch-go/arch-go
 

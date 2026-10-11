@@ -30,7 +30,7 @@ jobs:
       # install only, `just lint` runs it so that ci and the hooks agree
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.13.2
+          version: v2.14.0
           install-only: true
       # just test-cli runs the built miso from the outside
       - uses: bats-core/bats-action@4.0.0
