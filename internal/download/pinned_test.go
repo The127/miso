@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,4 +89,33 @@ func TestADownloadThatDoesNotMatchThePinIsRefused(t *testing.T) {
 	assert.ErrorContains(t, err, arrived(t, "another kernel"))
 	kept, _ := filepath.Glob(filepath.Join(dir, "sha256", "*"))
 	assert.Empty(t, kept)
+}
+
+func TestBytesKeptThatDoNotMatchTheirPinAreRefusedAndNotKept(t *testing.T) {
+	// arrange
+	dir := t.TempDir()
+	store := download.Open(dir, http.DefaultClient)
+	digest := arrived(t, "the emulator")
+
+	// act
+	err := store.KeepPinned(digest, strings.NewReader("another emulator"))
+
+	// assert
+	require.ErrorContains(t, err, digest)
+	assert.ErrorContains(t, err, arrived(t, "another emulator"))
+	kept, _ := filepath.Glob(filepath.Join(dir, "sha256", "*"))
+	assert.Empty(t, kept)
+}
+
+func TestBytesKeptThatMatchTheirPinAreKeptUnderIt(t *testing.T) {
+	// arrange
+	store := download.Open(t.TempDir(), http.DefaultClient)
+	digest := arrived(t, "the emulator")
+
+	// act
+	err := store.KeepPinned(digest, strings.NewReader("the emulator"))
+
+	// assert
+	require.NoError(t, err)
+	assert.Equal(t, "the emulator", read(t, store.Path(digest)))
 }

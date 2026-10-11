@@ -25,5 +25,5 @@ func (s *Store) Get(ctx context.Context, url string) (string, error) {
 		return "", fmt.Errorf("GET %s: %s", url, response.Status)
 	}
 
-	return s.Keep(response.Body)
+	return s.keep(response.Body)
 }

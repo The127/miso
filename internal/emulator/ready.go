@@ -59,16 +59,8 @@ func ready(ctx context.Context, store *download.Store, pin download.Pin, target,
 				return nil, err
 			}
 
-			got, err := store.Keep(bytes.NewReader(program))
-			if err != nil {
-				return nil, err
-			}
-
-			if got != digest {
-				// a pin on the digest it sits under would later find it
-				_ = store.Remove(got)
-
-				return nil, fmt.Errorf("the package holds %s as %s, pinned to %s", wanted, got, digest)
+			if err := store.KeepPinned(digest, bytes.NewReader(program)); err != nil {
+				return nil, fmt.Errorf("%s of the package: %w", wanted, err)
 			}
 
 			return program, nil

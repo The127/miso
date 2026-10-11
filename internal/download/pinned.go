@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 )
@@ -20,13 +21,32 @@ func (s *Store) Pinned(ctx context.Context, pin Pin) (string, error) {
 		return "", err
 	}
 
-	if got != pin.Digest {
-		// the bytes would sit under their own digest, where a pin on that
-		// digest would later find them without ever asking for them
-		_ = os.Remove(s.Path(got))
-
-		return "", fmt.Errorf("GET %s: pinned to %s, downloaded %s", pin.URL, pin.Digest, got)
+	if err := s.pinnedTo(pin.Digest, got); err != nil {
+		return "", fmt.Errorf("GET %s: %w", pin.URL, err)
 	}
 
 	return path, nil
+}
+
+// KeepPinned keeps the bytes of body, which are pinned to digest.
+func (s *Store) KeepPinned(digest string, body io.Reader) error {
+	got, err := s.keep(body)
+	if err != nil {
+		return err
+	}
+
+	return s.pinnedTo(digest, got)
+}
+
+// pinnedTo refuses bytes kept under got that are pinned to digest. They
+// would sit under their own digest, where a pin on that digest would later
+// find them without ever asking for them.
+func (s *Store) pinnedTo(digest, got string) error {
+	if got == digest {
+		return nil
+	}
+
+	_ = os.Remove(s.Path(got))
+
+	return fmt.Errorf("pinned to %s, got %s", digest, got)
 }
