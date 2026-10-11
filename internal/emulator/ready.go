@@ -1,9 +1,12 @@
 package emulator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"time"
 
 	"github.com/The127/miso/internal/deb"
 	"github.com/The127/miso/internal/download"
@@ -30,12 +33,16 @@ func Ready(ctx context.Context, store *download.Store, builder, target string) (
 		return nil, fmt.Errorf("miso has no QEMU that runs programs of %s", target)
 	}
 
-	return ready(ctx, store, pin, target)
+	return ready(ctx, store, pin, target, emulators[builder][target])
 }
 
-// ready takes the program that runs the programs of target out of the
-// package a pin names.
-func ready(ctx context.Context, store *download.Store, pin download.Pin, target string) ([]byte, error) {
+// ready is the program that runs the programs of target, the one the store
+// keeps under digest, or else taken out of the package a pin names.
+func ready(ctx context.Context, store *download.Store, pin download.Pin, target, digest string) ([]byte, error) {
+	if kept, err := os.ReadFile(store.Path(digest)); err == nil {
+		return kept, store.Use(time.Now(), digest)
+	}
+
 	pkg, err := store.OpenPinned(ctx, pin)
 	if err != nil {
 		return nil, err
@@ -47,7 +54,24 @@ func ready(ctx context.Context, store *download.Store, pin download.Pin, target 
 	files, failed := deb.Files(pkg)
 	for name, file := range files {
 		if name == wanted {
-			return io.ReadAll(file)
+			program, err := io.ReadAll(file)
+			if err != nil {
+				return nil, err
+			}
+
+			got, err := store.Keep(bytes.NewReader(program))
+			if err != nil {
+				return nil, err
+			}
+
+			if got != digest {
+				// a pin on the digest it sits under would later find it
+				_ = store.Remove(got)
+
+				return nil, fmt.Errorf("the package holds %s as %s, pinned to %s", wanted, got, digest)
+			}
+
+			return program, nil
 		}
 	}
 
