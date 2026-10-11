@@ -82,9 +82,10 @@ run again.
 | `--arch` | The architecture the image is built for, `amd64` or `arm64`. The default is the architecture miso runs on. |
 
 An image for the other architecture is built in the same builder VM. Its
-`RUN` steps run through QEMU in user mode, which miso downloads and keeps in
-the cache, and its checks boot without KVM. Both are much slower than a
-build for the architecture miso runs on.
+`RUN` steps run through QEMU in user mode, `qemu-x86_64-static` or
+`qemu-aarch64-static`, which the `qemu-user-static` package installs. Its
+checks boot without KVM. Both are much slower than a build for the
+architecture miso runs on.
 
 Without `-o` no output is written. Disks with a `CHECK` are still built and
 booted, so the checks run.

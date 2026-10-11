@@ -1,4 +1,4 @@
-// Package emulator readies the QEMU that runs the programs of an image of
-// another architecture than the builder VM's: it takes the pinned Debian
-// qemu-user package of the builder's architecture apart.
+// Package emulator finds the host's QEMU that runs the programs of an image
+// of another architecture than the builder VM's. The package manager keeps
+// it up to date, not miso.
 package emulator

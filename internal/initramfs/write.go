@@ -15,6 +15,12 @@ func Write(w io.Writer, arch string, init []byte, modules []Module, emulators ..
 		return err
 	}
 
+	for _, emulator := range emulators {
+		if err := checkProgram(arch, emulator.From, emulator.Program); err != nil {
+			return err
+		}
+	}
+
 	records := []cpio.Record{
 		cpio.StaticRecord(init, cpio.Info{Name: "init", Mode: cpio.S_IFREG | 0o700}),
 		// init has no output without it, and only some kernels bring one

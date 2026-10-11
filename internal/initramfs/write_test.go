@@ -116,7 +116,8 @@ func TestAnInitramfsForAKernelWithoutModulesStillHoldsTheirDirectory(t *testing.
 func TestAnInitramfsHoldsTheEmulatorOfAnotherArchitectureAsAProgramNamedByIt(t *testing.T) {
 	// arrange
 	var archive bytes.Buffer
-	emulator := initramfs.Emulator{Arch: "arm64", Program: []byte("qemu")}
+	qemu := static(t)
+	emulator := initramfs.Emulator{Arch: "arm64", From: "/usr/bin/qemu-aarch64-static", Program: qemu}
 
 	// act
 	err := initramfs.Write(&archive, "amd64", static(t), nil, emulator)
@@ -128,7 +129,7 @@ func TestAnInitramfsHoldsTheEmulatorOfAnotherArchitectureAsAProgramNamedByIt(t *
 	content := make([]byte, program.FileSize)
 	_, err = program.ReadAt(content, 0)
 	require.NoError(t, err)
-	assert.Equal(t, "qemu", string(content))
+	assert.Equal(t, qemu, content)
 }
 
 func TestAnInitramfsWithoutEmulatorsStillHoldsTheirDirectory(t *testing.T) {

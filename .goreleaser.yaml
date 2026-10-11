@@ -48,11 +48,13 @@ nfpms:
           - qemu-system-x86
         recommends:
           - qemu-system-arm
+          - qemu-user-static
       rpm:
         dependencies:
           - qemu-system-x86-core
         recommends:
           - qemu-system-aarch64-core
+          - qemu-user-static-aarch64
   - id: arm64
     ids: [arm64]
     package_name: miso
@@ -72,11 +74,13 @@ nfpms:
           - qemu-system-arm
         recommends:
           - qemu-system-x86
+          - qemu-user-static
       rpm:
         dependencies:
           - qemu-system-aarch64-core
         recommends:
           - qemu-system-x86-core
+          - qemu-user-static-x86
 
 checksum:
   name_template: checksums.txt

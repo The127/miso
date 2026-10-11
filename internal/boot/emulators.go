@@ -9,8 +9,7 @@ import (
 )
 
 // magics are what the header of a program of an architecture looks like to
-// binfmt_misc, and the mask it is compared under, as Debian's qemu-user
-// registers them.
+// binfmt_misc, and the mask it is compared under, as QEMU registers them.
 var magics = map[string]struct{ magic, mask string }{
 	"amd64": {
 		magic: `\x7f\x45\x4c\x46\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00`,
@@ -55,9 +54,8 @@ const binfmtMisc = "/proc/sys/fs/binfmt_misc"
 
 // register has each emulator in dir, named by its architecture, run the
 // programs of that architecture, through a write of its binfmt_misc entry.
-// Debian's QEMU keeps a program's argv[0] only when its own name ends in
-// -binfmt-P, so it is registered through a link of that name. F opens it
-// right away, so it runs in the root of a run too.
+// P has the kernel tell QEMU to keep a program's argv[0]. F opens it right
+// away, so it runs in the root of a run too.
 func register(dir string, write func(entry string) error) error {
 	found, err := os.ReadDir(dir)
 	if err != nil {
@@ -71,12 +69,8 @@ func register(dir string, write func(entry string) error) error {
 			return fmt.Errorf("no binfmt_misc entry for an emulator of %s", arch)
 		}
 
-		link := filepath.Join(dir, arch+"-binfmt-P")
-		if err := os.Symlink(arch, link); err != nil {
-			return err
-		}
-
-		if err := write(fmt.Sprintf(":%s:M::%s:%s:%s:OPF", arch, magic.magic, magic.mask, link)); err != nil {
+		program := filepath.Join(dir, arch)
+		if err := write(fmt.Sprintf(":%s:M::%s:%s:%s:OPF", arch, magic.magic, magic.mask, program)); err != nil {
 			return err
 		}
 	}
