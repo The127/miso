@@ -55,6 +55,8 @@ rejected in review).
 Plain [Conventional Commits](https://www.conventionalcommits.org/): a first
 line of the form `type: description`, no scopes. Allowed types: `feat`,
 `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `revert`.
+The title of a pull request follows the same form, since a squash merge
+takes it as the commit message. ci checks it.
 
 ## AI-assisted contributions
 
