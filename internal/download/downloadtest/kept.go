@@ -14,11 +14,25 @@ import (
 func Kept(t *testing.T, dir string, content []byte) string {
 	t.Helper()
 
+	digest := Digest(content)
+	KeptAs(t, dir, digest, content)
+
+	return digest
+}
+
+// KeptAs writes bytes into the store in dir by hand under a digest, which
+// need not be theirs.
+func KeptAs(t *testing.T, dir, digest string, content []byte) {
+	t.Helper()
+
+	path := filepath.Join(dir, "sha256", digest[len("sha256:"):])
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o750))
+	require.NoError(t, os.WriteFile(path, content, 0o600))
+}
+
+// Digest is the digest the store names bytes by.
+func Digest(content []byte) string {
 	sum := sha256.Sum256(content)
-	digest := hex.EncodeToString(sum[:])
 
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sha256"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "sha256", digest), content, 0o600))
-
-	return "sha256:" + digest
+	return "sha256:" + hex.EncodeToString(sum[:])
 }
