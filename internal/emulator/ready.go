@@ -20,20 +20,21 @@ var programs = map[string]string{
 	"arm64": "usr/bin/qemu-aarch64",
 }
 
-// Ready fetches miso's pinned qemu-user package of the builder's
-// architecture, through the store, and takes the program out of it that
-// runs the programs of target.
+// Ready is the program that runs the programs of target, out of miso's
+// pinned qemu-user package of the builder's architecture, which the store
+// fetches the first time.
 func Ready(ctx context.Context, store *download.Store, builder, target string) ([]byte, error) {
-	pin, ok := pins[builder]
+	pinned, ok := pins[builder]
 	if !ok {
 		return nil, fmt.Errorf("miso has no QEMU for a builder on %s", builder)
 	}
 
-	if _, ok := programs[target]; !ok {
+	digest, ok := pinned.emulators[target]
+	if !ok {
 		return nil, fmt.Errorf("miso has no QEMU that runs programs of %s", target)
 	}
 
-	return ready(ctx, store, pin, target, emulators[builder][target])
+	return ready(ctx, store, pinned.pkg, target, digest)
 }
 
 // ready is the program that runs the programs of target, the one the store
