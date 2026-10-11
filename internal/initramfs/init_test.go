@@ -106,3 +106,16 @@ func TestAnInitForABuilderOfAnArchMisoDoesNotKnowIsRefusedNamingIt(t *testing.T)
 	// assert
 	assert.ErrorContains(t, err, "sparc")
 }
+
+func TestAnEmulatorThatNeedsADynamicLoaderIsRefusedNamingWhereItIsFrom(t *testing.T) {
+	// arrange
+	var archive bytes.Buffer
+	emulator := initramfs.Emulator{Arch: "arm64", From: "/usr/bin/qemu-aarch64-static", Program: program(t, elf.PT_LOAD, elf.PT_INTERP)}
+
+	// act
+	err := initramfs.Write(&archive, "amd64", static(t), nil, emulator)
+
+	// assert
+	require.ErrorContains(t, err, "/usr/bin/qemu-aarch64-static")
+	assert.ErrorContains(t, err, "dynamic loader")
+}

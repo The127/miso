@@ -43,12 +43,12 @@ func emulatorsFor(target string) ([]initramfs.Emulator, error) {
 		return nil, nil
 	}
 
-	program, err := emulator.Host(target)
+	from, program, err := emulator.Host(target)
 	if err != nil {
 		return nil, err
 	}
 
-	return []initramfs.Emulator{{Arch: target, Program: program}}, nil
+	return []initramfs.Emulator{{Arch: target, From: from, Program: program}}, nil
 }
 
 // bootFiles writes the builder kernel and an initramfs with this very miso

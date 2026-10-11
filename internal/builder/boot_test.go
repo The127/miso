@@ -51,7 +51,7 @@ func TestTheBootFilesHoldTheEmulatorOfTheArchitectureTheBuildIsFor(t *testing.T)
 	// arrange
 	kernel := builderkernel.Kernel{Image: []byte("the kernel")}
 	init := static(t)
-	emulator := initramfs.Emulator{Arch: "arm64", Program: []byte("qemu")}
+	emulator := initramfs.Emulator{Arch: "arm64", From: "/usr/bin/qemu-aarch64-static", Program: static(t)}
 	var want bytes.Buffer
 	require.NoError(t, initramfs.Write(&want, "amd64", init, nil, emulator))
 
