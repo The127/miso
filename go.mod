@@ -2,6 +2,8 @@ module github.com/The127/miso
 
 go 1.27.2
 
+toolchain go1.27.4
+
 require (
 	github.com/dustin/go-humanize v1.1.0
 	github.com/florianl/go-tc v0.4.9-0.20260919172244-38abe92f45d6
